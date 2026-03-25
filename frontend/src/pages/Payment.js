@@ -21,6 +21,25 @@ function Payment() {
     <div className="section">
       <h1 className="section-title">Complete Payment</h1>
 
+      {/* Insurance Plan */}
+      <div className="card" style={{ marginBottom: 24, background: '#f0fdf4', borderLeft: '4px solid #16a34a' }}>
+        <h3>Ride Insurance (Optional)</h3>
+        <p style={{ fontSize: 15, color: '#222' }}>
+          <b>Protect your ride for just ₹49 per trip!</b> Covers accidental damage, medical emergencies, and roadside assistance. Valid for one ride only.
+        </p>
+        <ul style={{ fontSize: 14, color: '#444', marginLeft: 20 }}>
+          <li>✔️ Ambulance & medical helpline</li>
+          <li>✔️ Car accidental coverage up to ₹1 lakh</li>
+          <li>✔️ 24x7 support during your ride</li>
+        </ul>
+        <div style={{ marginTop: 10 }}>
+          <label>
+            <input type="checkbox" style={{ marginRight: 8 }} />
+            Add insurance for this booking (₹49)
+          </label>
+        </div>
+      </div>
+
       <div className="grid grid-2">
         {/* Payment Details */}
         <div className="card">

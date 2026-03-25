@@ -102,7 +102,7 @@ function Login({ onLogin }) {
         {/* Role Selection */}
         <div className="form-group" style={{ marginBottom: '25px' }}>
           <label className="form-label">I am a:</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <button
               onClick={() => { setRole('customer'); setStep('phoneNumber'); }}
               className="btn"
@@ -125,37 +125,10 @@ function Login({ onLogin }) {
             >
               Driver
             </button>
-            <button
-              onClick={() => setStep('adminLogin')}
-              className="btn"
-              style={{
-                backgroundColor: step === 'adminLogin' ? '#16a34a' : '#e5e7eb',
-                color: step === 'adminLogin' ? 'white' : '#111',
-                fontWeight: 'bold'
-              }}
-            >
-              Admin
-            </button>
           </div>
         </div>
 
-        {step === 'adminLogin' && (
-          <form onSubmit={handleAdminLogin}>
-            <div className="form-group">
-              <label className="form-label">Admin Password</label>
-              <input
-                type="password"
-                className="form-input"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter admin password"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Logging in...' : 'Admin Login'}
-            </button>
-          </form>
-        )}
+
 
         {step === 'phoneNumber' && (
           <form onSubmit={handleSendOTP}>

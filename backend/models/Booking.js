@@ -1,0 +1,129 @@
+const mongoose = require('mongoose');
+
+const bookingSchema = new mongoose.Schema({
+  bookingId: {
+    type: String,
+    unique: true
+  },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  driverId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Driver'
+  },
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
+  },
+  pickupLocation: {
+    address: String,
+    latitude: Number,
+    longitude: Number,
+    city: String,
+    state: String,
+    pincode: String
+  },
+  dropLocation: {
+    address: String,
+    latitude: Number,
+    longitude: Number,
+    city: String,
+    state: String,
+    pincode: String
+  },
+  bookingType: {
+    type: String,
+    enum: ['hourly', 'daily', 'outstation', 'subscription'],
+    default: 'daily'
+  },
+  startDate: Date,
+  endDate: Date,
+  numberOfDays: Number,
+  totalHours: Number,
+  estimatedDistance: Number,
+  estimatedPrice: Number,
+  finalPrice: Number,
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'driver_assigned', 'in_progress', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['upi', 'card', 'net_banking', 'wallet'],
+    default: 'upi'
+  },
+  paymentId: String,
+  insuranceOpted: {
+    type: Boolean,
+    default: false
+  },
+  insuranceAmount: {
+    type: Number,
+    default: 0
+  },
+  insuranceType: {
+    type: String,
+    enum: ['none', 'per_ride', 'monthly']
+  },
+  route: {
+    type: String,
+    default: null
+  },
+  feedback: {
+    rating: Number,
+    comment: String,
+    date: Date
+  },
+  emergency: {
+    sosCalled: { type: Boolean, default: false },
+    sosTime: Date,
+    sosDetails: String
+  },
+  helplineUsed: {
+    type: Boolean,
+    default: false
+  },
+  // OTP verification for ride start
+  verification: {
+    otp: String,
+    otpGenerated: Date,
+    otpExpiry: Date,
+    otpVerified: { type: Boolean, default: false },
+    otpVerificationTime: Date
+  },
+  // Post-ride payment tracking
+  rideCompletion: {
+    actualStartTime: Date,
+    actualEndTime: Date,
+    actualDistance: Number,
+    finalCalculatedPrice: Number,
+    paymentReceivedTime: Date,
+    paymentVerified: { type: Boolean, default: false }
+  },
+  // Timestamps in IST
+  timestamps: {
+    bookingCreatedIST: String, // Format: DD-MM-YYYY HH:mm:ss IST
+    rideStartIST: String,
+    rideEndIST: String,
+    paymentReceivedIST: String
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Booking', bookingSchema);

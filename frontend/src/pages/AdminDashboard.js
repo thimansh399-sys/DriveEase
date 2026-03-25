@@ -17,6 +17,28 @@ function AdminDashboard() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
+  // Real-time fetch for drivers and bookings
+  useEffect(() => {
+    let interval;
+    if (['drivers', 'live'].includes(activeTab)) {
+      const fetchDrivers = async () => {
+        const allDrivers = await api.getAllDrivers();
+        setDrivers(allDrivers);
+      };
+      fetchDrivers();
+      interval = setInterval(fetchDrivers, 10000);
+    }
+    if (activeTab === 'bookings') {
+      const fetchBookings = async () => {
+        const allBookings = await api.getAllBookings();
+        setBookings(allBookings);
+      };
+      fetchBookings();
+      interval = setInterval(fetchBookings, 10000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
@@ -96,7 +118,7 @@ function AdminDashboard() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', borderBottom: '2px solid #e5e7eb' }}>
-        {['dashboard', 'bookings', 'drivers', 'registrations', 'customers'].map(tab => (
+        {['dashboard', 'bookings', 'drivers', 'registrations', 'customers', 'live', 'enquiries'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -112,6 +134,63 @@ function AdminDashboard() {
           </button>
         ))}
       </div>
+      {/* Drivers */}
+      {activeTab === 'drivers' && (
+        <div className="grid grid-1">
+          {drivers.map(driver => (
+            <div key={driver._id} className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3>{driver.name}</h3>
+                  <p>Phone: {driver.phone}</p>
+                  <p>Status: <span style={{ fontWeight: 'bold', color: driver.status === 'approved' ? '#16a34a' : '#f59e0b' }}>{driver.status}</span></p>
+                  <p>Online: {driver.isOnline ? 'Yes' : 'No'}</p>
+                  <p>City: {driver.personalDetails?.city}</p>
+                  <p>Income: ₹{driver.experience?.totalEarnings || 0}</p>
+                  <p>Trips: {driver.experience?.totalRides || 0}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handleApproveDriver(driver._id)} className="btn btn-primary">Approve</button>
+                  <button onClick={() => handleRejectDriver(driver._id)} className="btn btn-danger">Reject</button>
+                  <button onClick={() => api.removeDriver(driver._id).then(fetchDashboardData)} className="btn btn-danger">Remove</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Live Drivers */}
+      {activeTab === 'live' && (
+        <div className="grid grid-1">
+          {drivers.filter(d => d.isOnline).length === 0 && <div>No drivers online.</div>}
+          {drivers.filter(d => d.isOnline).map(driver => (
+            <div key={driver._id} className="card">
+              <h3>{driver.name} ({driver.personalDetails?.city})</h3>
+              <p>Phone: {driver.phone}</p>
+              <p>Status: <span style={{ fontWeight: 'bold', color: '#16a34a' }}>Online</span></p>
+              <p>Current Location: {driver.currentLocation?.latitude}, {driver.currentLocation?.longitude}</p>
+              <p>Trips: {driver.experience?.totalRides || 0}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Customers */}
+      {activeTab === 'customers' && (
+        <div className="grid grid-1">
+          {/* Placeholder: Implement customer management here */}
+          <div>Customer management coming soon.</div>
+        </div>
+      )}
+
+      {/* Enquiries */}
+      {activeTab === 'enquiries' && (
+        <div className="grid grid-1">
+          {/* Placeholder: Implement enquiry management here */}
+          <div>Enquiry management coming soon.</div>
+        </div>
+      )}
 
       {loading && <div className="loading">Loading...</div>}
 
@@ -180,29 +259,67 @@ function AdminDashboard() {
         </>
       )}
 
-      {/* Driver Registrations */}
+      {/* Driver Registrations - Enhanced */}
       {activeTab === 'registrations' && (
         <div className="grid grid-1">
           {registrations.map(driver => (
             <div key={driver._id} className="card">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '20px', alignItems: 'center' }}>
+                {/* Driver Info */}
                 <div>
                   <h3>{driver.name}</h3>
                   <p>Phone: {driver.phone}</p>
-                  <p>Status: <span style={{ fontWeight: 'bold', color: driver.status === 'approved' ? '#16a34a' : '#f59e0b' }}>{driver.status}</span></p>
+                  <p>Status: <span style={{ fontWeight: 'bold', color: driver.status === 'approved' ? '#16a34a' : driver.status === 'rejected' ? '#dc2626' : '#f59e0b' }}>{driver.status}</span></p>
+                  <p>City: {driver.personalDetails?.city}</p>
+                  <p>Registered: {new Date(driver.createdAt).toLocaleString()}</p>
                 </div>
+                {/* Payment & Documents */}
                 <div>
-                  <p><strong>Documents:</strong></p>
-                  <p>✓ Aadhar: {driver.documents.aadhar.verified ? 'Verified' : 'Pending'}</p>
-                  <p>✓ PAN: {driver.documents.pancard.verified ? 'Verified' : 'Pending'}</p>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>💳 Payment Screenshot:</strong><br />
+                    {driver.paymentVerification?.screenshotUrl ? (
+                      <a href={driver.paymentVerification.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                        <img src={driver.paymentVerification.screenshotUrl} alt="Payment Screenshot" style={{ maxWidth: '120px', border: '1px solid #e5e7eb', borderRadius: '6px', marginTop: '6px' }} />
+                      </a>
+                    ) : (
+                      <span style={{ color: '#f59e0b' }}>Not uploaded</span>
+                    )}
+                    <div>Status: <span style={{ color: driver.paymentVerification?.status === 'verified' ? '#16a34a' : driver.paymentVerification?.status === 'rejected' ? '#dc2626' : '#f59e0b' }}>{driver.paymentVerification?.status || 'pending'}</span></div>
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>📄 Documents:</strong>
+                    <ul style={{ paddingLeft: '18px', margin: 0 }}>
+                      <li>Aadhar: <span style={{ color: driver.documents?.aadhar?.verified ? '#16a34a' : '#f59e0b' }}>{driver.documents?.aadhar?.verified ? 'Verified' : 'Pending'}</span></li>
+                      <li>PAN: <span style={{ color: driver.documents?.pan?.verified ? '#16a34a' : '#f59e0b' }}>{driver.documents?.pan?.verified ? 'Verified' : 'Pending'}</span></li>
+                      <li>License: <span style={{ color: driver.documents?.drivingLicense?.verified ? '#16a34a' : '#f59e0b' }}>{driver.documents?.drivingLicense?.verified ? 'Verified' : 'Pending'}</span></li>
+                      <li>Selfie: <span style={{ color: driver.documents?.selfie?.verified ? '#16a34a' : '#f59e0b' }}>{driver.documents?.selfie?.verified ? 'Verified' : 'Pending'}</span></li>
+                    </ul>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleApproveDriver(driver._id)} className="btn btn-primary">
+                {/* Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button
+                    onClick={() => handleApproveDriver(driver._id)}
+                    className="btn btn-primary"
+                    disabled={
+                      driver.status === 'approved' ||
+                      driver.paymentVerification?.status !== 'verified' ||
+                      !driver.documents?.aadhar?.verified ||
+                      !driver.documents?.pan?.verified ||
+                      !driver.documents?.drivingLicense?.verified ||
+                      !driver.documents?.selfie?.verified
+                    }
+                  >
                     Approve
                   </button>
-                  <button onClick={() => handleRejectDriver(driver._id)} className="btn btn-danger">
+                  <button
+                    onClick={() => handleRejectDriver(driver._id)}
+                    className="btn btn-danger"
+                    disabled={driver.status === 'rejected'}
+                  >
                     Reject
                   </button>
+                  {/* Optionally: Add verify/reject buttons for payment/documents here for full workflow */}
                 </div>
               </div>
             </div>

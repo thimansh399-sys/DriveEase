@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/DriverRegistration.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 export default function DriverRegistrationFlow() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -15,42 +17,19 @@ export default function DriverRegistrationFlow() {
     email: '',
     bloodGroup: '',
     yearsOfExperience: '0',
-
-    // Step 2: Vehicle Details
-    vehicle: {
-      model: '',
-      registrationNumber: '',
-      color: '',
-      seatCapacity: '0',
-      insuranceExpiry: ''
-    },
-
-    // Step 3: Payment
-    paymentScreenshot: '',
-    paymentId: ''
+    // Step 2: Document Uploads
+    aadharFile: null,
+    licenseFile: null,
+    selfieFile: null
   });
-
-  const [paymentStatus, setPaymentStatus] = useState(null);
-  const [verificationWaitTime, setVerificationWaitTime] = useState(30); // minutes
 
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name.startsWith('vehicle.')) {
-      const vehicleField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        vehicle: {
-          ...prev.vehicle,
-          [vehicleField]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     setError('');
   };
 
@@ -63,127 +42,59 @@ export default function DriverRegistrationFlow() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/drivers/register`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email,
-            city: 'Kanpur', // Get from location selector
-            state: 'Uttar Pradesh',
-            pincode: '208001',
-            bloodGroup: formData.bloodGroup,
-            yearsOfExperience: formData.yearsOfExperience,
-            vehicle: formData.vehicle
-          })
-        }
-      );
-
-      if (!response.ok) throw new Error('Registration failed');
-
-      const data = await response.json();
-      setDriverId(data.driverId);
-      setCurrentStep(2);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setCurrentStep(2);
   };
 
-  // Step 2: Upload Payment Screenshot
-  const handleDocumentUpload = async (e) => {
-    e.preventDefault();
+  // Handle file input changes
+  const handleFileChange = (e) => {
+    const { name, files } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: files[0]
+    }));
+    setError('');
+  };
 
-    if (!formData.paymentScreenshot) {
-      setError('Please upload payment screenshot');
+  // Step 2: Register Driver (after document uploads)
+  const handleDocumentsSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    // Validate file uploads
+    if (!formData.aadharFile || !formData.licenseFile || !formData.selfieFile) {
+      setError('Aadhaar, License, and Selfie files are required');
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
     try {
+      const form = new FormData();
+      form.append('name', formData.name);
+      form.append('phone', formData.phone);
+      form.append('email', formData.email);
+      form.append('city', 'Kanpur');
+      form.append('state', 'Uttar Pradesh');
+      form.append('pincode', '208001');
+      form.append('bloodGroup', formData.bloodGroup);
+      form.append('yearsOfExperience', formData.yearsOfExperience);
+      form.append('aadharFile', formData.aadharFile);
+      form.append('licenseFile', formData.licenseFile);
+      form.append('selfieFile', formData.selfieFile);
+
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/drivers/${driverId}/payment/upload`,
+        `${API_BASE_URL}/drivers/register`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            screenshotUrl: formData.paymentScreenshot,
-            paymentId: formData.paymentId
-          })
+          body: form
         }
       );
-
-      if (!response.ok) throw new Error('Upload failed');
-
+      if (!response.ok) throw new Error('Registration failed');
       const data = await response.json();
-      setPaymentStatus(data.currentStatus);
+      setDriverId(data.driverId);
       setCurrentStep(3);
-
-      // Start polling for verification status
-      startVerificationPolling();
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Poll verification status
-  const startVerificationPolling = () => {
-    let timeRemaining = 30;
-    const interval = setInterval(async () => {
-      timeRemaining--;
-      setVerificationWaitTime(timeRemaining);
-
-      if (timeRemaining <= 0) {
-        clearInterval(interval);
-        // Check final status
-        checkPaymentStatus();
-        return;
-      }
-
-      // Optional: Check status every minute
-      if (timeRemaining % 1 === 0) {
-        checkPaymentStatus();
-      }
-    }, 1000);
-  };
-
-  // Check payment verification status
-  const checkPaymentStatus = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/drivers/${driverId}/payment/status`
-      );
-      const data = await response.json();
-      setPaymentStatus(data.verificationStatus);
-
-      if (data.verificationStatus.label === 'Verified') {
-        setCurrentStep(4);
-      }
-    } catch (err) {
-      console.error('Status check error:', err);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Convert to base64 or handle file upload
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          paymentScreenshot: reader.result
-        }));
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -203,15 +114,11 @@ export default function DriverRegistrationFlow() {
           </div>
           <div className={`step ${currentStep >= 2 ? 'active' : ''}`}>
             <div className="step-number">2</div>
-            <div className="step-title">Vehicle Details</div>
+            <div className="step-title">Documents</div>
           </div>
           <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
             <div className="step-number">3</div>
-            <div className="step-title">Payment</div>
-          </div>
-          <div className={`step ${currentStep >= 4 ? 'active' : ''}`}>
-            <div className="step-number">4</div>
-            <div className="step-title">Verification</div>
+            <div className="step-title">Success</div>
           </div>
         </div>
 
@@ -291,65 +198,37 @@ export default function DriverRegistrationFlow() {
           </form>
         )}
 
-        {/* Step 2: Vehicle Details */}
+        {/* Step 2: Document Uploads */}
         {currentStep === 2 && (
-          <form onSubmit={(e) => { e.preventDefault(); setCurrentStep(3); }}>
+          <form onSubmit={handleDocumentsSubmit} encType="multipart/form-data">
             <div className="form-group">
-              <label>Vehicle Model *</label>
+              <label>Aadhaar Card (PDF/JPG/PNG) *</label>
               <input
-                type="text"
-                name="vehicle.model"
-                value={formData.vehicle.model}
-                onChange={handleInputChange}
-                placeholder="e.g., Maruti Swift"
+                type="file"
+                name="aadharFile"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
                 required
               />
             </div>
-
             <div className="form-group">
-              <label>Registration Number *</label>
+              <label>Driving License (PDF/JPG/PNG) *</label>
               <input
-                type="text"
-                name="vehicle.registrationNumber"
-                value={formData.vehicle.registrationNumber}
-                onChange={handleInputChange}
-                placeholder="e.g., UP 14 AB 1234"
+                type="file"
+                name="licenseFile"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
                 required
               />
             </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Vehicle Color</label>
-                <input
-                  type="text"
-                  name="vehicle.color"
-                  value={formData.vehicle.color}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Silver"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Seat Capacity</label>
-                <input
-                  type="number"
-                  name="vehicle.seatCapacity"
-                  value={formData.vehicle.seatCapacity}
-                  onChange={handleInputChange}
-                  min="1"
-                  max="9"
-                />
-              </div>
-            </div>
-
             <div className="form-group">
-              <label>Insurance Expiry Date</label>
+              <label>Selfie Photo (JPG/PNG) *</label>
               <input
-                type="date"
-                name="vehicle.insuranceExpiry"
-                value={formData.vehicle.insuranceExpiry}
-                onChange={handleInputChange}
+                type="file"
+                name="selfieFile"
+                accept=".jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                required
               />
             </div>
 
@@ -357,113 +236,19 @@ export default function DriverRegistrationFlow() {
               <button type="button" className="btn-secondary" onClick={() => setCurrentStep(1)}>
                 Back
               </button>
-              <button type="submit" className="btn-primary">
-                Continue to Payment
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Payment & Verification */}
-        {currentStep === 3 && (
-          <form onSubmit={handleDocumentUpload}>
-            <div className="payment-info">
-              <h3>Registration Fee: ₹150</h3>
-              <p>Make payment via any UPI app and upload screenshot below</p>
-            </div>
-
-            <div className="upi-section">
-              <h4>Payment Options:</h4>
-              <div className="payment-methods">
-                <div className="payment-method">
-                  <strong>UPI Address:</strong>
-                  <p>driveease@paytm</p>
-                  <button type="button" className="btn-copy">Copy UPI</button>
-                </div>
-                <div className="payment-method">
-                  <strong>Bank Transfer</strong>
-                  <p>Account: DriveEase Driver Registration</p>
-                  <p>IFSC: SBIN0001234</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Upload Payment Screenshot *</label>
-              <div className="file-upload">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  required
-                />
-                {formData.paymentScreenshot && (
-                  <img src={formData.paymentScreenshot} alt="Payment proof" className="preview" />
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Payment ID/Reference (if applicable)</label>
-              <input
-                type="text"
-                name="paymentId"
-                value={formData.paymentId}
-                onChange={handleInputChange}
-                placeholder="Optional: Enter transaction ID"
-              />
-            </div>
-
-            <div className="button-group">
-              <button type="button" className="btn-secondary" onClick={() => setCurrentStep(2)}>
-                Back
-              </button>
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Uploading...' : 'Submit Payment & Continue'}
+                {loading ? 'Registering...' : 'Register'}
               </button>
             </div>
           </form>
         )}
 
-        {/* Step 4: Verification Status */}
-        {currentStep === 4 && paymentStatus && (
-          <div className="verification-status">
-            <div className={`status-icon ${paymentStatus.color}`}>
-              {paymentStatus.icon === 'hourglass' && '⏳'}
-              {paymentStatus.icon === 'checkmark' && '✓'}
-              {paymentStatus.icon === 'close' && '✗'}
-            </div>
-
-            <h3>{paymentStatus.label}</h3>
-            <p>{paymentStatus.description}</p>
-
-            {paymentStatus.label === 'Pending Verification' && (
-              <div className="wait-timer">
-                <p>Estimated wait time: {verificationWaitTime} minutes</p>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{width: `${((30 - verificationWaitTime) / 30) * 100}%`}}></div>
-                </div>
-              </div>
-            )}
-
-            {paymentStatus.label === 'Verified' && (
-              <div className="success-message">
-                <p>Congratulations! Your payment is verified.</p>
-                <p>You can now log in as a driver.</p>
-                <button className="btn-primary" onClick={() => navigate('/login')}>
-                  Go to Driver Login
-                </button>
-              </div>
-            )}
-
-            {paymentStatus.label === 'Verification Failed' && (
-              <div className="error-section">
-                <p>Please resubmit your payment screenshot</p>
-                <button className="btn-primary" onClick={() => setCurrentStep(3)}>
-                  Resubmit Payment
-                </button>
-              </div>
-            )}
+        {/* Step 3: Registration Success */}
+        {currentStep === 3 && (
+          <div className="registration-success">
+            <h2>Registration Submitted!</h2>
+            <p>Your driver registration has been submitted for admin approval.</p>
+            <p>You will be notified once your account is approved.</p>
           </div>
         )}
       </div>
