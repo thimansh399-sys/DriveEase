@@ -59,4 +59,12 @@ router.get('/address/saved', authMiddleware, (req, res, next) => {
   next();
 }, bookingController.getSavedAddresses);
 
+// Quick book from Browse page (no auth required - creates customer if needed)
+router.post('/quick-book', bookingController.quickBook);
+
+// Driver-specific routes
+router.get('/driver/my-bookings', authMiddleware, bookingController.getDriverBookings);
+
+router.put('/:id/driver-respond', authMiddleware, bookingController.driverRespondBooking);
+
 module.exports = router;

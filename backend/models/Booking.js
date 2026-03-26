@@ -116,6 +116,10 @@ const bookingSchema = new mongoose.Schema({
     rideEndIST: String,
     paymentReceivedIST: String
   },
+  notes: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

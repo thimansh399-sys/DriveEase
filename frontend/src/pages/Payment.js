@@ -24,10 +24,10 @@ function Payment() {
       {/* Insurance Plan */}
       <div className="card" style={{ marginBottom: 24, background: '#f0fdf4', borderLeft: '4px solid #16a34a' }}>
         <h3>Ride Insurance (Optional)</h3>
-        <p style={{ fontSize: 15, color: '#222' }}>
+        <p style={{ fontSize: 15, color: '#ffffff' }}>
           <b>Protect your ride for just ₹49 per trip!</b> Covers accidental damage, medical emergencies, and roadside assistance. Valid for one ride only.
         </p>
-        <ul style={{ fontSize: 14, color: '#444', marginLeft: 20 }}>
+        <ul style={{ fontSize: 14, color: '#e0e0e0', marginLeft: 20 }}>
           <li>✔️ Ambulance & medical helpline</li>
           <li>✔️ Car accidental coverage up to ₹1 lakh</li>
           <li>✔️ 24x7 support during your ride</li>
@@ -45,10 +45,11 @@ function Payment() {
         <div className="card">
           <h3>Payment Summary</h3>
           <div style={{
-            backgroundColor: '#f0f9ff',
+            backgroundColor: 'rgba(15, 23, 42, 0.5)',
             padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
+            borderRadius: '12px',
+            marginBottom: '20px',
+            border: '1px solid rgba(34, 197, 94, 0.1)'
           }}>
             <p><strong>Booking ID:</strong> {bookingId}</p>
             <p><strong>Amount:</strong> <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a' }}>₹{amount}</span></p>
@@ -59,7 +60,7 @@ function Payment() {
 
           {/* Bank Transfer Info */}
           <h4>Bank Transfer</h4>
-          <div style={{ fontSize: '14px', backgroundColor: '#f9fafb', padding: '15px', borderRadius: '6px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '14px', backgroundColor: 'rgba(15, 23, 42, 0.4)', padding: '15px', borderRadius: '10px', marginBottom: '20px', border: '1px solid rgba(34, 197, 94, 0.08)' }}>
             <p><strong>Account Holder:</strong> {paymentDetails.bank.name}</p>
             <p><strong>Account:</strong> {paymentDetails.bank.account}</p>
             <p><strong>IFSC:</strong> {paymentDetails.bank.ifsc}</p>
@@ -67,7 +68,7 @@ function Payment() {
             <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>Reference: {bookingId}</p>
           </div>
 
-          <div style={{ backgroundColor: '#fef3c7', padding: '10px', borderRadius: '6px', marginBottom: '20px' }}>
+          <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
             <p style={{ margin: '0', fontSize: '12px', fontWeight: 'bold' }}>
               ⚠️ Add Reference: {bookingId} for instant confirmation
             </p>
@@ -78,9 +79,10 @@ function Payment() {
         <div className="card" style={{ textAlign: 'center' }}>
           <h3>Quick Payment via UPI</h3>
           <div style={{
-            backgroundColor: '#f0f0f0',
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
             padding: '30px',
-            borderRadius: '8px',
+            borderRadius: '12px',
+            border: '1px solid rgba(34, 197, 94, 0.1)',
             display: 'inline-block',
             marginBottom: '20px'
           }}>
@@ -96,7 +98,7 @@ function Payment() {
       </div>
 
       {/* Payment Confirmation */}
-      <div className="card" style={{ marginTop: '30px', backgroundColor: '#f0f9ff', borderLeft: '4px solid #16a34a' }}>
+      <div className="card" style={{ marginTop: '30px', backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #16a34a' }}>
         <h4>After Payment</h4>
         <ol style={{ marginLeft: '20px' }}>
           <li>Take a screenshot of the payment confirmation</li>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import '../styles/MyBookings.css';
 
@@ -50,7 +51,7 @@ function MyBookings() {
       {loading ? (
         <div className="loading">Loading your bookings...</div>
       ) : bookings.length === 0 ? (
-        <div className="alert alert-info">No bookings yet. <a href="/browse">Browse drivers</a> to make your first booking!</div>
+        <div className="alert alert-info">No bookings yet. <Link to="/browse">Browse drivers</Link> to make your first booking!</div>
       ) : (
         <div className="grid grid-1">
           {bookings.map(booking => (

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './styles/App.css';
 import Navigation from './components/Navigation';
-import Footer from './components/Footer';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
 import Booking from './pages/Booking';
@@ -87,7 +86,7 @@ function App() {
             <Route path="/track-booking" element={<TrackBooking />} />
           </Routes>
         </main>
-        <Footer />
+        {/* Footer is now only on Home page */}
         
         {/* WhatsApp Button */}
         <a href="https://wa.me/+917836887228" target="_blank" rel="noopener noreferrer" className="whatsapp-btn">

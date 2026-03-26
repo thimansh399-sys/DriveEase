@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 function Footer() {
   return (
-    <footer className="footer">
+    <footer className="footer" style={{ width: '100vw', minWidth: '100vw', margin: 0, padding: 0 }}>
       <div className="footer-content">
         <div className="footer-section">
           <h3>DriveEase</h3>
@@ -12,10 +13,10 @@ function Footer() {
         </div>
         <div className="footer-section">
           <h3>Quick Links</h3>
-          <a href="/">Home</a>
-          <a href="/browse">Find Drivers</a>
-          <a href="/services">Services & Plans</a>
-          <a href="/insurance">Insurance</a>
+          <Link to="/">Home</Link>
+          <Link to="/browse">Find Drivers</Link>
+          <Link to="/services">Services & Plans</Link>
+          <Link to="/insurance">Insurance</Link>
         </div>
         <div className="footer-section">
           <h3>Support</h3>

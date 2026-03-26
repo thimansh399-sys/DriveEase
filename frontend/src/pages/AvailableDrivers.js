@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/AvailableDrivers.css';
 
 export default function AvailableDriversPage() {
+  const navigate = useNavigate();
   const [drivers, setDrivers] = useState([]);
   const [filteredDrivers, setFilteredDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function AvailableDriversPage() {
   const handleBookNow = (driver) => {
     setSelectedDriver(driver);
     // Redirect to booking page with driver pre-selected
-    window.location.href = `/booking?driverId=${driver._id}`;
+    navigate(`/booking?driverId=${driver._id}`);
   };
 
   return (

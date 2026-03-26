@@ -1,9 +1,44 @@
 const express = require('express');
-const driverRegistrationController = require('../controllers/driverRegistrationController');
-const { authMiddleware, driverMiddleware } = require('../middleware/auth');
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const driverRegistrationController = require('../controllers/driverRegistrationController');
+const driverRegistrationSingleStepController = require('../controllers/driverRegistrationSingleStepController');
+
+const { authMiddleware, driverMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Multer config for single-step registration (multiple files)
+const singleStepUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      let folder = 'aadhar';
+      if (file.fieldname === 'licenseFile') folder = 'license';
+      if (file.fieldname === 'selfie') folder = 'selfie';
+      const dir = path.join(__dirname, '..', 'uploads', 'driver-documents', folder);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + '-' + file.originalname);
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+// Single-step registration endpoint with selfie upload
+router.post('/register-driver',
+  singleStepUpload.single('selfie'),
+  driverRegistrationSingleStepController.registerDriverSingleStep
+);
 
 // Multer configs for different document uploads
 const paymentUpload = multer({

@@ -1,63 +1,50 @@
-import React, { useState, useMemo } from 'react';
-import '../styles/LocationSelector.css';
+import React, { useRef } from "react";
+import { GoogleMap, LoadScript, Autocomplete, Marker } from "@react-google-maps/api";
 
-// India location data - States, Cities, Pincodes
-const INDIA_LOCATIONS = {
-  'Andhra Pradesh': {
-    'Hyderabad': ['500001', '500002', '500003', '500004', '500005'],
-    'Vijayawada': ['520001', '520002', '520003'],
-    'Visakhapatnam': ['530001', '530002', '530003']
-  },
-  'Delhi': {
-    'New Delhi': ['110001', '110002', '110003', '110004', '110005'],
-    'Delhi': ['110006', '110007', '110008', '110009', '110010']
-  },
-  'Georgia': {
-    'Bangalore': ['560001', '560002', '560003', '560004', '560005'],
-    'Mysore': ['570001', '570002', '570003'],
-    'Pune': ['411001', '411002', '411003']
-  },
-  'Maharashtra': {
-    'Mumbai': ['400001', '400002', '400003', '400004', '400005'],
-    'Pune': ['411001', '411002', '411003'],
-    'Nagpur': ['440001', '440002', '440003']
-  },
-  'Tamil Nadu': {
-    'Chennai': ['600001', '600002', '600003', '600004', '600005'],
-    'Coimbatore': ['641001', '641002', '641003'],
-    'Madurai': ['625001', '625002', '625003']
-  },
-  'Uttar Pradesh': {
-    'Lucknow': ['226001', '226002', '226003'],
-    'Kanpur': ['208001', '208002', '208003'],
-    'Varanasi': ['221001', '221002', '221003']
-  },
-  'West Bengal': {
-    'Kolkata': ['700001', '700002', '700003', '700004', '700005'],
-    'Howrah': ['711101', '711102', '711103'],
-  }
-};
+const containerStyle = { width: "100%", height: "300px" };
+const center = { lat: 26.8467, lng: 80.9462 }; // Lucknow
 
-export default function LocationSelector({ 
-  onLocationSelect = null, 
-  initialState = null, 
-  initialCity = null, 
-  initialPincode = null,
-  showPincode = true 
-}) {
-  const [selectedState, setSelectedState] = useState(initialState || '');
-  const [selectedCity, setSelectedCity] = useState(initialCity || '');
-  const [selectedPincode, setSelectedPincode] = useState(initialPincode || '');
-  const [searchState, setSearchState] = useState('');
-  const [searchCity, setSearchCity] = useState('');
-  const [showStateDropdown, setShowStateDropdown] = useState(false);
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [showPincodeDropdown, setShowPincodeDropdown] = useState(false);
+export default function LocationSelector({ label, value, onChange }) {
+  const autocompleteRef = useRef(null);
+  const apiKey = process.env.REACT_APP_GOOGLE_KEY;
 
-  const states = Object.keys(INDIA_LOCATIONS);
+  const handlePlaceChanged = () => {
+    const place = autocompleteRef.current.getPlace();
+    if (place && place.geometry) {
+      onChange({
+        address: place.formatted_address,
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      });
+    }
+  };
 
-  const filteredStates = useMemo(() => {
-    return states.filter(state =>
+  return (
+    <LoadScript googleMapsApiKey={apiKey} libraries={["places"]}>
+      <div>
+        <label>{label}</label>
+        <Autocomplete
+          onLoad={ref => (autocompleteRef.current = ref)}
+          onPlaceChanged={handlePlaceChanged}
+        >
+          <input
+            type="text"
+            placeholder={`Enter ${label}`}
+            style={{ width: "100%", padding: 8, marginBottom: 8 }}
+            defaultValue={value?.address || ""}
+          />
+        </Autocomplete>
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={value?.lat ? { lat: value.lat, lng: value.lng } : center}
+          zoom={12}
+        >
+          {value?.lat && <Marker position={{ lat: value.lat, lng: value.lng }} />}
+        </GoogleMap>
+      </div>
+    </LoadScript>
+  );
+}
       state.toLowerCase().includes(searchState.toLowerCase())
     );
   }, [searchState]);

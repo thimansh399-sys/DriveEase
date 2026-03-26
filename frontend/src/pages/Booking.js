@@ -89,16 +89,16 @@ function Booking() {
           {/* Pickup & Drop */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#222', marginBottom: 6, display: 'block' }}>Pickup Location</label>
+              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Pickup Location</label>
               <div style={{ display: 'flex', alignItems: 'center', background: '#f6f6f6', borderRadius: 8, padding: '8px 12px' }}>
                 <span style={{ color: '#27ae60', fontSize: 20, marginRight: 8 }}>📍</span>
                 <input className="form-input" type="text" placeholder="Current Location" style={{ border: 'none', background: 'transparent', flex: 1, fontSize: 15 }} />
               </div>
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#222', marginBottom: 6, display: 'block' }}>Drop Location</label>
+              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Drop Location</label>
               <div style={{ display: 'flex', alignItems: 'center', background: '#f6f6f6', borderRadius: 8, padding: '8px 12px' }}>
-                <span style={{ color: '#111', fontSize: 20, marginRight: 8 }}>🏁</span>
+                <span style={{ color: '#ffffff', fontSize: 20, marginRight: 8 }}>🏁</span>
                 <input className="form-input" type="text" placeholder="Enter Location" style={{ border: 'none', background: 'transparent', flex: 1, fontSize: 15 }} />
               </div>
             </div>
@@ -106,15 +106,15 @@ function Booking() {
           {/* Date, Time, Days */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#222', marginBottom: 6, display: 'block' }}>Date</label>
+              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Date</label>
               <input className="form-input" type="date" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#222', marginBottom: 6, display: 'block' }}>Time</label>
+              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Time</label>
               <input className="form-input" type="time" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#222', marginBottom: 6, display: 'block' }}>No. of Days</label>
+              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>No. of Days</label>
               <input className="form-input" type="number" min="1" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
             </div>
           </div>

@@ -37,6 +37,41 @@ export const api = {
   getDriverById: (id) =>
     fetch(`${API_BASE_URL}/drivers/${id}`).then(r => r.json()),
 
+  updateDriverStatus: (data) =>
+    fetch(`${API_BASE_URL}/drivers/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    }).then(r => r.json()),
+
+  updateProfilePicture: (file) => {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    return fetch(`${API_BASE_URL}/drivers/profile-picture`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: formData
+    }).then(r => r.json());
+  },
+
+  updateDriverProfile: (data) =>
+    fetch(`${API_BASE_URL}/drivers/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    }).then(r => r.json()),
+
+  getDriverEarnings: () =>
+    fetch(`${API_BASE_URL}/drivers/earnings/me`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
   registerDriver: (data) =>
     fetch(`${API_BASE_URL}/drivers/register`, {
       method: 'POST',
@@ -81,6 +116,21 @@ export const api = {
     fetch(`${API_BASE_URL}/bookings/${id}/sos`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
+  getDriverBookings: () =>
+    fetch(`${API_BASE_URL}/bookings/driver/my-bookings`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
+  respondToBooking: (id, action) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/driver-respond`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ action })
     }).then(r => r.json()),
 
   // Admin

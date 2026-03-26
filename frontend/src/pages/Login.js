@@ -177,7 +177,7 @@ function Login({ onLogin }) {
             <button
               type="button"
               className="btn"
-              style={{ width: '100%', marginTop: '10px', backgroundColor: '#e5e7eb', color: '#111' }}
+              style={{ width: '100%', marginTop: '10px', backgroundColor: 'rgba(100, 116, 139, 0.2)', color: '#94a3b8' }}
               onClick={() => { setStep('phoneNumber'); setOtp(''); }}
             >
               Change Phone Number

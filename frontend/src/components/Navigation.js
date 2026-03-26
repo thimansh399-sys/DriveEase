@@ -1,38 +1,31 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import '../styles/Navigation.css';
 
 function Navigation() {
-  const location = useLocation();
-  const navLinkStyle = (path) => ({
-    color: '#fff',
-    textDecoration: 'none',
-    fontWeight: location.pathname === path ? 900 : 600,
-    borderBottom: location.pathname === path ? '2.5px solid #16a34a' : 'none',
-    paddingBottom: '2px',
-    transition: 'border 0.2s',
-  });
+  // No need for useLocation or navLinkStyle with NavLink's active class
   return (
     <header className="navbar sticky-header" style={{
       position: 'sticky', top: 0, zIndex: 100,
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '18px 40px', background: 'rgba(16,24,32,0.98)', color: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.08)'
+      padding: '18px 40px', background: 'rgba(16,24,32,0.98)', color: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+      width: '100%', boxSizing: 'border-box', margin: 0, overflowX: 'hidden'
     }}>
       <div className="logo" style={{ fontSize: '28px', fontWeight: 900, letterSpacing: 1, color: '#16a34a' }}>
         DriveEase
       </div>
       <nav style={{ display: 'flex', gap: '28px', fontWeight: 600 }}>
-        <Link to="/" style={navLinkStyle('/')}>Home</Link>
-        <Link to="/drivers" style={navLinkStyle('/drivers')}>Drivers</Link>
-        <Link to="/subscriptions" style={navLinkStyle('/subscriptions')}>Plans</Link>
-        <Link to="/insurance" style={navLinkStyle('/insurance')}>Insurance</Link>
-        <Link to="/pay" style={navLinkStyle('/pay')}>Pay</Link>
-        <Link to="/my-bookings" style={navLinkStyle('/my-bookings')}>My Bookings</Link>
+        <NavLink to="/" className={({ isActive }) => isActive ? "active" : ""} end>Home</NavLink>
+        <NavLink to="/drivers" className={({ isActive }) => isActive ? "active" : ""}>Drivers</NavLink>
+        <NavLink to="/subscriptions" className={({ isActive }) => isActive ? "active" : ""}>Plans</NavLink>
+        <NavLink to="/insurance" className={({ isActive }) => isActive ? "active" : ""}>Insurance</NavLink>
+        <NavLink to="/pay" className={({ isActive }) => isActive ? "active" : ""}>Pay</NavLink>
+        <NavLink to="/my-bookings" className={({ isActive }) => isActive ? "active" : ""}>My Bookings</NavLink>
       </nav>
       <div className="actions" style={{ display: 'flex', gap: '12px' }}>
         <Link to="/login" className="btn" style={{ background: 'transparent', color: '#16a34a', border: '1.5px solid #16a34a', padding: '10px 22px', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}>Login</Link>
         <Link to="/register-driver" className="btn" style={{ background: '#16a34a', color: '#fff', padding: '10px 22px', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}>Register as Driver</Link>
-        <Link to="/booking" className="btn" style={{ background: '#fff', color: '#16a34a', padding: '10px 22px', borderRadius: '6px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 2px 8px rgba(22,163,74,0.08)' }}>Book a Driver</Link>
+        <Link to="/booking" className="btn" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', padding: '10px 22px', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)' }}>Book a Driver</Link>
       </div>
     </header>
   );

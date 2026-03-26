@@ -3,20 +3,45 @@ const { calculateDistance } = require('../utils/helpers');
 
 exports.getAllDrivers = async (req, res) => {
   try {
-    const { city, state, pincode, status = 'approved', isOnline } = req.query;
-    let filter = { status };
+    const { city, state, pincode, area, status, isOnline } = req.query;
+    let filter = {};
 
-    if (status !== 'all') {
+    if (status && status !== 'all') {
       filter.status = status;
     }
 
-    if (city) filter['currentLocation.city'] = city;
-    if (state) filter['currentLocation.state'] = state;
-    if (pincode) filter['currentLocation.pincode'] = pincode;
+    if (city) {
+      filter.$or = filter.$or || [];
+      filter.$or.push({ 'currentLocation.city': city }, { 'personalDetails.city': city });
+    }
+    if (state) {
+      const stateOr = [{ 'currentLocation.state': state }, { 'personalDetails.state': state }];
+      if (filter.$or) {
+        // combine with AND
+        filter.$and = [{ $or: filter.$or }, { $or: stateOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = stateOr;
+      }
+    }
+    if (pincode) {
+      const pincodeOr = [{ 'currentLocation.pincode': pincode }, { 'personalDetails.pincode': pincode }];
+      if (filter.$and) {
+        filter.$and.push({ $or: pincodeOr });
+      } else if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: pincodeOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = pincodeOr;
+      }
+    }
+    if (area) {
+      filter.serviceAreas = { $regex: area, $options: 'i' };
+    }
     if (isOnline !== undefined) filter.isOnline = isOnline === 'true';
 
     const drivers = await Driver.find(filter).select(
-      '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file -documents.selfie.file'
+      '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file'
     );
 
     res.json(drivers);
@@ -61,7 +86,7 @@ exports.getNearbyDrivers = async (req, res) => {
 exports.getDriverById = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id).select(
-      '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file -documents.selfie.file'
+      '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file'
     );
 
     if (!driver) {
@@ -76,44 +101,34 @@ exports.getDriverById = async (req, res) => {
 
 exports.registerDriver = async (req, res) => {
   try {
-    const { phone, name, email } = req.body;
+    const {
+      name,
+      phone,
+      email,
+      bloodGroup,
+      yearsOfExperience,
+      aadhaarNumber,
+      licenseNumber
+    } = req.body;
 
     const existingDriver = await Driver.findOne({ phone });
     if (existingDriver) {
       return res.status(400).json({ error: 'Driver already registered' });
     }
 
-    // Handle file uploads
-    const documents = {};
-    if (req.files && req.files['aadharFile']) {
-      documents.aadhar = {
-        file: req.files['aadharFile'][0].path,
-        verified: false
-      };
-    }
-    if (req.files && req.files['licenseFile']) {
-      documents.drivingLicense = {
-        file: req.files['licenseFile'][0].path,
-        verified: false
-      };
-    }
-    if (req.files && req.files['selfieFile']) {
-      documents.selfie = {
-        file: req.files['selfieFile'][0].path,
-        verified: false
-      };
-    }
-
     const driver = new Driver({
-      phone,
       name,
+      phone,
       email,
+      bloodGroup,
+      experience: { yearsOfExperience: parseInt(yearsOfExperience) || 0 },
+      aadhaarNumber,
+      licenseNumber,
       status: 'pending',
       registrationFee: {
         amount: 150,
         paid: false
-      },
-      documents
+      }
     });
 
     await driver.save();
@@ -156,25 +171,25 @@ exports.updateDriverStatus = async (req, res) => {
     const driverId = req.user.id;
     const { isOnline, latitude, longitude, city, state, pincode } = req.body;
 
+    const updateData = {
+      isOnline,
+      'currentLocation.lastUpdated': new Date(),
+      updatedAt: new Date()
+    };
+
+    if (latitude) updateData['currentLocation.latitude'] = latitude;
+    if (longitude) updateData['currentLocation.longitude'] = longitude;
+    if (city) updateData['currentLocation.city'] = city;
+    if (state) updateData['currentLocation.state'] = state;
+    if (pincode) updateData['currentLocation.pincode'] = pincode;
+
     const driver = await Driver.findByIdAndUpdate(
       driverId,
-      {
-        isOnline,
-        status: isOnline ? 'online' : 'offline',
-        'currentLocation': {
-          latitude,
-          longitude,
-          city,
-          state,
-          pincode,
-          lastUpdated: new Date()
-        },
-        updatedAt: new Date()
-      },
+      updateData,
       { new: true }
     );
 
-    res.json({ message: 'Status updated', driver });
+    res.json({ message: `You are now ${isOnline ? 'Online' : 'Offline'}`, driver });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -202,6 +217,42 @@ exports.getOnlineHours = async (req, res) => {
     const driver = await Driver.findById(driverId).select('onlineHours');
 
     res.json(driver.onlineHours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateProfilePicture = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const profilePicturePath = 'uploads/profile-pictures/' + req.file.filename;
+    const driver = await Driver.findByIdAndUpdate(
+      driverId,
+      { profilePicture: profilePicturePath },
+      { new: true }
+    );
+
+    res.json({ message: 'Profile picture updated', profilePicture: profilePicturePath, driver });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateDriverProfile = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+    const { name, email, bloodGroup } = req.body;
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (bloodGroup) updateData['personalDetails.bloodGroup'] = bloodGroup;
+
+    const driver = await Driver.findByIdAndUpdate(driverId, updateData, { new: true });
+    res.json({ message: 'Profile updated', driver });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

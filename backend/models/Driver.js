@@ -14,6 +14,12 @@ const driverSchema = new mongoose.Schema({
     type: String,
     sparse: true
   },
+  aadhaarNumber: {
+    type: String
+  },
+  licenseNumber: {
+    type: String
+  },
   profilePicture: {
     type: String,
     default: null

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Footer from '../components/Footer';
 import '../styles/Home.css';
 
 function Home() {
@@ -45,7 +46,7 @@ function Home() {
   };
 
   return (
-    <div className="home-page" style={{ fontFamily: 'Poppins, sans-serif', background: '#101820', minHeight: '100vh', margin: 0, padding: 0, width: '100vw', height: '100vh', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div className="home-page" style={{ fontFamily: 'Poppins, sans-serif', background: '#101820', minHeight: '100vh', margin: 0, padding: 0, width: '100%', height: '100vh', boxSizing: 'border-box', overflow: 'hidden' }}>
 
       {/* Hero Section */}
       <section className="hero grid-container" style={{
@@ -90,23 +91,10 @@ function Home() {
           <img src="https://gsiglobe.com/assets/img/personal-driver.jpg" alt="DriveEase Driver" style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: '100%', objectFit: 'cover', zIndex: 1, display: 'block' }} />
           <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(16,24,32,0.3) 0%, rgba(22,163,74,0.3) 100%)', zIndex: 2 }} />
         </div>
-        {/* Floating WhatsApp Button */}
-        <a href="https://wa.me/+917836887228" target="_blank" rel="noopener noreferrer" style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 200 }}>
-          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{ width: 56, height: 56, borderRadius: '50%', boxShadow: '0 4px 16px rgba(22,163,74,0.18)' }} />
-        </a>
+
       </section>
-      {/* Footer */}
-      <footer style={{ background: '#101820', color: '#b6f5d8', padding: '32px 0 16px 0', textAlign: 'center', marginTop: 40 }}>
-        <div style={{ marginBottom: 12, fontWeight: 700, fontSize: 18 }}>Need Help? Contact Us Directly</div>
-        <div style={{ marginBottom: 8 }}>Support: <a href="tel:+917836887228" style={{ color: '#16a34a', textDecoration: 'none', fontWeight: 700 }}>+91-7836887228</a> | <a href="mailto:support@driveease.in" style={{ color: '#16a34a', textDecoration: 'none', fontWeight: 700 }}>support@driveease.in</a></div>
-        <div style={{ marginBottom: 8 }}>
-          <Link to="/" style={{ color: '#b6f5d8', margin: '0 12px', textDecoration: 'none' }}>Home</Link>
-          <Link to="/booking" style={{ color: '#b6f5d8', margin: '0 12px', textDecoration: 'none' }}>Book Driver</Link>
-          <Link to="/register-driver" style={{ color: '#b6f5d8', margin: '0 12px', textDecoration: 'none' }}>Register Driver</Link>
-          <Link to="/track-booking" style={{ color: '#b6f5d8', margin: '0 12px', textDecoration: 'none' }}>Track Booking</Link>
-        </div>
-        <div style={{ fontSize: 13, color: '#b6f5d8', marginTop: 10 }}>© 2026 DriveEase. All rights reserved.</div>
-      </footer>
+      {/* Footer (only on Home) */}
+      <Footer />
     </div>
   );
 }

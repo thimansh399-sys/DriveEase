@@ -197,19 +197,19 @@ function AdminDashboard() {
       {/* Dashboard */}
       {activeTab === 'dashboard' && (
         <div className="grid grid-4">
-          <div className="card" style={{ backgroundColor: '#f0f9ff', borderLeft: '4px solid #16a34a' }}>
+          <div className="card" style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #16a34a' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>Total Drivers</h3>
             <p style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{stats.totalDrivers || 0}</p>
           </div>
-          <div className="card" style={{ backgroundColor: '#f0fdf4', borderLeft: '4px solid #10b981' }}>
+          <div className="card" style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #10b981' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#10b981' }}>Total Customers</h3>
             <p style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{stats.totalCustomers || 0}</p>
           </div>
-          <div className="card" style={{ backgroundColor: '#fef3c7', borderLeft: '4px solid #f59e0b' }}>
+          <div className="card" style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #f59e0b' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#f59e0b' }}>Total Bookings</h3>
             <p style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{stats.totalBookings || 0}</p>
           </div>
-          <div className="card" style={{ backgroundColor: '#dbeafe', borderLeft: '4px solid #3b82f6' }}>
+          <div className="card" style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #3b82f6' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#3b82f6' }}>Total Earnings</h3>
             <p style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>₹{stats.totalEarnings || 0}</p>
           </div>
@@ -222,9 +222,9 @@ function AdminDashboard() {
           <button onClick={handleExportBookings} className="btn btn-primary" style={{ marginBottom: '20px' }}>
             📥 Export to Excel
           </button>
-          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'rgba(15, 23, 42, 0.7)' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
+              <tr style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', borderBottom: '2px solid rgba(34, 197, 94, 0.1)' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Booking ID</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Customer</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Driver</th>
@@ -234,7 +234,7 @@ function AdminDashboard() {
             </thead>
             <tbody>
               {bookings.map(booking => (
-                <tr key={booking._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <tr key={booking._id} style={{ borderBottom: '1px solid rgba(34, 197, 94, 0.06)' }}>
                   <td style={{ padding: '12px' }}>{booking.bookingId}</td>
                   <td style={{ padding: '12px' }}>{booking.customerId?.name}</td>
                   <td style={{ padding: '12px' }}>{booking.driverId?.name || 'Unassigned'}</td>
@@ -245,8 +245,8 @@ function AdminDashboard() {
                       borderRadius: '4px',
                       fontSize: '12px',
                       fontWeight: 'bold',
-                      backgroundColor: booking.status === 'completed' ? '#dcfce7' : '#fef3c7',
-                      color: booking.status === 'completed' ? '#15803d' : '#92400e'
+                      backgroundColor: booking.status === 'completed' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                      color: booking.status === 'completed' ? '#4ade80' : '#fbbf24'
                     }}>
                       {booking.status}
                     </span>
