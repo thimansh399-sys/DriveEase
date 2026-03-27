@@ -26,6 +26,8 @@ router.get('/driver/my-bookings', authMiddleware, driverMiddleware, bookingContr
 
 router.put('/:id/driver-respond', authMiddleware, driverMiddleware, bookingController.driverRespondBooking);
 
+router.put('/:id/arrived', authMiddleware, driverMiddleware, bookingController.markDriverArrived);
+
 router.put('/:id/start', authMiddleware, driverMiddleware, bookingController.startRideWithOTP);
 
 router.put('/:id/complete-ride', authMiddleware, driverMiddleware, bookingController.completeRide);

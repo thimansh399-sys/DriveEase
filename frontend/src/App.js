@@ -1,14 +1,13 @@
 import CustomerProfile from './pages/CustomerProfile';
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { NotificationProvider, NotificationBell } from './context/NotificationContext';
 import './styles/App.css';
 import Navigation from './components/Navigation';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
-import Booking from './pages/Booking';
 import Login from './pages/Login';
-import DriverRegister from './pages/DriverRegister';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import MyBookings from './pages/MyBookings';
@@ -26,26 +25,74 @@ import Subscriptions from './pages/Plans';
 import TrackBooking from './pages/TrackBooking';
 import Messages from './pages/Messages';
 import BookDriver from './pages/BookDriver';
+import CustomerConfirmation from './pages/CustomerConfirmation';
+import SplashScreen from './components/SplashScreen';
+
+function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        className="page-transition-shell"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/book-driver" element={<BookDriver />} />
+          <Route path="/browse" element={isLoggedIn ? <Browse /> : <Navigate to="/login" />} />
+          <Route path="/available-drivers" element={<AvailableDrivers />} />
+          <Route path="/booking/:driverId" element={<BookDriver />} />
+          <Route path="/booking" element={<BookDriver />} />
+          <Route path="/register-driver" element={<DriverRegistrationFlow />} />
+          <Route path="/driver-registration" element={<DriverRegistrationFlow />} />
+          <Route path="/my-bookings" element={isLoggedIn ? <MyBookings /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={isLoggedIn ? <CustomerProfile /> : <Navigate to="/login" />} />
+          <Route path="/services" element={isLoggedIn ? <Services /> : <Navigate to="/login" />} />
+          <Route path="/insurance" element={<Insurance />} />
+          <Route path="/pay" element={<Pay />} />
+          <Route path="/payment" element={isLoggedIn ? <Payment /> : <Navigate to="/login" />} />
+          <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-dashboard" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
+          <Route path="/drivers" element={<Drivers />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/track-booking" element={<TrackBooking />} />
+          <Route path="/track-booking/:bookingId" element={<TrackBooking />} />
+          <Route path="/booking-confirmation/:bookingId" element={isLoggedIn ? <CustomerConfirmation /> : <Navigate to="/login" />} />
+          <Route path="/messages" element={isLoggedIn ? <Messages /> : <Navigate to="/login" />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedRole = localStorage.getItem('userRole');
     if (storedToken) {
-      setToken(storedToken);
       setUserRole(storedRole);
       setIsLoggedIn(true);
     }
+
+    const splashTimer = setTimeout(() => setShowSplash(false), 1800);
+    return () => clearTimeout(splashTimer);
   }, []);
 
   const handleLogin = (newToken, role) => {
     localStorage.setItem('token', newToken);
     localStorage.setItem('userRole', role);
-    setToken(newToken);
     setUserRole(role);
     setIsLoggedIn(true);
   };
@@ -54,7 +101,6 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userId');
-    setToken(null);
     setUserRole(null);
     setIsLoggedIn(false);
   };
@@ -63,6 +109,7 @@ function App() {
     <NotificationProvider>
       <Router>
         <div className="app">
+          <SplashScreen visible={showSplash} />
           {/* Modern sticky Navigation bar on all pages */}
           <Navigation isLoggedIn={isLoggedIn} userRole={userRole} onLogout={handleLogout} />
           
@@ -70,32 +117,7 @@ function App() {
           {isLoggedIn && <NotificationBell />}
           
           <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
-              <Route path="/book-driver" element={<BookDriver />} />
-              <Route path="/browse" element={isLoggedIn ? <Browse /> : <Navigate to="/login" />} />
-              <Route path="/available-drivers" element={<AvailableDrivers />} />
-              <Route path="/booking/:driverId" element={<BookDriver />} />
-              <Route path="/booking" element={<BookDriver />} />
-              <Route path="/register-driver" element={<DriverRegistrationFlow />} />
-              <Route path="/driver-registration" element={<DriverRegistrationFlow />} />
-              <Route path="/my-bookings" element={isLoggedIn ? <MyBookings /> : <Navigate to="/login" />} />
-              <Route path="/profile" element={isLoggedIn ? <CustomerProfile /> : <Navigate to="/login" />} />
-              <Route path="/services" element={isLoggedIn ? <Services /> : <Navigate to="/login" />} />
-              <Route path="/insurance" element={<Insurance />} />
-              <Route path="/pay" element={<Pay />} />
-              <Route path="/payment" element={isLoggedIn ? <Payment /> : <Navigate to="/login" />} />
-              <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />
-              <Route path="/admin-dashboard" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
-              <Route path="/drivers" element={<Drivers />} />
-              <Route path="/subscriptions" element={<Subscriptions />} />
-              <Route path="/track-booking" element={<TrackBooking />} />
-              <Route path="/track-booking/:bookingId" element={<TrackBooking />} />
-              <Route path="/messages" element={isLoggedIn ? <Messages /> : <Navigate to="/login" />} />
-            </Routes>
+            <AppRoutes isLoggedIn={isLoggedIn} userRole={userRole} handleLogin={handleLogin} />
           </main>
           {/* Footer is now only on Home page */}
           

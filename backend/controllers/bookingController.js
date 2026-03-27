@@ -86,11 +86,15 @@ async function findAssignableDrivers(excludeDriverId = null) {
   if (!candidates.length) return [];
 
   const candidateIds = candidates.map((d) => d._id);
-  const activeStatuses = ['pending', 'confirmed', 'driver_assigned', 'in_progress'];
+  const blockingStatuses = ['confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress'];
+  const recentPendingCutoff = new Date(Date.now() - 5 * 60 * 1000);
   const activeBookings = await Booking.find(
     {
       driverId: { $in: candidateIds },
-      status: { $in: activeStatuses },
+      $or: [
+        { status: { $in: blockingStatuses } },
+        { status: 'pending', updatedAt: { $gte: recentPendingCutoff } },
+      ],
     },
     'driverId'
   ).lean();
@@ -271,7 +275,9 @@ exports.bookRide = async (req, res) => {
     const availableDrivers = await findAssignableDrivers();
 
     if (!availableDrivers.length) {
-      return res.status(404).json({ error: 'No drivers available' });
+      return res.status(404).json({
+        error: 'No drivers available right now. Please retry in a minute while we refresh online driver availability.'
+      });
     }
 
     const pickupLat = Number(pickupLocation?.latitude);
@@ -1064,6 +1070,57 @@ exports.driverRespondBooking = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.markDriverArrived = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+    const bookingId = req.params.id;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (!booking.driverId || String(booking.driverId) !== String(driverId)) {
+      return res.status(403).json({ error: 'This ride is not assigned to you' });
+    }
+
+    if (!['confirmed', 'driver_assigned'].includes(booking.status)) {
+      return res.status(400).json({ error: `Cannot mark arrived from status ${booking.status}` });
+    }
+
+    booking.status = 'driver_arrived';
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    const driver = await Driver.findById(driverId);
+    const invoice = buildInvoiceSummary(booking);
+
+    return res.json({
+      success: true,
+      message: 'Arrival marked successfully',
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        driver: buildDriverSummary(driver),
+        invoice,
+        verification: {
+          otp: booking.verification?.otp || null,
+          otpVerified: booking.verification?.otpVerified || false,
+          otpExpiry: booking.verification?.otpExpiry
+        },
+        pickupLocation: booking.pickupLocation,
+        dropLocation: booking.dropLocation,
+        estimatedPrice: booking.estimatedPrice,
+        finalPrice: booking.finalPrice,
+        updatedAt: booking.updatedAt
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };
 

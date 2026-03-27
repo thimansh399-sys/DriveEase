@@ -3,62 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
+import { annotateDriversWithDistance } from '../utils/geo';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
-
-const mockDrivers = [
-  {
-    _id: 'mock-1',
-    name: 'Rajesh Kumar',
-    rating: 4.8,
-    rides: 1200,
-    experience: 5,
-    location: 'Swaroop Nagar, Kanpur, Uttar Pradesh',
-    price: 80,
-    available: true,
-    profileImg: 'https://randomuser.me/api/portraits/men/32.jpg',
-    phone: '9876543210',
-    vehicle: 'Maruti Suzuki Dzire',
-    languages: ['Hindi', 'English'],
-    verified: true,
-    serviceAreas: ['Kanpur', 'Swaroop Nagar'],
-    distanceKm: '2.4',
-  },
-  {
-    _id: 'mock-2',
-    name: 'Amit Verma',
-    rating: 4.6,
-    rides: 980,
-    experience: 4,
-    location: 'Kakadeo, Kanpur, Uttar Pradesh',
-    price: 90,
-    available: true,
-    profileImg: 'https://randomuser.me/api/portraits/men/45.jpg',
-    phone: '9876501234',
-    vehicle: 'Hyundai Xcent',
-    languages: ['Hindi'],
-    verified: true,
-    serviceAreas: ['Kanpur', 'Kakadeo'],
-    distanceKm: '4.1',
-  },
-  {
-    _id: 'mock-3',
-    name: 'Suresh Thakur',
-    rating: 4.7,
-    rides: 1400,
-    experience: 7,
-    location: 'Civil Lines, Kanpur, Uttar Pradesh',
-    price: 120,
-    available: true,
-    profileImg: 'https://randomuser.me/api/portraits/men/67.jpg',
-    phone: '9876502222',
-    vehicle: 'Honda City',
-    languages: ['Hindi', 'English'],
-    verified: true,
-    serviceAreas: ['Kanpur', 'Civil Lines'],
-    distanceKm: '5.8',
-  },
-];
 
 const buildDriverLocation = (driver) => {
   const parts = [];
@@ -113,8 +60,8 @@ export default function Drivers() {
   const [locationStatus, setLocationStatus] = useState('Detecting your location for GPS-based nearby drivers...');
   const [locationError, setLocationError] = useState('');
 
-  const cityOptions = state ? getCitiesByState(state) : [];
-  const areaOptions = state && city ? getAreasByCity(state, city) : [];
+  const cityOptions = useMemo(() => (state ? getCitiesByState(state) : []), [state]);
+  const areaOptions = useMemo(() => (state && city ? getAreasByCity(state, city) : []), [state, city]);
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
@@ -171,7 +118,7 @@ export default function Drivers() {
       setLoading(true);
       try {
         const hasCoords = Number.isFinite(Number(browserCoords?.latitude)) && Number.isFinite(Number(browserCoords?.longitude));
-        let response;
+        let response = [];
 
         if (hasCoords) {
           response = await api.getNearbyDrivers({
@@ -182,8 +129,16 @@ export default function Drivers() {
             area,
             radius: 50,
           });
+
+          if (!Array.isArray(response) || response.length === 0) {
+            let fallbackQuery = '?status=all';
+            if (state) fallbackQuery += `&state=${encodeURIComponent(state)}`;
+            if (city) fallbackQuery += `&city=${encodeURIComponent(city)}`;
+            if (area) fallbackQuery += `&area=${encodeURIComponent(area)}`;
+            response = await api.getAllDrivers(fallbackQuery);
+          }
         } else {
-          let query = '?status=approved&isOnline=true';
+          let query = '?status=all';
           if (state) query += `&state=${encodeURIComponent(state)}`;
           if (city) query += `&city=${encodeURIComponent(city)}`;
           if (area) query += `&area=${encodeURIComponent(area)}`;
@@ -193,14 +148,18 @@ export default function Drivers() {
         const list = Array.isArray(response) ? response : [];
         if (!isMounted) return;
 
-        if (list.length > 0) {
-          setDrivers(list.map(mapDriverCard));
+        const distanceSortedDrivers = browserCoords
+          ? annotateDriversWithDistance(list, browserCoords)
+          : list;
+
+        if (distanceSortedDrivers.length > 0) {
+          setDrivers(distanceSortedDrivers.map(mapDriverCard));
         } else {
-          setDrivers(mockDrivers);
+          setDrivers([]);
         }
       } catch (error) {
         if (isMounted) {
-          setDrivers(mockDrivers);
+          setDrivers([]);
           setLocationError(error.message || 'Unable to load nearby drivers.');
         }
       } finally {
@@ -218,12 +177,25 @@ export default function Drivers() {
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.toLowerCase();
-    return drivers.filter((driver) =>
-      [driver.name, driver.location, driver.vehicle, ...(driver.serviceAreas || [])]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSearch)
-    );
+    return drivers
+      .filter((driver) =>
+        [driver.name, driver.location, driver.vehicle, ...(driver.serviceAreas || [])]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedSearch)
+      )
+      .sort((left, right) => {
+        const leftDistance = Number(left.distanceKm);
+        const rightDistance = Number(right.distanceKm);
+
+        if (Number.isFinite(leftDistance) && Number.isFinite(rightDistance)) {
+          return leftDistance - rightDistance;
+        }
+
+        if (Number.isFinite(leftDistance)) return -1;
+        if (Number.isFinite(rightDistance)) return 1;
+        return 0;
+      });
   }, [drivers, search]);
 
   return (

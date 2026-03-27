@@ -142,15 +142,26 @@ export const api = {
       body: JSON.stringify(data)
     }).then(r => r.json()),
 
-  bookRide: (data) =>
-    fetch(`${API_BASE_URL}/bookings/book-ride`, {
+  bookRide: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/bookings/book-ride`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(data)
-    }).then(r => r.json()),
+    });
+
+    const result = await parseJsonSafe(response);
+    if (response.status === 404) {
+      return {
+        ...result,
+        error: result.error || 'Booking endpoint not found. Ensure backend/server.js is running on port 5000.'
+      };
+    }
+
+    return result;
+  },
 
   getMyBookings: () =>
     fetch(`${API_BASE_URL}/bookings/customer`, {
@@ -195,6 +206,14 @@ export const api = {
       body: JSON.stringify({ action })
     }).then(r => r.json()),
 
+  markDriverArrived: (id) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/arrived`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(r => r.json()),
+
   startRideWithOTP: (id, otp) =>
     fetch(`${API_BASE_URL}/bookings/${id}/start`, {
       method: 'PUT',
@@ -211,6 +230,16 @@ export const api = {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
+    }).then(r => r.json()),
+
+  addFeedback: (id, payload) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(payload)
     }).then(r => r.json()),
 
   // Admin

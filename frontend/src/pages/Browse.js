@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
+import { annotateDriversWithDistance } from '../utils/geo';
 import '../styles/Browse.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
 function Browse() {
+  const navigate = useNavigate();
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [city, setCity] = useState('');
@@ -57,13 +58,7 @@ function Browse() {
     );
   }, []);
 
-  useEffect(() => {
-    fetchDrivers();
-    const interval = setInterval(fetchDrivers, 10000);
-    return () => clearInterval(interval);
-  }, [city, pincode, isOnline, state, area, browserCoords]);
-
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     setLoading(true);
     try {
       const hasCoords = Number.isFinite(Number(browserCoords?.latitude)) && Number.isFinite(Number(browserCoords?.longitude));
@@ -89,14 +84,23 @@ function Browse() {
       }
 
       if (Array.isArray(response)) {
-        setDrivers(response);
+        const sortedDrivers = browserCoords
+          ? annotateDriversWithDistance(response, browserCoords)
+          : response;
+        setDrivers(sortedDrivers);
       }
     } catch (error) {
       console.error('Error fetching drivers:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [area, browserCoords, city, isOnline, pincode, state]);
+
+  useEffect(() => {
+    fetchDrivers();
+    const interval = setInterval(fetchDrivers, 10000);
+    return () => clearInterval(interval);
+  }, [fetchDrivers]);
 
   useEffect(() => {
     if (state) {
@@ -159,34 +163,26 @@ function Browse() {
     setBookingSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
-
-      const res = await fetch(`${API_BASE_URL}/bookings/quick-book`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          driverId: bookingDriver._id,
-          customerName: bookingForm.customerName,
-          customerPhone: bookingForm.customerPhone,
-          pickupAddress: bookingForm.pickupAddress,
-          dropAddress: bookingForm.dropAddress,
-          bookingDate: bookingForm.bookingDate,
-          bookingType: bookingForm.bookingType,
-          numberOfDays: parseInt(bookingForm.numberOfDays) || 1,
-          notes: bookingForm.notes
-        })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Booking failed');
+      if (!bookingDriver?._id) {
+        throw new Error('Please select a driver first.');
       }
 
-      setBookingSuccess(`✅ Booking confirmed! ID: ${data.booking?.bookingId || 'N/A'} • Invoice ${data.booking?.invoice?.invoiceId || 'generated'} • Total ₹${data.booking?.invoice?.total || data.booking?.finalPrice || data.booking?.estimatedPrice || 0}. Driver will be notified via SMS.`);
+      if (!bookingForm.pickupAddress?.trim() || !bookingForm.dropAddress?.trim()) {
+        throw new Error('Pickup and drop address are required.');
+      }
+
+      const params = new URLSearchParams({
+        driverId: bookingDriver._id,
+        pickup: bookingForm.pickupAddress.trim(),
+        drop: bookingForm.dropAddress.trim(),
+      });
+
+      if (bookingForm.customerName?.trim()) params.set('name', bookingForm.customerName.trim());
+      if (bookingForm.customerPhone?.trim()) params.set('phone', bookingForm.customerPhone.trim());
+
+      setBookingSuccess('Redirecting to map booking page...');
+      setBookingDriver(null);
+      navigate(`/book-driver?${params.toString()}`);
     } catch (err) {
       setBookingError(err.message || 'Booking failed. Please try again.');
     } finally {

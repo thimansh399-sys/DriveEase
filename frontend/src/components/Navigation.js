@@ -29,7 +29,8 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
       <div className="nav-content">
         {/* Logo */}
         <Link to="/" className="nav-brand">
-          <span>🚗</span> DriveEase
+          <img src="/driveease-logo.svg" alt="DriveEase" className="nav-brand-logo" />
+          <span className="nav-brand-text">DriveEase</span>
         </Link>
 
         {/* Mobile Toggle */}

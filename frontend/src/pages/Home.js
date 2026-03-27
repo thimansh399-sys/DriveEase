@@ -129,6 +129,7 @@ function Home() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, duration: 0.4 }}
           >
+            <img src="/driveease-logo.svg" alt="DriveEase" className="home-brand-logo" />
             🚗 India's #1 Personal Driver Service
           </motion.div>
 

@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../utils/api';
+import { downloadInvoice } from '../utils/invoiceUtils';
 import '../styles/DriverDashboard.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const SOUND_PRESETS = {
   soft: { sequence: [740, 880], peakVolume: 0.07, stepGap: 0.16, toneDuration: 0.12 },
-  loud: { sequence: [880, 1046, 1318], peakVolume: 0.18, stepGap: 0.12, toneDuration: 0.11 },
+  loud: { sequence: [880, 1046, 1318], peakVolume: 0.18, stepGap: 0.12, toneDuration: 0.11 }
 };
 
-const DEFAULT_BOOKING_SOUND_MODE = 'soft';
+const ACTIVE_RIDE_STATUSES = ['confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress'];
 
 const playBookingNotificationSound = (mode = 'soft') => {
   try {
@@ -45,66 +44,68 @@ const playBookingNotificationSound = (mode = 'soft') => {
   }
 };
 
+const groupByDay = (rides) => {
+  return rides.reduce((acc, ride) => {
+    const key = new Date(ride.updatedAt || ride.endDate || ride.createdAt || Date.now()).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(ride);
+    return acc;
+  }, {});
+};
+
 function DriverDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [earnings, setEarnings] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [onlineStatus, setOnlineStatus] = useState(false);
   const [driverInfo, setDriverInfo] = useState(null);
+  const [onlineStatus, setOnlineStatus] = useState(false);
   const [bookings, setBookings] = useState([]);
+  const [earnings, setEarnings] = useState({});
   const [newBookingCount, setNewBookingCount] = useState(0);
   const [bookingAlert, setBookingAlert] = useState('');
   const [otpByBooking, setOtpByBooking] = useState({});
   const [rideActionLoading, setRideActionLoading] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [mapToggleByRide, setMapToggleByRide] = useState({});
+
   const previousPendingCountRef = useRef(0);
   const hasInitialFetchRef = useRef(false);
 
   useEffect(() => {
     fetchDriverProfile();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'dashboard' || activeTab === 'earnings') {
-      fetchDriverData();
-    }
-    if (activeTab === 'bookings') {
-      fetchBookings();
-    }
-  }, [activeTab]);
-
-  // Poll for new bookings every 3 seconds for near real-time updates
-  useEffect(() => {
+    fetchDriverData();
     fetchBookings();
-    const interval = setInterval(fetchBookings, 3000);
+
+    const interval = setInterval(fetchBookings, 4000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchDriverProfile = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      if (userId) {
-        const driver = await api.getDriverById(userId);
-        if (driver && !driver.error) {
-          setDriverInfo(driver);
-          setOnlineStatus(driver.isOnline || false);
-        }
+      if (!userId) return;
+      const driver = await api.getDriverById(userId);
+      if (driver && !driver.error) {
+        setDriverInfo(driver);
+        setOnlineStatus(Boolean(driver.isOnline));
       }
     } catch (error) {
-      console.error('Error fetching driver profile:', error);
+      console.error('Error fetching profile:', error);
     }
   };
 
   const fetchDriverData = async () => {
-    setLoading(true);
     try {
       const response = await api.getDriverEarnings();
       if (response && !response.error) {
         setEarnings(response);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching earnings:', error);
     }
   };
 
@@ -112,15 +113,13 @@ function DriverDashboard() {
     try {
       const response = await api.getDriverBookings();
       const list = response?.bookings || (Array.isArray(response) ? response : []);
-      const pending = list.filter(b => b.status === 'pending').length;
+      const pending = list.filter((item) => item.status === 'pending').length;
 
-      // Trigger alert only for delta after first successful fetch.
       if (hasInitialFetchRef.current && pending > previousPendingCountRef.current) {
         const added = pending - previousPendingCountRef.current;
-        const message = `${added} new booking request${added > 1 ? 's' : ''} received`;
-        setBookingAlert(message);
+        setBookingAlert(`${added} new booking request${added > 1 ? 's' : ''} received`);
         setTimeout(() => setBookingAlert(''), 5000);
-        playBookingNotificationSound(DEFAULT_BOOKING_SOUND_MODE);
+        playBookingNotificationSound('soft');
       }
 
       previousPendingCountRef.current = pending;
@@ -132,11 +131,19 @@ function DriverDashboard() {
     }
   };
 
+  const pendingRequests = useMemo(() => bookings.filter((item) => item.status === 'pending'), [bookings]);
+  const activeRides = useMemo(() => bookings.filter((item) => ACTIVE_RIDE_STATUSES.includes(item.status)), [bookings]);
+  const completedRides = useMemo(
+    () => bookings.filter((item) => item.status === 'completed').sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)),
+    [bookings]
+  );
+
+  const completedGrouped = useMemo(() => groupByDay(completedRides), [completedRides]);
+
   const handleBookingAction = async (bookingId, action) => {
     try {
       const response = await api.respondToBooking(bookingId, action);
       if (response && !response.error) {
-        alert(`Booking ${action}ed successfully!`);
         fetchBookings();
       } else {
         alert(response?.error || `Failed to ${action} booking`);
@@ -146,10 +153,26 @@ function DriverDashboard() {
     }
   };
 
+  const handleMarkArrived = async (bookingId) => {
+    try {
+      setRideActionLoading(`arrived-${bookingId}`);
+      const response = await api.markDriverArrived(bookingId);
+      if (response?.success) {
+        fetchBookings();
+      } else {
+        alert(response?.error || 'Unable to mark arrival.');
+      }
+    } catch (error) {
+      alert(error?.message || 'Unable to mark arrival.');
+    } finally {
+      setRideActionLoading('');
+    }
+  };
+
   const handleStartRide = async (bookingId) => {
     const otp = String(otpByBooking[bookingId] || '').trim();
     if (!otp) {
-      alert('Enter the customer OTP to start the ride.');
+      alert('Enter customer OTP first.');
       return;
     }
 
@@ -157,7 +180,6 @@ function DriverDashboard() {
       setRideActionLoading(`start-${bookingId}`);
       const response = await api.startRideWithOTP(bookingId, otp);
       if (response?.success) {
-        alert('Ride started successfully.');
         setOtpByBooking((prev) => ({ ...prev, [bookingId]: '' }));
         fetchBookings();
       } else {
@@ -175,7 +197,6 @@ function DriverDashboard() {
       setRideActionLoading(`complete-${bookingId}`);
       const response = await api.completeRide(bookingId);
       if (response?.success) {
-        alert('Ride completed successfully.');
         fetchBookings();
       } else {
         alert(response?.error || 'Unable to complete ride.');
@@ -193,356 +214,263 @@ function DriverDashboard() {
       const response = await api.updateDriverStatus({ isOnline: newStatus });
       if (response && !response.error) {
         setOnlineStatus(newStatus);
-        if (response.driver) setDriverInfo(response.driver);
       } else {
         alert(response?.error || 'Failed to update status');
       }
     } catch (error) {
-      console.error('Error updating status:', error);
       alert('Failed to update status');
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'confirmed': return '#16a34a';
-      case 'cancelled': return '#ef4444';
-      case 'in_progress': return '#3b82f6';
-      case 'completed': return '#10b981';
-      default: return '#666';
+  const handleWithdrawRequest = () => {
+    const requestedAmount = Number(withdrawAmount);
+    if (!Number.isFinite(requestedAmount) || requestedAmount < 100) {
+      alert('Minimum withdrawal amount is 100 INR.');
+      return;
     }
+
+    setWithdrawHistory((prev) => [
+      {
+        id: `WD-${Date.now()}`,
+        amount: requestedAmount,
+        status: 'Pending',
+        requestedAt: new Date().toISOString()
+      },
+      ...prev
+    ]);
+    setWithdrawAmount('');
+  };
+
+  const renderRideCard = (ride, includeActions = true) => {
+    const earning = Number(ride.rideFlow?.driverEarning || ride.finalPrice || ride.estimatedPrice || 0);
+    const statusLabel = String(ride.status || '').replace(/_/g, ' ').toUpperCase();
+
+    return (
+      <div key={ride._id} className={`dd-ride-card ${ride.status === 'in_progress' ? 'active' : ''}`}>
+        <div className="dd-ride-top">
+          <div className="dd-ride-id-group">
+            <span className="dd-ride-id">#{ride.bookingId || ride._id?.slice(-6)}</span>
+            <span className="dd-ride-date">{ride.startDate ? new Date(ride.startDate).toLocaleString('en-IN') : ''}</span>
+          </div>
+          <div className="dd-ride-right">
+            <span className={`dd-ride-status ${ride.status?.replace(/_/g, '-')}`}>{statusLabel}</span>
+          </div>
+        </div>
+
+        <div className="dd-ride-route">
+          <div className="dd-route-point"><span className="dd-dot pickup"></span><span>{ride.pickupLocation?.address || 'Pickup'}</span></div>
+          <div className="dd-route-line"></div>
+          <div className="dd-route-point"><span className="dd-dot drop"></span><span>{ride.dropLocation?.address || 'Drop'}</span></div>
+        </div>
+
+        <div className="dd-ride-footer">
+          <div className="dd-ride-meta">
+            <span>{ride.bookingType || 'daily'}</span>
+            <span>Customer: {ride.customer?.name || ride.customerId?.name || '-'}</span>
+          </div>
+          <span className="dd-ride-earning">INR {earning}</span>
+        </div>
+
+        {includeActions && ride.status === 'confirmed' && (
+          <div style={{ marginTop: '12px' }}>
+            <button className="dd-btn accept" onClick={() => handleMarkArrived(ride._id)} disabled={rideActionLoading === `arrived-${ride._id}`}>
+              {rideActionLoading === `arrived-${ride._id}` ? 'Updating...' : 'Mark Arrived'}
+            </button>
+          </div>
+        )}
+
+        {includeActions && ride.status === 'driver_arrived' && (
+          <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Enter customer OTP"
+              value={otpByBooking[ride._id] || ''}
+              onChange={(event) => setOtpByBooking((prev) => ({ ...prev, [ride._id]: event.target.value.replace(/\D/g, '').slice(0, 4) }))}
+              style={{
+                flex: '1 1 170px',
+                minWidth: '170px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1px solid rgba(147, 197, 253, 0.3)',
+                backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                color: '#fff'
+              }}
+            />
+            <button className="dd-btn accept" onClick={() => handleStartRide(ride._id)} disabled={rideActionLoading === `start-${ride._id}`}>
+              {rideActionLoading === `start-${ride._id}` ? 'Starting...' : 'Start Ride'}
+            </button>
+          </div>
+        )}
+
+        {includeActions && ride.status === 'in_progress' && (
+          <div style={{ marginTop: '12px' }}>
+            <button className="dd-btn accept" onClick={() => handleCompleteRide(ride._id)} disabled={rideActionLoading === `complete-${ride._id}`}>
+              {rideActionLoading === `complete-${ride._id}` ? 'Completing...' : 'Complete Ride'}
+            </button>
+          </div>
+        )}
+
+        {ride.status === 'completed' && (
+          <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button className="dd-btn accept" onClick={() => downloadInvoice(ride, 'driver')}>Download Invoice</button>
+            <button
+              className="dd-btn"
+              onClick={() => setMapToggleByRide((prev) => ({ ...prev, [ride._id]: !prev[ride._id] }))}
+            >
+              {mapToggleByRide[ride._id] ? 'Hide Route Map' : 'View Route Map'}
+            </button>
+          </div>
+        )}
+
+        {mapToggleByRide[ride._id] && (
+          <div style={{ marginTop: '10px', padding: '10px', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.2)' }}>
+            <p style={{ margin: '0 0 8px', color: '#cbd5e1', fontSize: '12px' }}>Route map preview:</p>
+            <p style={{ margin: '0 0 4px', color: '#e2e8f0', fontSize: '13px' }}>From: {ride.pickupLocation?.address || 'Pickup'}</p>
+            <p style={{ margin: 0, color: '#e2e8f0', fontSize: '13px' }}>To: {ride.dropLocation?.address || 'Drop'}</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="section">
       <div className="dd-header-row">
-        <h1 style={{ marginBottom: '0' }}>🚗 Driver Dashboard</h1>
+        <h1 style={{ marginBottom: '0' }}>Driver Portal</h1>
       </div>
 
       {bookingAlert && (
         <div className="card" style={{ marginBottom: '20px', borderLeft: '4px solid #f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.12)' }}>
-          <strong style={{ color: '#fcd34d' }}>🔔 {bookingAlert}</strong>
+          <strong style={{ color: '#fcd34d' }}>Notice: {bookingAlert}</strong>
         </div>
       )}
 
-      {/* Online Status Toggle */}
-      <div className="card" style={{ marginBottom: '30px', backgroundColor: onlineStatus ? '#dcfce7' : '#f3f4f6' }}>
+      <div className="card" style={{ marginBottom: '22px', backgroundColor: onlineStatus ? '#dcfce7' : '#f3f4f6' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ margin: '0 0 5px 0' }}>Your Status</h3>
-            <p style={{ margin: '0', color: '#666' }}>Currently <strong>{onlineStatus ? '🟢 Online' : '🔘 Offline'}</strong></p>
+            <h3 style={{ margin: '0 0 6px 0' }}>Welcome {driverInfo?.name || 'Driver'} </h3>
+            <p style={{ margin: 0, color: '#334155' }}>
+              Status: <strong>{onlineStatus ? 'Online' : 'Offline'}</strong>
+            </p>
           </div>
-          <button
-            onClick={toggleOnlineStatus}
-            className="btn"
-            style={{
-              backgroundColor: onlineStatus ? '#ef4444' : '#16a34a',
-              color: 'white',
-              fontWeight: 'bold'
-            }}
-          >
+          <button onClick={toggleOnlineStatus} className="btn" style={{ backgroundColor: onlineStatus ? '#ef4444' : '#16a34a', color: '#fff', fontWeight: 700 }}>
             {onlineStatus ? 'Go Offline' : 'Go Online'}
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="dd-tabs">
-        {['dashboard', 'earnings', 'bookings', 'profile'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`dd-tab-btn ${activeTab === tab ? 'active' : ''}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {tab === 'bookings' && newBookingCount > 0 && (
-              <span className="dd-tab-badge">
-                {newBookingCount}
-              </span>
-            )}
+        {['dashboard', 'history', 'withdrawals'].map((tab) => (
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`dd-tab-btn ${activeTab === tab ? 'active' : ''}`}>
+            {tab === 'dashboard' && 'Dashboard'}
+            {tab === 'history' && 'Ride History'}
+            {tab === 'withdrawals' && 'Withdrawals'}
+            {tab === 'dashboard' && newBookingCount > 0 && <span className="dd-tab-badge">{newBookingCount}</span>}
           </button>
         ))}
       </div>
 
-      {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
-        <div className="grid grid-4">
-          <div className="card" style={{ backgroundColor: '#1a2332', borderLeft: '4px solid #16a34a' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>Today's Earnings</h4>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>₹0</p>
-          </div>
-          <div className="card" style={{ backgroundColor: '#1a2e1a', borderLeft: '4px solid #10b981' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#10b981' }}>Total Earnings</h4>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>₹{earnings.totalEarnings || 0}</p>
-          </div>
-          <div className="card" style={{ backgroundColor: '#2e2a1a', borderLeft: '4px solid #f59e0b' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#f59e0b' }}>Total Rides</h4>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>{earnings.totalRides || 0}</p>
-          </div>
-          <div className="card" style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', borderLeft: '4px solid #3b82f6' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#3b82f6' }}>Online Hours</h4>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>0 hrs</p>
-          </div>
-        </div>
-      )}
-
-      {/* Earnings Tab */}
-      {activeTab === 'earnings' && (
-        <div className="card">
-          <h3>Earnings & Withdrawals</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-            <div style={{ padding: '20px', backgroundColor: '#1a2332', borderRadius: '8px' }}>
-              <p style={{ margin: '0 0 10px 0', color: '#666' }}>Available Balance</p>
-              <p style={{ margin: '0', fontSize: '28px', fontWeight: 'bold', color: '#16a34a' }}>
-                ₹{earnings.totalEarnings || 0}
-              </p>
-            </div>
-            <div>
-              <button className="btn btn-primary" style={{ width: '100%' }}>
-                Request Withdrawal
-              </button>
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                Minimum withdrawal: ₹100
-              </p>
-            </div>
-          </div>
-
-          <h4>Payment Methods</h4>
-          <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-            <p><strong>Bank Account:</strong> {earnings.bankDetails?.accountNumber || 'Not added'}</p>
-            <p><strong>UPI:</strong> {earnings.upiId || 'Not added'}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Bookings Tab */}
-      {activeTab === 'bookings' && (
         <div>
-          {/* New Booking Requests */}
-          {bookings.filter(b => b.status === 'pending').length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <h3 className="dd-section-title">🔔 New Booking Requests</h3>
-              {bookings.filter(b => b.status === 'pending').map(booking => (
-                <div key={booking._id} className="dd-request-card">
+          <div className="grid grid-4" style={{ marginBottom: '20px' }}>
+            <div className="card"><h4>Active Rides</h4><p style={{ fontSize: '28px', fontWeight: 800 }}>{activeRides.length}</p></div>
+            <div className="card"><h4>Pending Requests</h4><p style={{ fontSize: '28px', fontWeight: 800 }}>{pendingRequests.length}</p></div>
+            <div className="card"><h4>Total Earnings</h4><p style={{ fontSize: '28px', fontWeight: 800 }}>INR {earnings.totalEarnings || 0}</p></div>
+            <div className="card"><h4>Total Rides</h4><p style={{ fontSize: '28px', fontWeight: 800 }}>{earnings.totalRides || 0}</p></div>
+          </div>
+
+          {pendingRequests.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 className="dd-section-title">New Booking Requests</h3>
+              {pendingRequests.map((request) => (
+                <div key={request._id} className="dd-request-card">
                   <div className="dd-request-top">
-                    <span className="dd-request-id">#{booking.bookingId || booking._id?.slice(-6)}</span>
-                    <span className="dd-request-price">₹{booking.estimatedPrice || booking.finalPrice || 0}</span>
-                  </div>
-                  <div className="dd-request-customer">
-                    <span>👤</span>
-                    <div>
-                      <strong>{booking.customer?.name || booking.customerId?.name || 'Customer'}</strong>
-                      <span className="dd-phone">{booking.customer?.phone || booking.customerId?.phone || ''}</span>
-                    </div>
+                    <span className="dd-request-id">#{request.bookingId || request._id?.slice(-6)}</span>
+                    <span className="dd-request-price">INR {request.estimatedPrice || request.finalPrice || 0}</span>
                   </div>
                   <div className="dd-request-route">
-                    <div className="dd-route-point"><span className="dd-dot pickup"></span><span>{booking.pickupLocation?.address || 'N/A'}</span></div>
+                    <div className="dd-route-point"><span className="dd-dot pickup"></span><span>{request.pickupLocation?.address || 'Pickup'}</span></div>
                     <div className="dd-route-line"></div>
-                    <div className="dd-route-point"><span className="dd-dot drop"></span><span>{booking.dropLocation?.address || 'N/A'}</span></div>
+                    <div className="dd-route-point"><span className="dd-dot drop"></span><span>{request.dropLocation?.address || 'Drop'}</span></div>
                   </div>
-                  <div className="dd-request-meta">
-                    <span>📅 {booking.startDate ? new Date(booking.startDate).toLocaleString('en-IN') : 'N/A'}</span>
-                    <span>🚗 {booking.bookingType} • {booking.numberOfDays || 1} day(s)</span>
-                  </div>
-                  {booking.notes && <p className="dd-request-notes">📝 {booking.notes}</p>}
                   <div className="dd-request-actions">
-                    <button className="dd-btn accept" onClick={() => handleBookingAction(booking._id, 'accept')}>✅ Accept</button>
-                    <button className="dd-btn reject" onClick={() => handleBookingAction(booking._id, 'reject')}>❌ Reject</button>
+                    <button className="dd-btn accept" onClick={() => handleBookingAction(request._id, 'accept')}>Accept</button>
+                    <button className="dd-btn reject" onClick={() => handleBookingAction(request._id, 'reject')}>Reject</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Rides History */}
-          <h3 className="dd-section-title">📋 All Rides</h3>
-          {bookings.length === 0 ? (
-            <div className="dd-empty">
-              <span>🚗</span>
-              <p>No bookings yet. Go online to receive rides!</p>
-            </div>
-          ) : (
-            <div className="dd-rides-list">
-              {bookings.map(booking => {
-                const earning = booking.rideFlow?.driverEarning || booking.finalPrice || booking.estimatedPrice || 0;
-                const statusLabel = booking.status?.replace(/_/g, ' ').toUpperCase();
-                return (
-                  <div key={booking._id} className={`dd-ride-card ${booking.status === 'in_progress' || booking.status === 'driver_arrived' || booking.status === 'otp_verified' ? 'active' : ''}`}>
-                    <div className="dd-ride-top">
-                      <div className="dd-ride-id-group">
-                        <span className="dd-ride-id">#{booking.bookingId || booking._id?.slice(-6)}</span>
-                        <span className="dd-ride-date">{booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : ''}</span>
-                      </div>
-                      <div className="dd-ride-right">
-                        {booking.insurance?.opted && <span className="dd-insurance-badge">🛡️</span>}
-                        {booking.rideFlow?.isPeakRide && <span className="dd-peak-badge">🔥 Peak</span>}
-                        <span className={`dd-ride-status ${booking.status?.replace(/_/g, '-')}`}>{statusLabel}</span>
-                      </div>
-                    </div>
-                    <div className="dd-ride-customer">
-                      <span className="dd-ride-avatar">👤</span>
-                      <div>
-                        <span className="dd-customer-name">{booking.customer?.name || booking.customerId?.name || 'Customer'}</span>
-                        <span className="dd-customer-phone">{booking.customer?.phone || booking.customerId?.phone || ''}</span>
-                      </div>
-                    </div>
-                    <div className="dd-ride-route">
-                      <div className="dd-route-point"><span className="dd-dot pickup"></span><span>{booking.pickupLocation?.address || 'N/A'}</span></div>
-                      <div className="dd-route-line"></div>
-                      <div className="dd-route-point"><span className="dd-dot drop"></span><span>{booking.dropLocation?.address || 'N/A'}</span></div>
-                    </div>
-                    <div className="dd-ride-footer">
-                      <div className="dd-ride-meta">
-                        <span>{booking.bookingType}</span>
-                        {booking.rideFlow?.commissionRate && <span>Commission: {booking.rideFlow.commissionRate}%</span>}
-                      </div>
-                      <span className="dd-ride-earning">₹{earning}</span>
-                    </div>
-                    {booking.status === 'confirmed' && (
-                      <div style={{ marginTop: '14px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="Enter customer OTP"
-                          value={otpByBooking[booking._id] || ''}
-                          onChange={(event) => setOtpByBooking((prev) => ({ ...prev, [booking._id]: event.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                          style={{
-                            flex: '1 1 170px',
-                            minWidth: '170px',
-                            padding: '10px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(147, 197, 253, 0.3)',
-                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                            color: '#fff'
-                          }}
-                        />
-                        <button
-                          className="dd-btn accept"
-                          onClick={() => handleStartRide(booking._id)}
-                          disabled={rideActionLoading === `start-${booking._id}`}
-                        >
-                          {rideActionLoading === `start-${booking._id}` ? 'Starting...' : 'Start Ride'}
-                        </button>
-                      </div>
-                    )}
-                    {booking.status === 'in_progress' && (
-                      <div style={{ marginTop: '14px' }}>
-                        <button
-                          className="dd-btn accept"
-                          onClick={() => handleCompleteRide(booking._id)}
-                          disabled={rideActionLoading === `complete-${booking._id}`}
-                        >
-                          {rideActionLoading === `complete-${booking._id}` ? 'Completing...' : 'Complete Ride'}
-                        </button>
-                      </div>
-                    )}
-                    {booking.feedback?.rating && (
-                      <div className="dd-ride-feedback">⭐ {booking.feedback.rating}/5 {booking.feedback.comment && `— "${booking.feedback.comment}"`}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <h3 className="dd-section-title">Active Rides</h3>
+          {activeRides.length === 0 ? <div className="dd-empty"><p>No active rides right now.</p></div> : activeRides.map((ride) => renderRideCard(ride, true))}
         </div>
       )}
 
-      {/* Profile Tab */}
-      {activeTab === 'profile' && (
+      {activeTab === 'history' && (
+        <div>
+          <h3 className="dd-section-title">Completed Rides (Grouped by Day)</h3>
+          {Object.keys(completedGrouped).length === 0 && (
+            <div className="dd-empty"><p>No completed rides yet.</p></div>
+          )}
+
+          {Object.entries(completedGrouped).map(([dateLabel, rides]) => {
+            const dayTotal = rides.reduce((sum, ride) => sum + Number(ride.rideFlow?.driverEarning || ride.finalPrice || ride.estimatedPrice || 0), 0);
+            return (
+              <div key={dateLabel} className="card" style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h4 style={{ margin: 0 }}>{dateLabel}</h4>
+                  <strong style={{ color: '#4ade80' }}>Daily Earnings: INR {dayTotal.toFixed(0)}</strong>
+                </div>
+                {rides.map((ride) => renderRideCard(ride, false))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === 'withdrawals' && (
         <div className="card">
-          <h3>Driver Profile</h3>
-          
-          {/* Profile Picture */}
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <img
-                src={driverInfo?.profilePicture 
-                  ? `http://localhost:5000/${driverInfo.profilePicture}` 
-                  : 'https://randomuser.me/api/portraits/men/31.jpg'}
-                alt="Profile"
-                style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #16a34a' }}
-              />
-              <label style={{
-                position: 'absolute', bottom: '0', right: '0',
-                backgroundColor: '#16a34a', color: '#fff', borderRadius: '50%',
-                width: '35px', height: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: '18px', border: '2px solid #fff'
-              }}>
-                📷
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  style={{ display: 'none' }}
-                  onChange={async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    if (file.size > 5 * 1024 * 1024) { alert('Max 5MB allowed'); return; }
-                    try {
-                      const res = await api.updateProfilePicture(file);
-                      if (res.profilePicture) {
-                        setDriverInfo(prev => ({ ...prev, profilePicture: res.profilePicture }));
-                        alert('Profile picture updated!');
-                      } else {
-                        alert(res.error || 'Upload failed');
-                      }
-                    } catch { alert('Upload failed'); }
-                  }}
-                />
-              </label>
+          <h3>Withdrawals</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
+            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(30,41,59,0.7)' }}>
+              <p style={{ margin: '0 0 8px', color: '#94a3b8' }}>Available Balance</p>
+              <strong style={{ fontSize: '26px', color: '#22c55e' }}>INR {earnings.totalEarnings || 0}</strong>
             </div>
-            <p style={{ marginTop: '10px', fontSize: '12px', color: '#999' }}>Click 📷 to change photo</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="number"
+                min="100"
+                className="form-input"
+                placeholder="Enter amount"
+                value={withdrawAmount}
+                onChange={(event) => setWithdrawAmount(event.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleWithdrawRequest}>Request</button>
+            </div>
           </div>
 
-          {/* Driver Info */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Name</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.name || '-'}</p>
+          <h4 style={{ marginTop: '24px' }}>Withdrawal History</h4>
+          {withdrawHistory.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>No withdrawal requests yet.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {withdrawHistory.map((entry) => (
+                <div key={entry.id} style={{ border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                  <div>
+                    <strong>{entry.id}</strong>
+                    <p style={{ margin: '3px 0 0', color: '#94a3b8' }}>{new Date(entry.requestedAt).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <strong>INR {entry.amount}</strong>
+                    <p style={{ margin: '3px 0 0', color: '#facc15' }}>{entry.status}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Phone</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.phone || '-'}</p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Email</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.email || '-'}</p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Status</p>
-              <p style={{ margin: 0, fontWeight: 'bold', color: driverInfo?.status === 'approved' ? '#16a34a' : '#f59e0b' }}>
-                {driverInfo?.status?.toUpperCase() || 'PENDING'}
-              </p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Current Location</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>
-                {driverInfo?.currentLocation?.city || '-'}
-                {driverInfo?.currentLocation?.state ? `, ${driverInfo.currentLocation.state}` : ''}
-              </p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Pincode</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.currentLocation?.pincode || '-'}</p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Coordinates</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>
-                {driverInfo?.currentLocation?.latitude && driverInfo?.currentLocation?.longitude
-                  ? `${Number(driverInfo.currentLocation.latitude).toFixed(4)}, ${Number(driverInfo.currentLocation.longitude).toFixed(4)}`
-                  : '-'}
-              </p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>Aadhaar</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.aadhaarNumber || '-'}</p>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#1e293b', borderRadius: '8px' }}>
-              <p style={{ margin: 0, color: '#999', fontSize: '12px' }}>License</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>{driverInfo?.licenseNumber || '-'}</p>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

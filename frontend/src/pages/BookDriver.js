@@ -127,6 +127,9 @@ export default function BookDriver() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preferredDriverId = searchParams.get('driverId') || '';
+  const authToken = localStorage.getItem('token');
+  const currentRole = String(localStorage.getItem('userRole') || '').toLowerCase();
+  const isCustomerRole = currentRole === 'customer' || currentRole === 'user';
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -291,10 +294,14 @@ export default function BookDriver() {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!authToken) {
       setBookingError('Please login first to book a ride.');
       navigate('/login');
+      return;
+    }
+
+    if (!isCustomerRole) {
+      setBookingError('Booking is available for customer accounts only. Please login as customer to confirm this ride.');
       return;
     }
 
@@ -347,6 +354,13 @@ export default function BookDriver() {
 
   return (
     <div className="booking-page book-driver-page">
+      <div className="book-driver-banner-strip">
+        <span>Book Your Driver Today</span>
+        <span>20% Off First Ride</span>
+        <span>Police Verified Drivers</span>
+        <span>GPS Tracked Every Ride</span>
+      </div>
+
       <div className="book-driver-layout">
         <motion.div
           className="booking-container book-driver-form-column"
@@ -467,6 +481,12 @@ export default function BookDriver() {
               <div className="book-driver-error">{bookingError}</div>
             )}
 
+            {!isCustomerRole && authToken && (
+              <div className="book-driver-error" style={{ marginTop: '10px', borderColor: 'rgba(250,204,21,0.5)', background: 'rgba(113,63,18,0.28)', color: '#fde68a' }}>
+                You are logged in as <strong>{currentRole || 'non-customer'}</strong>. Switch to a customer account to book this ride.
+              </div>
+            )}
+
             {assignedRide?.driver && (
               <div className="book-driver-assigned-card">
                 <div className="book-driver-assigned-head">
@@ -520,6 +540,17 @@ export default function BookDriver() {
                     </div>
                   </div>
                 )}
+                {assignedRide.id && (
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => navigate(`/booking-confirmation/${assignedRide.id}`)}
+                    >
+                      Open Confirmation Page
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -527,10 +558,21 @@ export default function BookDriver() {
               type="button"
               className="btn btn-primary"
               onClick={handleContinue}
-              disabled={bookingLoading || !form.pickup.trim() || !form.drop.trim()}
+              disabled={bookingLoading || !form.pickup.trim() || !form.drop.trim() || (authToken && !isCustomerRole)}
             >
-              {bookingLoading ? 'Booking Ride...' : assignedRide?.id ? 'Track Assigned Driver' : 'Confirm & Find Driver'}
+              {bookingLoading ? 'Booking Ride...' : assignedRide?.id ? 'Track Assigned Driver' : (authToken && !isCustomerRole) ? 'Customer Access Required' : 'Confirm & Find Driver'}
             </button>
+
+            {authToken && !isCustomerRole && (
+              <button
+                type="button"
+                className="btn"
+                style={{ marginTop: '10px', width: '100%', background: 'rgba(148,163,184,0.2)', color: '#e2e8f0' }}
+                onClick={() => navigate('/login')}
+              >
+                Switch Account
+              </button>
+            )}
           </div>
         </motion.div>
 

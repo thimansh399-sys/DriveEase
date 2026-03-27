@@ -96,6 +96,13 @@ LOCATIONIQ_API_KEY=pk.your_api_key
 node seeds/seedDrivers.js
 ```
 
+    **Seed Kanpur Demo Pool (recommended for nearby testing):**
+```bash
+npm run seed:kanpur-demo
+# optional overrides:
+# KANPUR_ONLINE_DRIVERS=80 KANPUR_OFFLINE_DRIVERS=25 npm run seed:kanpur-demo
+```
+
 6. **Start Backend Server:**
 ```bash
 npm start

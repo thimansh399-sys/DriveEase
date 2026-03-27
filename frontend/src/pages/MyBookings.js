@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
+import { downloadInvoice } from '../utils/invoiceUtils';
 import '../styles/MyBookings.css';
 
 const STATUS_CONFIG = {
@@ -22,6 +23,9 @@ function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('active');
   const [expandedId, setExpandedId] = useState(null);
+  const [ratingByBooking, setRatingByBooking] = useState({});
+  const [commentByBooking, setCommentByBooking] = useState({});
+  const [feedbackBusy, setFeedbackBusy] = useState('');
   const role = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase();
   const isDriverView = role === 'driver';
 
@@ -51,6 +55,30 @@ function MyBookings() {
       } catch (error) {
         console.error('Error cancelling booking:', error);
       }
+    }
+  };
+
+  const handleSubmitFeedback = async (bookingId) => {
+    const rating = Number(ratingByBooking[bookingId] || 0);
+    const comment = String(commentByBooking[bookingId] || '').trim();
+
+    if (!rating || rating < 1 || rating > 5) {
+      alert('Please choose a rating between 1 and 5.');
+      return;
+    }
+
+    try {
+      setFeedbackBusy(bookingId);
+      const response = await api.addFeedback(bookingId, { rating, comment });
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+      await fetchMyBookings();
+      alert('Thanks! Your feedback was submitted.');
+    } catch (error) {
+      alert(error.message || 'Unable to submit feedback.');
+    } finally {
+      setFeedbackBusy('');
     }
   };
 
@@ -321,6 +349,48 @@ function MyBookings() {
                         </div>
                       )}
 
+                      {!isDriverView && booking.status === 'completed' && !booking.feedback?.rating && (
+                        <div className="mb-feedback" onClick={(event) => event.stopPropagation()}>
+                          <span>Rate This Ride</span>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <button
+                                key={`${booking._id}-rating-${value}`}
+                                type="button"
+                                className="mb-btn track"
+                                style={{ padding: '6px 10px' }}
+                                onClick={() => setRatingByBooking((prev) => ({ ...prev, [booking._id]: value }))}
+                              >
+                                {value}⭐
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            value={commentByBooking[booking._id] || ''}
+                            onChange={(event) => setCommentByBooking((prev) => ({ ...prev, [booking._id]: event.target.value.slice(0, 180) }))}
+                            placeholder="Share your ride feedback (optional)"
+                            style={{
+                              width: '100%',
+                              marginTop: '10px',
+                              borderRadius: '10px',
+                              padding: '10px',
+                              background: 'rgba(15,23,42,0.8)',
+                              color: '#fff',
+                              border: '1px solid rgba(148,163,184,0.25)'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="mb-btn track"
+                            style={{ marginTop: '10px' }}
+                            disabled={feedbackBusy === booking._id}
+                            onClick={() => handleSubmitFeedback(booking._id)}
+                          >
+                            {feedbackBusy === booking._id ? 'Submitting...' : 'Submit Feedback'}
+                          </button>
+                        </div>
+                      )}
+
                       {/* Actions */}
                       <div className="mb-actions">
                         {!isDriverView && booking.status === 'pending' && (
@@ -333,9 +403,19 @@ function MyBookings() {
                             📍 Track Booking
                           </Link>
                         )}
+                        {!isDriverView && ACTIVE_STATUSES.includes(booking.status) && (
+                          <Link to={`/booking-confirmation/${booking._id}`} className="mb-btn track" onClick={(e) => e.stopPropagation()}>
+                            ✅ Confirm & OTP
+                          </Link>
+                        )}
                         {!isDriverView && (booking.status === 'confirmed' || booking.status === 'driver_assigned') && (
                           <button className="mb-btn cancel" onClick={(e) => { e.stopPropagation(); handleCancel(booking._id); }}>
                             ❌ Cancel Booking
+                          </button>
+                        )}
+                        {!isDriverView && booking.status === 'completed' && (
+                          <button className="mb-btn track" onClick={(e) => { e.stopPropagation(); downloadInvoice(booking, 'customer'); }}>
+                            🧾 Download Invoice
                           </button>
                         )}
                       </div>

@@ -93,102 +93,116 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ maxWidth: '500px', margin: '60px auto', padding: '20px' }}>
-      <div className="card" style={{ padding: '40px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>{"Login to DriveEase"}</h2>
+    <div className="login-page">
+      <div className="login-car-decoration left">[CAB IN]</div>
+      <div className="login-car-decoration right">[CAB UP]</div>
 
-        {error && <div className="alert alert-danger">{error}</div>}
+      <div className="login-container">
+        <div className="login-card">
+          <h2 className="login-title">{role === 'driver' ? 'Driver Login Portal' : 'Login to DriveEase'}</h2>
+          <p className="login-subtitle">
+            {role === 'driver'
+              ? 'Start and get earn with verified rides across your city.'
+              : 'Safe rides, verified drivers, and instant booking.'}
+          </p>
 
-        {/* Role Selection */}
-        <div className="form-group" style={{ marginBottom: '25px' }}>
-          <label className="form-label">I am a:</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <button
-              onClick={() => { setRole('customer'); setStep('phoneNumber'); }}
-              className="btn"
-              style={{
-                backgroundColor: role === 'customer' ? '#16a34a' : '#e5e7eb',
-                color: role === 'customer' ? 'white' : '#111',
-                fontWeight: 'bold'
-              }}
-            >
-              Customer
-            </button>
-            <button
-              onClick={() => { setRole('driver'); setStep('phoneNumber'); }}
-              className="btn"
-              style={{
-                backgroundColor: role === 'driver' ? '#16a34a' : '#e5e7eb',
-                color: role === 'driver' ? 'white' : '#111',
-                fontWeight: 'bold'
-              }}
-            >
-              Driver
-            </button>
+          <div className="login-banner-strip">
+            <span>Book Your Driver Today</span>
+            <span>GPS Tracked Every Ride</span>
+            <span>24/7 Support Available</span>
           </div>
+
+          {error && <div className="alert alert-error">{error}</div>}
+
+          {/* Role Selection */}
+          <div className="form-group" style={{ marginBottom: '25px' }}>
+            <label className="form-label">I am a:</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                onClick={() => { setRole('customer'); setStep('phoneNumber'); }}
+                className="btn"
+                style={{
+                  backgroundColor: role === 'customer' ? '#16a34a' : 'rgba(100,116,139,0.25)',
+                  color: '#fff',
+                  fontWeight: 'bold'
+                }}
+              >
+                Customer
+              </button>
+              <button
+                onClick={() => { setRole('driver'); setStep('phoneNumber'); }}
+                className="btn"
+                style={{
+                  backgroundColor: role === 'driver' ? '#16a34a' : 'rgba(100,116,139,0.25)',
+                  color: '#fff',
+                  fontWeight: 'bold'
+                }}
+              >
+                Driver
+              </button>
+            </div>
+          </div>
+
+          {step === 'phoneNumber' && (
+            <form onSubmit={handleSendOTP} className="login-form">
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit phone number"
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Sending OTP...' : 'Send OTP'}
+              </button>
+            </form>
+          )}
+
+          {step === 'otp' && (
+            <form onSubmit={handleVerifyOTP} className="login-form">
+              <div className="form-group">
+                <label className="form-label">Your Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">OTP</label>
+                <input
+                  type="text"
+                  className="form-input otp-input"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit OTP"
+                />
+                <small style={{ color: '#94a3b8', marginTop: '5px', display: 'block' }}>OTP: {displayedOtp}</small>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Verifying...' : 'Verify OTP & Login'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                style={{ width: '100%', marginTop: '10px', backgroundColor: 'rgba(100, 116, 139, 0.2)', color: '#94a3b8' }}
+                onClick={() => { setStep('phoneNumber'); setOtp(''); }}
+              >
+                Change Phone Number
+              </button>
+            </form>
+          )}
+
+          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: '#94a3b8' }}>
+            {role === 'customer' && 'New customer? OTP will create your account automatically.'}
+            {role === 'driver' && 'New driver? Register, verify documents, and start earning.'}
+          </p>
         </div>
-
-
-
-        {step === 'phoneNumber' && (
-          <form onSubmit={handleSendOTP}>
-            <div className="form-group">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="tel"
-                className="form-input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                placeholder="10-digit phone number"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Sending OTP...' : 'Send OTP'}
-            </button>
-          </form>
-        )}
-
-        {step === 'otp' && (
-          <form onSubmit={handleVerifyOTP}>
-            <div className="form-group">
-              <label className="form-label">Your Name</label>
-              <input
-                type="text"
-                className="form-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full name"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">OTP</label>
-              <input
-                type="text"
-                className="form-input"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6-digit OTP"
-              />
-              <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>OTP: {displayedOtp}</small>
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify OTP & Login'}
-            </button>
-            <button
-              type="button"
-              className="btn"
-              style={{ width: '100%', marginTop: '10px', backgroundColor: 'rgba(100, 116, 139, 0.2)', color: '#94a3b8' }}
-              onClick={() => { setStep('phoneNumber'); setOtp(''); }}
-            >
-              Change Phone Number
-            </button>
-          </form>
-        )}
-
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: '#666' }}>
-          {role === 'customer' && "New customer? OTP will create your account automatically."}
-          {role === 'driver' && "New driver? Register and verify your documents."}
-        </p>
       </div>
     </div>
   );

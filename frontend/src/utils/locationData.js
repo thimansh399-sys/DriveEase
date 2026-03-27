@@ -11,7 +11,11 @@ const LOCATION_DIRECTORY = [
       { name: 'Prayagraj', areas: ['Civil Lines', 'George Town', 'Naini', 'Allahpur', 'Jhunsi'] },
       { name: 'Meerut', areas: ['Shastri Nagar', 'Ganga Nagar', 'Sadar Bazaar', 'Partapur'] },
       { name: 'Ayodhya', areas: ['Faizabad Road', 'Devkali', 'Niyawan', 'Sahabganj'] },
-      { name: 'Gorakhpur', areas: ['Golghar', 'Taramandal', 'Betiahata', 'Rustampur'] }
+      { name: 'Gorakhpur', areas: ['Golghar', 'Taramandal', 'Betiahata', 'Rustampur'] },
+      { name: 'Aligarh', areas: ['Civil Lines', 'Ramghat Road', 'Center Point', 'Dodhpur'] },
+      { name: 'Bareilly', areas: ['Civil Lines', 'Delapeer', 'Rajendra Nagar', 'Pilibhit Bypass'] },
+      { name: 'Mathura', areas: ['Vrindavan Road', 'Krishna Nagar', 'Dampier Nagar', 'Govardhan Road'] },
+      { name: 'Jhansi', areas: ['Civil Lines', 'Sipri Bazar', 'Nandanpura', 'Elite Crossing'] }
     ]
   },
   {
@@ -33,7 +37,9 @@ const LOCATION_DIRECTORY = [
       { name: 'Nashik', areas: ['College Road', 'Gangapur Road', 'Panchavati', 'Indira Nagar'] },
       { name: 'Thane', areas: ['Ghodbunder Road', 'Majiwada', 'Kasarvadavali', 'Vartak Nagar'] },
       { name: 'Navi Mumbai', areas: ['Vashi', 'Nerul', 'Belapur', 'Airoli', 'Kharghar'] },
-      { name: 'Aurangabad', areas: ['CIDCO', 'Jalna Road', 'Osmanpura', 'Beed Bypass'] }
+      { name: 'Aurangabad', areas: ['CIDCO', 'Jalna Road', 'Osmanpura', 'Beed Bypass'] },
+      { name: 'Kolhapur', areas: ['Rajarampuri', 'Shahupuri', 'Tarabai Park', 'Ujalaiwadi'] },
+      { name: 'Solapur', areas: ['Jule Solapur', 'Hotgi Road', 'Saat Rasta', 'Vijapur Road'] }
     ]
   },
   {
@@ -43,7 +49,9 @@ const LOCATION_DIRECTORY = [
       { name: 'Mysuru', areas: ['Vijayanagar', 'Hebbal', 'Kuvempunagar', 'Gokulam'] },
       { name: 'Mangaluru', areas: ['Kadri', 'Bejai', 'Surathkal', 'Kankanady'] },
       { name: 'Hubballi', areas: ['Vidyanagar', 'Gokul Road', 'Keshwapur', 'Deshpande Nagar'] },
-      { name: 'Belagavi', areas: ['Tilakwadi', 'Shahapur', 'Vadgaon', 'Angol'] }
+      { name: 'Belagavi', areas: ['Tilakwadi', 'Shahapur', 'Vadgaon', 'Angol'] },
+      { name: 'Mysuru Rural', areas: ['Srirampura', 'Jayalakshmipuram', 'Nazarbad', 'Bogadi'] },
+      { name: 'Kalaburagi', areas: ['Sedam Road', 'Shah Bazar', 'Jewargi Road', 'Brahmapur'] }
     ]
   },
   {
@@ -53,7 +61,9 @@ const LOCATION_DIRECTORY = [
       { name: 'Coimbatore', areas: ['RS Puram', 'Peelamedu', 'Saibaba Colony', 'Singanallur', 'Ganapathy'] },
       { name: 'Madurai', areas: ['Anna Nagar', 'KK Nagar', 'Tallakulam', 'Simmakkal'] },
       { name: 'Salem', areas: ['Fairlands', 'Hasthampatti', 'Ammapet', 'Alagapuram'] },
-      { name: 'Tiruchirappalli', areas: ['Srirangam', 'Thillai Nagar', 'Cantonment', 'Woraiyur'] }
+      { name: 'Tiruchirappalli', areas: ['Srirangam', 'Thillai Nagar', 'Cantonment', 'Woraiyur'] },
+      { name: 'Tiruppur', areas: ['Avinashi Road', 'Kangayam Road', 'PN Road', 'Rakiyapalayam'] },
+      { name: 'Erode', areas: ['Perundurai Road', 'Brough Road', 'Veerappanchatram', 'Thindal'] }
     ]
   },
   {
@@ -153,7 +163,9 @@ const LOCATION_DIRECTORY = [
       { name: 'Gaya', areas: ['AP Colony', 'Civil Lines', 'Delha', 'Bodh Gaya Road'] },
       { name: 'Muzaffarpur', areas: ['Mithanpura', 'Aghoria Bazar', 'Kalambagh Road', 'Brahmpura'] },
       { name: 'Bhagalpur', areas: ['Tilkamanjhi', 'Barari', 'Khalifabagh', 'Adampur'] },
-      { name: 'Darbhanga', areas: ['Laheriasarai', 'Benta', 'Donar', 'Mabbi'] }
+      { name: 'Darbhanga', areas: ['Laheriasarai', 'Benta', 'Donar', 'Mabbi'] },
+      { name: 'Purnea', areas: ['Madhubani', 'Line Bazar', 'Bhattabazar', 'Rambagh'] },
+      { name: 'Arrah', areas: ['Nawada', 'Pakri', 'Babu Bazar', 'Station Road'] }
     ]
   },
   {

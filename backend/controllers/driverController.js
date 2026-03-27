@@ -73,7 +73,7 @@ exports.getNearbyDrivers = async (req, res) => {
     const hasCoords = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
 
     if (!hasCoords && !city && !state && !area) {
-      return res.status(400).json({ error: 'Latitude/longitude or city/state/area required' });
+      return res.json([]);
     }
 
     const filter = {
