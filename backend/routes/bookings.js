@@ -1,6 +1,6 @@
 const express = require('express');
 const bookingController = require('../controllers/bookingController');
-const { authMiddleware, customerMiddleware } = require('../middleware/auth');
+const { authMiddleware, customerMiddleware, driverMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -18,6 +18,17 @@ router.get('/customer', authMiddleware, customerMiddleware, (req, res, next) => 
   console.log('Middleware passed for /customer route');
   next();
 }, bookingController.getCustomerBookings);
+
+router.post('/book-ride', authMiddleware, customerMiddleware, bookingController.bookRide);
+
+// Driver-specific routes (must come before '/:id' route)
+router.get('/driver/my-bookings', authMiddleware, driverMiddleware, bookingController.getDriverBookings);
+
+router.put('/:id/driver-respond', authMiddleware, driverMiddleware, bookingController.driverRespondBooking);
+
+router.put('/:id/start', authMiddleware, driverMiddleware, bookingController.startRideWithOTP);
+
+router.put('/:id/complete-ride', authMiddleware, driverMiddleware, bookingController.completeRide);
 
 router.get('/:id', authMiddleware, (req, res, next) => {
   console.log('Middleware passed for /:id route');
@@ -61,10 +72,5 @@ router.get('/address/saved', authMiddleware, (req, res, next) => {
 
 // Quick book from Browse page (no auth required - creates customer if needed)
 router.post('/quick-book', bookingController.quickBook);
-
-// Driver-specific routes
-router.get('/driver/my-bookings', authMiddleware, bookingController.getDriverBookings);
-
-router.put('/:id/driver-respond', authMiddleware, bookingController.driverRespondBooking);
 
 module.exports = router;

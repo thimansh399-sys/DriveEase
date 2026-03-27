@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/Browse.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -11,6 +12,7 @@ function Browse() {
   const [pincode, setPincode] = useState('');
   const [isOnline, setIsOnline] = useState('');
   const [state, setState] = useState('');
+  const [area, setArea] = useState('');
   const [cities, setCities] = useState([]);
   const [bookingDriver, setBookingDriver] = useState(null);
   const [bookingForm, setBookingForm] = useState({
@@ -26,36 +28,66 @@ function Browse() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState('');
   const [bookingError, setBookingError] = useState('');
+  const [browserCoords, setBrowserCoords] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('Detecting your location for nearby drivers...');
+  const [locationError, setLocationError] = useState('');
 
-  const states = ['Delhi', 'Maharashtra', 'Karnataka', 'Telangana', 'Tamil Nadu', 'West Bengal', 'Rajasthan', 'Uttar Pradesh'];
+  const areaOptions = getAreasByCity(state, city);
 
-  const stateCities = {
-    'Delhi': ['New Delhi', 'Dwarka', 'Rohini', 'Saket'],
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
-    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
-    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur'],
-    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur'],
-    'Uttar Pradesh': ['Lucknow', 'Noida', 'Varanasi', 'Agra', 'Kanpur']
-  };
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Browser GPS is not supported on this device.');
+      setLocationStatus('Showing driver list using filters only.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setBrowserCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLocationStatus('Nearby drivers are sorted by your live GPS distance.');
+      },
+      (error) => {
+        setLocationError(error.message || 'Location access denied.');
+        setLocationStatus('Showing driver list using filters only.');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 }
+    );
+  }, []);
 
   useEffect(() => {
     fetchDrivers();
     const interval = setInterval(fetchDrivers, 10000);
     return () => clearInterval(interval);
-  }, [city, pincode, isOnline, state]);
+  }, [city, pincode, isOnline, state, area, browserCoords]);
 
   const fetchDrivers = async () => {
     setLoading(true);
     try {
-      let query = '?status=all';
-      if (state) query += `&state=${state}`;
-      if (city) query += `&city=${city}`;
-      if (pincode) query += `&pincode=${pincode}`;
-      if (isOnline) query += `&isOnline=${isOnline}`;
+      const hasCoords = Number.isFinite(Number(browserCoords?.latitude)) && Number.isFinite(Number(browserCoords?.longitude));
+      let response;
 
-      const response = await api.getAllDrivers(query);
+      if (hasCoords && !pincode && isOnline !== 'false') {
+        response = await api.getNearbyDrivers({
+          latitude: browserCoords.latitude,
+          longitude: browserCoords.longitude,
+          state,
+          city,
+          area,
+          radius: 50,
+        });
+      } else {
+        let query = '?status=all';
+        if (state) query += `&state=${state}`;
+        if (city) query += `&city=${city}`;
+        if (area) query += `&area=${encodeURIComponent(area)}`;
+        if (pincode) query += `&pincode=${pincode}`;
+        if (isOnline) query += `&isOnline=${isOnline}`;
+        response = await api.getAllDrivers(query);
+      }
+
       if (Array.isArray(response)) {
         setDrivers(response);
       }
@@ -68,29 +100,36 @@ function Browse() {
 
   useEffect(() => {
     if (state) {
-      setCities(stateCities[state] || []);
+      setCities(getCitiesByState(state));
       setCity('');
+      setArea('');
     } else {
       setCities([]);
       setCity('');
+      setArea('');
     }
   }, [state]);
 
   const clearFilters = () => {
     setState('');
     setCity('');
+    setArea('');
     setPincode('');
     setIsOnline('');
   };
 
-  const hasFilters = state || city || pincode || isOnline;
+  const hasFilters = state || city || area || pincode || isOnline;
 
   const getDriverLocation = (driver) => {
     const parts = [];
     const loc = driver.personalDetails || driver.currentLocation || {};
+    if (loc.address) parts.push(loc.address);
     if (loc.city) parts.push(loc.city);
     if (loc.state) parts.push(loc.state);
     if (loc.pincode) parts.push(loc.pincode);
+    if (parts.length === 0 && Array.isArray(driver.serviceAreas) && driver.serviceAreas.length > 0) {
+      parts.push(driver.serviceAreas.join(', '));
+    }
     return parts.length > 0 ? parts.join(', ') : null;
   };
 
@@ -147,7 +186,7 @@ function Browse() {
         throw new Error(data.error || 'Booking failed');
       }
 
-      setBookingSuccess(`✅ Booking confirmed! ID: ${data.booking?.bookingId || 'N/A'}. Driver will be notified via SMS.`);
+      setBookingSuccess(`✅ Booking confirmed! ID: ${data.booking?.bookingId || 'N/A'} • Invoice ${data.booking?.invoice?.invoiceId || 'generated'} • Total ₹${data.booking?.invoice?.total || data.booking?.finalPrice || data.booking?.estimatedPrice || 0}. Driver will be notified via SMS.`);
     } catch (err) {
       setBookingError(err.message || 'Booking failed. Please try again.');
     } finally {
@@ -160,6 +199,8 @@ function Browse() {
       <div className="browse-hero">
         <h1 className="browse-title">🚗 Browse Drivers</h1>
         <p className="browse-subtitle">Find the perfect driver for your journey</p>
+        <p className="browse-subtitle" style={{ marginTop: '8px', fontSize: '14px' }}>{locationStatus}</p>
+        {locationError && <p className="browse-subtitle" style={{ marginTop: '4px', fontSize: '13px', color: '#fecaca' }}>{locationError}</p>}
       </div>
 
       <div className="browse-filters">
@@ -167,7 +208,7 @@ function Browse() {
           <label>State</label>
           <select value={state} onChange={(e) => setState(e.target.value)}>
             <option value="">All States</option>
-            {states.map((s) => (
+            {STATE_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -179,6 +220,16 @@ function Browse() {
             <option value="">All Cities</option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="browse-filter-item">
+          <label>Area</label>
+          <select value={area} onChange={(e) => setArea(e.target.value)} disabled={!city}>
+            <option value="">All Areas</option>
+            {areaOptions.map((entry) => (
+              <option key={entry} value={entry}>{entry}</option>
             ))}
           </select>
         </div>
@@ -214,6 +265,7 @@ function Browse() {
           <span className="browse-filter-tags">
             {state && <span className="browse-tag">{state} ✕</span>}
             {city && <span className="browse-tag">{city} ✕</span>}
+            {area && <span className="browse-tag">{area} ✕</span>}
             {pincode && <span className="browse-tag">📍 {pincode} ✕</span>}
             {isOnline === 'true' && <span className="browse-tag">🟢 Online ✕</span>}
             {isOnline === 'false' && <span className="browse-tag">🔘 Offline ✕</span>}
@@ -271,6 +323,12 @@ function Browse() {
                   <div className="browse-info-row">
                     <span className="browse-info-icon">🚙</span>
                     <span>{driver.vehicle.model}</span>
+                  </div>
+                )}
+                {Number.isFinite(Number(driver.distance)) && (
+                  <div className="browse-info-row">
+                    <span className="browse-info-icon">📏</span>
+                    <span>{Number(driver.distance).toFixed(1)} km away</span>
                   </div>
                 )}
               </div>

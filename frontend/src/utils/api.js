@@ -1,27 +1,70 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+const getAuthBaseUrls = () => {
+  const urls = [];
+
+  if (typeof API_BASE_URL === 'string' && API_BASE_URL.trim()) {
+    urls.push(API_BASE_URL.trim());
+  }
+
+  // Fallback for local backend in development.
+  urls.push('http://localhost:5000/api');
+
+  // Fallback for setups using frontend proxy/same-origin API gateway.
+  urls.push('/api');
+
+  return [...new Set(urls)];
+};
+
+const parseJsonSafe = async (response) => {
+  try {
+    return await response.json();
+  } catch (_) {
+    return {};
+  }
+};
+
+const postAuthWithFallback = async (path, payload) => {
+  const bases = getAuthBaseUrls();
+  let lastNetworkError = null;
+
+  for (const base of bases) {
+    try {
+      const response = await fetch(`${base}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await parseJsonSafe(response);
+      if (!response.ok) {
+        return {
+          error: data.error || `Request failed (${response.status})`
+        };
+      }
+
+      return data;
+    } catch (error) {
+      lastNetworkError = error;
+    }
+  }
+
+  throw new Error(
+    lastNetworkError?.message ||
+    'Unable to connect to backend API. Please ensure backend is running on port 5000.'
+  );
+};
+
 export const api = {
   // Auth
   sendOTP: (phone, role = 'customer') =>
-    fetch(`${API_BASE_URL}/auth/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, role })
-    }).then(r => r.json()),
+    postAuthWithFallback('/auth/send-otp', { phone, role }),
 
   verifyOTP: (phone, otp, name, role) =>
-    fetch(`${API_BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp, name, role })
-    }).then(r => r.json()),
+    postAuthWithFallback('/auth/verify-otp', { phone, otp, name, role }),
 
   adminLogin: (password) =>
-    fetch(`${API_BASE_URL}/auth/admin-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    }).then(r => r.json()),
+    postAuthWithFallback('/auth/admin-login', { password }),
 
   // Drivers
   getAllDrivers: (query = '') =>
@@ -29,10 +72,19 @@ export const api = {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()),
 
-  getNearbyDrivers: (latitude, longitude, city, radius = 10) =>
-    fetch(`${API_BASE_URL}/drivers/nearby?latitude=${latitude}&longitude=${longitude}&city=${city}&radius=${radius}`, {
+  getNearbyDrivers: ({ latitude, longitude, city = '', state = '', area = '', radius = 25 } = {}) => {
+    const params = new URLSearchParams();
+    if (Number.isFinite(Number(latitude))) params.set('latitude', latitude);
+    if (Number.isFinite(Number(longitude))) params.set('longitude', longitude);
+    if (city) params.set('city', city);
+    if (state) params.set('state', state);
+    if (area) params.set('area', area);
+    params.set('radius', radius);
+
+    return fetch(`${API_BASE_URL}/drivers/nearby?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }).then(r => r.json()),
+    }).then(r => r.json());
+  },
 
   getDriverById: (id) =>
     fetch(`${API_BASE_URL}/drivers/${id}`).then(r => r.json()),
@@ -90,6 +142,16 @@ export const api = {
       body: JSON.stringify(data)
     }).then(r => r.json()),
 
+  bookRide: (data) =>
+    fetch(`${API_BASE_URL}/bookings/book-ride`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    }).then(r => r.json()),
+
   getMyBookings: () =>
     fetch(`${API_BASE_URL}/bookings/customer`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -133,6 +195,24 @@ export const api = {
       body: JSON.stringify({ action })
     }).then(r => r.json()),
 
+  startRideWithOTP: (id, otp) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/start`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ otp })
+    }).then(r => r.json()),
+
+  completeRide: (id) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/complete-ride`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(r => r.json()),
+
   // Admin
   getAdminStats: () =>
     fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
@@ -174,7 +254,41 @@ export const api = {
   exportBookingsToExcel: () =>
     fetch(`${API_BASE_URL}/admin/export/bookings`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }).then(r => r.blob())
+    }).then(r => r.blob()),
+
+  // Insurance
+  addInsurance: (bookingId) =>
+    fetch(`${API_BASE_URL}/ride/${bookingId}/add-insurance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(r => r.json()),
+
+  addDriverInsurance: (bookingId) =>
+    fetch(`${API_BASE_URL}/ride/${bookingId}/add-driver-insurance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(r => r.json()),
+
+  suggestInsurance: (bookingId) =>
+    fetch(`${API_BASE_URL}/ride/${bookingId}/suggest-insurance`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
+  getActiveRide: () =>
+    fetch(`${API_BASE_URL}/ride/active`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
+  getRideHistory: (page = 1) =>
+    fetch(`${API_BASE_URL}/ride/history?page=${page}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json())
 };
 
 export default api;

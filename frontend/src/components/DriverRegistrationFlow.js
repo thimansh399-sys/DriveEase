@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/DriverRegistration.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -17,24 +18,15 @@ export default function DriverRegistrationFlow() {
     yearsOfExperience: '0',
     aadhaarNumber: '',
     licenseNumber: '',
-    state: '',
-    city: '',
-    area: '',
+    state: DEFAULT_LOCATION.state,
+    city: DEFAULT_LOCATION.city,
+    area: DEFAULT_LOCATION.area,
     pincode: ''
   });
-
-  const statesAndCities = {
-    'Delhi': ['New Delhi', 'Dwarka', 'Rohini', 'Saket'],
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
-    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
-    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur'],
-    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur'],
-    'Uttar Pradesh': ['Lucknow', 'Noida', 'Varanasi', 'Agra', 'Kanpur']
-  };
   const [selfieFile, setSelfieFile] = useState(null);
   const [selfiePreview, setSelfiePreview] = useState(null);
+  const cityOptions = getCitiesByState(formData.state);
+  const areaOptions = getAreasByCity(formData.state, formData.city);
 
 
   // Unified input handler
@@ -203,29 +195,26 @@ export default function DriverRegistrationFlow() {
           <div className="form-row">
             <div className="form-group">
               <label>State *</label>
-              <select name="state" value={formData.state} onChange={(e) => { handleInputChange(e); setFormData(prev => ({...prev, state: e.target.value, city: ''})); }} required>
+              <select name="state" value={formData.state} onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value, city: '', area: '' }))} required>
                 <option value="">Select State</option>
-                {Object.keys(statesAndCities).map(s => <option key={s} value={s}>{s}</option>)}
+                {STATE_OPTIONS.map((state) => <option key={state} value={state}>{state}</option>)}
               </select>
             </div>
             <div className="form-group">
               <label>City *</label>
               <select name="city" value={formData.city} onChange={handleInputChange} required disabled={!formData.state}>
                 <option value="">Select City</option>
-                {(statesAndCities[formData.state] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                {cityOptions.map((city) => <option key={city} value={city}>{city}</option>)}
               </select>
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Area / Locality</label>
-              <input
-                type="text"
-                name="area"
-                value={formData.area}
-                onChange={handleInputChange}
-                placeholder="e.g. Connaught Place"
-              />
+              <select name="area" value={formData.area} onChange={handleInputChange} disabled={!formData.city}>
+                <option value="">Select Area</option>
+                {areaOptions.map((area) => <option key={area} value={area}>{area}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label>Pincode *</label>

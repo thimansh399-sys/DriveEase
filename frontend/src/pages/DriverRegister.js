@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/DriverRegister.css';
 
 
@@ -26,8 +27,9 @@ function DriverRegister() {
   const [driverData, setDriverData] = useState({
     dateOfBirth: '',
     address: '',
-    city: 'Delhi',
-    state: 'Delhi',
+    city: DEFAULT_LOCATION.city,
+    state: DEFAULT_LOCATION.state,
+    area: DEFAULT_LOCATION.area,
     pincode: '',
     vehicle: 'Honda City',
     registrationNumber: '',
@@ -80,6 +82,9 @@ function DriverRegister() {
     setDriverData(prev => ({ ...prev, [field]: value }));
   };
 
+  const cityOptions = getCitiesByState(driverData.state);
+  const areaOptions = getAreasByCity(driverData.state, driverData.city);
+
 
   const handleSubmitDetails = async (e) => {
     e.preventDefault();
@@ -88,6 +93,7 @@ function DriverRegister() {
       const payload = {
         phone,
         name,
+        address: driverData.address || driverData.area,
         ...driverData
       };
       const response = await api.registerDriver(payload);
@@ -274,14 +280,54 @@ function DriverRegister() {
                 />
               </div>
               <div className="form-group">
+                <label className="form-label">State</label>
+                <select
+                  className="form-input"
+                  value={driverData.state}
+                  onChange={(e) => setDriverData((prev) => ({ ...prev, state: e.target.value, city: '', area: '' }))}
+                >
+                  {STATE_OPTIONS.map((entry) => (
+                    <option key={entry} value={entry}>{entry}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
                 <label className="form-label">City</label>
-                <input
-                  type="text"
+                <select
                   className="form-input"
                   value={driverData.city}
                   onChange={(e) => handleDriverDataChange('city', e.target.value)}
-                />
+                >
+                  {cityOptions.map((entry) => (
+                    <option key={entry} value={entry}>{entry}</option>
+                  ))}
+                </select>
               </div>
+              <div className="form-group">
+                <label className="form-label">Area / Locality</label>
+                <select
+                  className="form-input"
+                  value={driverData.area}
+                  onChange={(e) => handleDriverDataChange('area', e.target.value)}
+                >
+                  <option value="">Select area</option>
+                  {areaOptions.map((entry) => (
+                    <option key={entry} value={entry}>{entry}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Pincode</label>
+              <input
+                type="text"
+                className="form-input"
+                value={driverData.pincode}
+                onChange={(e) => handleDriverDataChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="e.g. 208001"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Vehicle Type</label>

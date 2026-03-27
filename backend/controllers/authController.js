@@ -3,6 +3,8 @@ const Driver = require('../models/Driver');
 const { generateOTP, verifyOTP } = require('../utils/helpers');
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'driveease-dev-secret';
+
 exports.sendOTP = async (req, res) => {
   try {
     const { phone, role } = req.body;
@@ -68,7 +70,7 @@ exports.verifyOTPAndLogin = async (req, res) => {
         role: role === 'driver' ? 'driver' : 'customer',
         name: user.name
       },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '30d' }
     );
 
@@ -100,7 +102,7 @@ exports.adminLogin = async (req, res) => {
         id: 'admin',
         role: 'admin'
       },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '24h' }
     );
 

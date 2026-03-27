@@ -444,6 +444,7 @@ exports.updateOnlineStatus = async (req, res) => {
     }
 
     driver.isOnline = isOnline;
+    driver.availabilityStatus = isOnline ? 'AVAILABLE' : 'BUSY';
     const updatedDriver = await driver.save();
 
     res.json({

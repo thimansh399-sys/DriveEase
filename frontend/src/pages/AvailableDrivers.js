@@ -69,8 +69,8 @@ export default function AvailableDriversPage() {
 
   const handleBookNow = (driver) => {
     setSelectedDriver(driver);
-    // Redirect to booking page with driver pre-selected
-    navigate(`/booking?driverId=${driver._id}`);
+    // Redirect to integrated booking page with driver pre-selected
+    navigate(`/book-driver?driverId=${driver._id}`);
   };
 
   return (

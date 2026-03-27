@@ -92,6 +92,11 @@ const driverSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  availabilityStatus: {
+    type: String,
+    enum: ['AVAILABLE', 'BUSY'],
+    default: 'AVAILABLE'
+  },
   currentLocation: {
     latitude: Number,
     longitude: Number,
@@ -157,6 +162,26 @@ const driverSchema = new mongoose.Schema({
     totalCommissionEarned: { type: Number, default: 0 },
     totalEarningsAfterCommission: { type: Number, default: 0 }
   },
+  // Subscription Plan
+  plan: {
+    type: {
+      type: String,
+      enum: ['ZERO', 'GROWTH', 'ELITE'],
+      default: 'ZERO'
+    },
+    subscribedAt: Date,
+    expiresAt: Date,
+    autoRenew: { type: Boolean, default: false }
+  },
+  // Ride Allocation Metrics
+  acceptanceRate: { type: Number, default: 100 }, // percentage
+  ridesToday: { type: Number, default: 0 },
+  ridesThisWeek: { type: Number, default: 0 },
+  ridesThisMonth: { type: Number, default: 0 },
+  monthlyEarnings: { type: Number, default: 0 },
+  lastRideAt: Date,
+  lastActiveAt: { type: Date, default: Date.now },
+  inactiveDays: { type: Number, default: 0 },
   // Online hours tracking for analytics
   onlineStatus: {
     isCurrentlyOnline: { type: Boolean, default: false },

@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -13,6 +14,7 @@ const driverRegistrationRoutes = require('./routes/driverRegistration');
 const bookingsEnhancedRoutes = require('./routes/bookingsEnhanced');
 const adminDashboardRoutes = require('./routes/adminDashboard');
 const publicRoutes = require('./routes/public');
+const rideFlowRoutes = require('./routes/rideFlow');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files as static
-app.use('/uploads', require('express').static(require('path').join(__dirname, 'uploads')));
+app.use('/uploads', require('express').static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -50,6 +52,7 @@ app.use('/api/bookings-enhanced', bookingsEnhancedRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin-dashboard', adminDashboardRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/ride', rideFlowRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

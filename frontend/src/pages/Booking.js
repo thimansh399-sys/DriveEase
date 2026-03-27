@@ -1,132 +1,284 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import '../styles/UnifiedUI.css';
+import '../styles/EnhancedAnimations.css';
 
-const LOCATIONIQ_TOKEN = process.env.REACT_APP_LOCATIONIQ_TOKEN || 'YOUR_LOCATIONIQ_TOKEN';
-
-function LocationPicker({ position, setPosition, label }) {
-  useMapEvents({
-    click(e) {
-      setPosition({ ...position, latitude: e.latlng.lat, longitude: e.latlng.lng });
-    }
-  });
-  return <Marker position={[position.latitude, position.longitude]} />;
-}
+const MAX_STEP = 5;
 
 function Booking() {
-  const navigate = useNavigate();
   const { driverId } = useParams();
-  const [bookingData, setBookingData] = useState({
-    bookingType: 'daily',
-    numberOfDays: 1,
-    startDate: '',
-    insuranceOpted: false,
-    insuranceType: 'per_ride'
-  });
-  const [locations, setLocations] = useState({
-    pickup: { address: '', latitude: 28.6139, longitude: 77.2090 },
-    drop: { address: '', latitude: 28.7041, longitude: 77.1025 }
-  });
+  const [searchParams] = useSearchParams();
+  const [step, setStep] = useState(1);
+  const [pickup, setPickup] = useState(searchParams.get('pickup') || '');
+  const [drop, setDrop] = useState(searchParams.get('drop') || '');
+  const [datetime, setDatetime] = useState('');
+  const [driverType, setDriverType] = useState(searchParams.get('ride') || 'Standard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [drivers, setDrivers] = useState([]);
-  const [filters, setFilters] = useState({ city: '', pincode: '', onlineOnly: false });
+  const [success, setSuccess] = useState(null);
 
-  // Try to get user location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          setLocations(locs => ({
-            ...locs,
-            pickup: { ...locs.pickup, latitude: pos.coords.latitude, longitude: pos.coords.longitude }
-          }));
-        },
-        () => {},
-        { enableHighAccuracy: true }
-      );
+  const title = useMemo(() => {
+    if (step === 1) return 'Pickup Location';
+    if (step === 2) return 'Drop Location';
+    if (step === 3) return 'Select Time';
+    if (step === 4) return 'Choose Driver';
+    return 'Confirm Booking';
+  }, [step]);
+
+  const rideType = useMemo(() => {
+    if (driverType === 'Premium') return 'hourly';
+    if (driverType === 'Corporate') return 'outstation';
+    return 'daily';
+  }, [driverType]);
+
+  const canGoNext = useMemo(() => {
+    if (step === 1) return Boolean(pickup.trim());
+    if (step === 2) return Boolean(drop.trim());
+    if (step === 3) return Boolean(datetime);
+    if (step === 4) return Boolean(driverType);
+    return true;
+  }, [step, pickup, drop, datetime, driverType]);
+
+  const onNext = () => {
+    setError('');
+    setSuccess(null);
+    if (!canGoNext) return;
+    setStep((prev) => Math.min(prev + 1, MAX_STEP));
+  };
+
+  const onBack = () => {
+    setError('');
+    setStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const onConfirm = async () => {
+    setError('');
+    setSuccess(null);
+
+    if (!pickup.trim() || !drop.trim() || !datetime) {
+      setError('Please complete all booking details before confirming.');
+      return;
     }
-  }, []);
 
-  // ...other hooks and handlers...
+    setLoading(true);
+    try {
+      const parsed = new Date(datetime);
+      const date = Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
+      const time = Number.isNaN(parsed.getTime()) ? '' : parsed.toTimeString().slice(0, 5);
 
-  const [tab, setTab] = useState('daily');
+      const response = await api.bookRide({
+        driverId,
+        pickupLocation: { address: pickup.trim() },
+        dropLocation: { address: drop.trim() },
+        date,
+        time,
+        rideType,
+      });
+
+      if (!response || response.error) {
+        setError(response?.error || 'Booking failed. Please try again.');
+      } else {
+        setSuccess(response.ride || response.booking || response);
+      }
+    } catch {
+      setError('Booking failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="booking-container" style={{ background: '#111', minHeight: '100vh', paddingTop: 40 }}>
-      <div className="booking-content" style={{ maxWidth: 600, margin: '0 auto' }}>
-        <div className="booking-header" style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1 style={{ color: '#27ae60', fontWeight: 900, fontSize: 36, letterSpacing: 1 }}>Book a Driver</h1>
-        </div>
-        {/* Tabs */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-          {['daily', 'rental', 'outstation'].map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                background: tab === t ? '#27ae60' : '#222',
-                color: tab === t ? '#fff' : '#aaa',
-                border: 'none',
-                borderRadius: '20px 20px 0 0',
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 16,
-                marginRight: 8,
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s',
-              }}
+    <motion.div 
+      className="ux-page ux-booking-wrap"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <motion.div 
+        className="ux-panel"
+        layout
+      >
+        <motion.div 
+          key={`step-badge-${step}`}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className={`ux-step-badge ${step === MAX_STEP ? 'active' : ''}`}
+        >
+          Step {step} / {MAX_STEP}
+        </motion.div>
+        
+        <motion.h2 
+          className="ux-title"
+          key={`title-${step}`}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+        >
+          {title}
+        </motion.h2>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`step-${step}`}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="step-container"
+          >
+            {step === 1 && (
+              <input
+                placeholder="Enter pickup location"
+                className="ux-input"
+                value={pickup}
+                onChange={(e) => setPickup(e.target.value)}
+                autoFocus
+              />
+            )}
+
+            {step === 2 && (
+              <input
+                placeholder="Enter drop location"
+                className="ux-input"
+                value={drop}
+                onChange={(e) => setDrop(e.target.value)}
+                autoFocus
+              />
+            )}
+
+            {step === 3 && (
+              <input
+                type="datetime-local"
+                className="ux-input"
+                value={datetime}
+                onChange={(e) => setDatetime(e.target.value)}
+                autoFocus
+              />
+            )}
+
+            {step === 4 && (
+              <motion.div 
+                className="ux-grid-gap"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ staggerChildren: 0.1, delayChildren: 0.1 }}
+              >
+                {['Standard', 'Premium', 'Corporate'].map((type, idx) => {
+                  const active = driverType === type;
+                  return (
+                    <motion.button
+                      key={type}
+                      type="button"
+                      onClick={() => setDriverType(type)}
+                      className={`ux-choice ${active ? 'active' : ''}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {type}
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.div 
+                className="ux-review"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <p className="ux-review-muted">Review your booking</p>
+                <p className="ux-review-line"><strong>Pickup:</strong> {pickup || '-'}</p>
+                <p className="ux-review-line"><strong>Drop:</strong> {drop || '-'}</p>
+                <p className="ux-review-line"><strong>Time:</strong> {datetime || '-'}</p>
+                <p className="ux-review-line"><strong>Category:</strong> {driverType}</p>
+                {driverId && <p className="ux-review-line"><strong>Selected Driver:</strong> {driverId}</p>}
+
+                <motion.button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={loading}
+                  className="ux-btn primary full"
+                  style={{ marginTop: 14 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {loading ? 'Confirming...' : 'Confirm Ride'}
+                </motion.button>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              className="ux-alert error"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-        {/* Booking Card */}
-        <form className="booking-form" style={{ background: '#fff', borderRadius: 16, boxShadow: '0 8px 32px rgba(39,174,96,0.08)', padding: 32 }}>
-          {/* Pickup & Drop */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Pickup Location</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#f6f6f6', borderRadius: 8, padding: '8px 12px' }}>
-                <span style={{ color: '#27ae60', fontSize: 20, marginRight: 8 }}>📍</span>
-                <input className="form-input" type="text" placeholder="Current Location" style={{ border: 'none', background: 'transparent', flex: 1, fontSize: 15 }} />
-              </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Drop Location</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#f6f6f6', borderRadius: 8, padding: '8px 12px' }}>
-                <span style={{ color: '#ffffff', fontSize: 20, marginRight: 8 }}>🏁</span>
-                <input className="form-input" type="text" placeholder="Enter Location" style={{ border: 'none', background: 'transparent', flex: 1, fontSize: 15 }} />
-              </div>
-            </div>
-          </div>
-          {/* Date, Time, Days */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Date</label>
-              <input className="form-input" type="date" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>Time</label>
-              <input className="form-input" type="time" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontWeight: 600, color: '#ffffff', marginBottom: 6, display: 'block' }}>No. of Days</label>
-              <input className="form-input" type="number" min="1" style={{ width: '100%', borderColor: '#27ae60', borderRadius: 8, padding: '8px 12px' }} />
-            </div>
-          </div>
-          {/* Book Button */}
-          <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <button className="btn btn-primary" style={{ background: 'linear-gradient(90deg,#27ae60 60%,#111 100%)', color: '#fff', fontWeight: 700, fontSize: 18, borderRadius: 8, padding: '14px 48px', border: 'none', boxShadow: '0 4px 16px rgba(39,174,96,0.12)', cursor: 'pointer', letterSpacing: 1 }} type="submit">
-              Book Now
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {error}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div 
+              className="ux-alert success"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>✓ Booking Confirmed</div>
+              <div style={{ fontSize: 14 }}>Booking ID: {success.bookingId || success.id || 'Created'}</div>
+              {success.driver?.name && (
+                <div style={{ fontSize: 14, marginTop: 4 }}>
+                  Driver: {success.driver.name} ({success.driver.phone})
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.div 
+          className="ux-nav-row"
+          layout
+        >
+          <motion.button
+            type="button"
+            onClick={onBack}
+            disabled={step === 1 || loading}
+            className="ux-btn ghost"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            ← Back
+          </motion.button>
+          {step < MAX_STEP && (
+            <motion.button
+              type="button"
+              onClick={onNext}
+              disabled={!canGoNext || loading}
+              className="ux-btn primary"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Next →
+            </motion.button>
+          )}
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }
 

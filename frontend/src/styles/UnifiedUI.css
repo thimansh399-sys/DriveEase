@@ -1,0 +1,369 @@
+.ux-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at 10% 10%, rgba(34, 197, 94, 0.08), transparent 35%), #0b0f19;
+  color: #ffffff;
+}
+
+.ux-booking-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 14px 24px;
+}
+
+.ux-panel {
+  width: 100%;
+  max-width: 430px;
+  border-radius: 18px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ux-step-badge {
+  display: inline-block;
+  border-radius: 999px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  color: #93c5fd;
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-bottom: 14px;
+}
+
+.ux-title {
+  margin: 0 0 18px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ux-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.ux-input:focus {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+.ux-grid-gap {
+  display: grid;
+  gap: 10px;
+}
+
+.ux-choice {
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ux-choice:hover {
+  transform: translateY(-1px);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.ux-choice.active {
+  border-color: rgba(34, 197, 94, 0.7);
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.ux-review {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.ux-review-muted {
+  margin: 0 0 10px;
+  color: #94a3b8;
+}
+
+.ux-review-line {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.ux-alert {
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.ux-alert.error {
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+}
+
+.ux-alert.success {
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.2);
+  color: #dcfce7;
+}
+
+.ux-nav-row {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.ux-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ux-btn.full {
+  width: 100%;
+}
+
+.ux-btn.primary {
+  background: #22c55e;
+  color: #03210f;
+}
+
+.ux-btn.primary:hover {
+  background: #28d368;
+}
+
+.ux-btn.ghost {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #d1d5db;
+}
+
+.ux-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ux-drivers-page,
+.ux-admin-page {
+  padding: 100px 20px 30px;
+}
+
+.ux-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ux-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.ux-search {
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  min-width: 220px;
+  outline: none;
+}
+
+.ux-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .ux-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .ux-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ux-driver-card,
+.ux-admin-card {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ux-driver-card:hover,
+.ux-admin-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 26px rgba(34, 197, 94, 0.16);
+}
+
+.ux-driver-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ux-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.ux-muted {
+  color: #9ca3af;
+}
+
+.ux-subtle {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.ux-rating {
+  margin: 12px 0 0;
+  color: #34d399;
+  font-weight: 700;
+}
+
+.ux-location {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.ux-meta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.ux-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px 0;
+}
+
+.ux-admin-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.ux-admin-subtitle {
+  margin-top: 8px;
+  color: #94a3b8;
+}
+
+.ux-tabs {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ux-tab {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ux-tab.active {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.2);
+  color: #dcfce7;
+}
+
+.ux-section {
+  margin-top: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 16px;
+}
+
+.ux-section-title {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.ux-table-wrap {
+  overflow-x: auto;
+}
+
+.ux-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ux-table th,
+.ux-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ux-table th {
+  color: #a5b4fc;
+}
+
+.ux-table td {
+  color: #d1d5db;
+}
+
+.ux-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.ux-line {
+  margin: 4px 0;
+  color: #a3b2c7;
+  font-size: 14px;
+}
+
+.ux-action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ux-btn.reject {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .ux-booking-wrap,
+  .ux-drivers-page,
+  .ux-admin-page {
+    padding-top: 86px;
+  }
+
+  .ux-panel {
+    padding: 18px;
+  }
+}

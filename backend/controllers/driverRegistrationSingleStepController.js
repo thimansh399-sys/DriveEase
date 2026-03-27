@@ -43,17 +43,17 @@ exports.registerDriverSingleStep = async (req, res) => {
       aadhaarNumber,
       licenseNumber,
       personalDetails: {
-        state: state || '',
-        city: city || '',
-        address: area || '',
-        pincode: pincode || ''
+        state: state || 'Uttar Pradesh',
+        city: city || 'Kanpur',
+        address: area || 'Swaroop Nagar',
+        pincode: pincode || '208001'
       },
       currentLocation: {
-        state: state || '',
-        city: city || '',
-        pincode: pincode || ''
+        state: state || 'Uttar Pradesh',
+        city: city || 'Kanpur',
+        pincode: pincode || '208001'
       },
-      serviceAreas: [city, area, state].filter(Boolean),
+      serviceAreas: [city || 'Kanpur', area || 'Swaroop Nagar', state || 'Uttar Pradesh'].filter(Boolean),
       documents: {
         selfie: {
           file: 'uploads/driver-documents/selfie/' + req.file.filename,

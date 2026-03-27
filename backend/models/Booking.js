@@ -48,7 +48,7 @@ const bookingSchema = new mongoose.Schema({
   finalPrice: Number,
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'driver_assigned', 'in_progress', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress', 'completed', 'cancelled'],
     default: 'pending'
   },
   paymentStatus: {
@@ -74,6 +74,33 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     enum: ['none', 'per_ride', 'monthly']
   },
+  driverInsuranceOpted: {
+    type: Boolean,
+    default: false
+  },
+  driverInsuranceAmount: {
+    type: Number,
+    default: 0
+  },
+  rejectedByDrivers: [{
+    driverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Driver'
+    },
+    action: {
+      type: String,
+      enum: ['reject', 'decline'],
+      default: 'reject'
+    },
+    reason: {
+      type: String,
+      default: ''
+    },
+    rejectedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   route: {
     type: String,
     default: null
@@ -108,6 +135,19 @@ const bookingSchema = new mongoose.Schema({
     finalCalculatedPrice: Number,
     paymentReceivedTime: Date,
     paymentVerified: { type: Boolean, default: false }
+  },
+  // Ride flow - commission & plan info
+  rideFlow: {
+    driverPlan: { type: String, enum: ['ZERO', 'GROWTH', 'ELITE'], default: 'ZERO' },
+    baseFare: Number,
+    peakMultiplier: { type: Number, default: 1.0 },
+    finalFare: Number,
+    commissionRate: Number,
+    commissionAmount: Number,
+    driverEarning: Number,
+    isPeakRide: { type: Boolean, default: false },
+    allocationScore: Number,
+    driverDistance: Number
   },
   // Timestamps in IST
   timestamps: {

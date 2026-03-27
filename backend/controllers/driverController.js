@@ -36,7 +36,22 @@ exports.getAllDrivers = async (req, res) => {
       }
     }
     if (area) {
-      filter.serviceAreas = { $regex: area, $options: 'i' };
+      const areaRegex = { $regex: area, $options: 'i' };
+      const areaCondition = {
+        $or: [
+          { serviceAreas: areaRegex },
+          { 'personalDetails.address': areaRegex }
+        ]
+      };
+
+      if (filter.$and) {
+        filter.$and.push(areaCondition);
+      } else if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, areaCondition];
+        delete filter.$or;
+      } else {
+        filter.$and = [areaCondition];
+      }
     }
     if (isOnline !== undefined) filter.isOnline = isOnline === 'true';
 
@@ -52,32 +67,82 @@ exports.getAllDrivers = async (req, res) => {
 
 exports.getNearbyDrivers = async (req, res) => {
   try {
-    const { latitude, longitude, city, radius = 10 } = req.query;
+    const { latitude, longitude, city, state, area, radius = 25 } = req.query;
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+    const hasCoords = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
 
-    if (!latitude || !longitude || !city) {
-      return res.status(400).json({ error: 'Latitude, longitude, and city required' });
+    if (!hasCoords && !city && !state && !area) {
+      return res.status(400).json({ error: 'Latitude/longitude or city/state/area required' });
     }
 
-    const drivers = await Driver.find({
+    const filter = {
       status: 'approved',
-      isOnline: true,
-      'currentLocation.city': city
+      isOnline: true
+    };
+
+    if (city) {
+      filter.$or = [
+        { 'currentLocation.city': city },
+        { 'personalDetails.city': city },
+        { serviceAreas: { $regex: city, $options: 'i' } }
+      ];
+    }
+
+    if (state) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { 'currentLocation.state': state },
+          { 'personalDetails.state': state },
+          { serviceAreas: { $regex: state, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (area) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { serviceAreas: { $regex: area, $options: 'i' } },
+          { 'personalDetails.address': { $regex: area, $options: 'i' } }
+        ]
+      });
+    }
+
+    const drivers = await Driver.find(filter).select(
+      '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file'
+    );
+
+    if (!hasCoords) {
+      return res.json(drivers);
+    }
+
+    const maxRadius = Number(radius) > 0 ? Number(radius) : 25;
+    const withDistance = drivers.map((driver) => {
+      const driverLat = Number(driver.currentLocation?.latitude);
+      const driverLng = Number(driver.currentLocation?.longitude);
+      const distance = Number.isFinite(driverLat) && Number.isFinite(driverLng)
+        ? calculateDistance(parsedLatitude, parsedLongitude, driverLat, driverLng)
+        : null;
+
+      return {
+        ...driver.toObject(),
+        distance,
+      };
     });
 
-    const nearbyDrivers = drivers
-      .map(driver => ({
-        ...driver.toObject(),
-        distance: calculateDistance(
-          latitude,
-          longitude,
-          driver.currentLocation.latitude,
-          driver.currentLocation.longitude
-        )
-      }))
-      .filter(d => parseFloat(d.distance) <= radius)
-      .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+    const nearbyDrivers = withDistance
+      .filter((driver) => Number.isFinite(Number(driver.distance)) && Number(driver.distance) <= maxRadius)
+      .sort((a, b) => Number(a.distance) - Number(b.distance));
 
-    res.json(nearbyDrivers);
+    const fallbackDrivers = nearbyDrivers.length
+      ? nearbyDrivers
+      : withDistance
+        .filter((driver) => Number.isFinite(Number(driver.distance)))
+        .sort((a, b) => Number(a.distance) - Number(b.distance));
+
+    res.json(fallbackDrivers);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -108,7 +173,12 @@ exports.registerDriver = async (req, res) => {
       bloodGroup,
       yearsOfExperience,
       aadhaarNumber,
-      licenseNumber
+      licenseNumber,
+      city,
+      state,
+      pincode,
+      address,
+      area
     } = req.body;
 
     const existingDriver = await Driver.findOne({ phone });
@@ -120,10 +190,22 @@ exports.registerDriver = async (req, res) => {
       name,
       phone,
       email,
-      bloodGroup,
       experience: { yearsOfExperience: parseInt(yearsOfExperience) || 0 },
       aadhaarNumber,
       licenseNumber,
+      personalDetails: {
+        address: address || area || 'Swaroop Nagar',
+        city: city || 'Kanpur',
+        state: state || 'Uttar Pradesh',
+        pincode: pincode || '208001',
+        bloodGroup
+      },
+      currentLocation: {
+        city: city || 'Kanpur',
+        state: state || 'Uttar Pradesh',
+        pincode: pincode || '208001'
+      },
+      serviceAreas: [city || 'Kanpur', area || address || 'Swaroop Nagar', state || 'Uttar Pradesh'].filter(Boolean),
       status: 'pending',
       registrationFee: {
         amount: 150,
@@ -173,6 +255,7 @@ exports.updateDriverStatus = async (req, res) => {
 
     const updateData = {
       isOnline,
+      availabilityStatus: isOnline ? 'AVAILABLE' : 'BUSY',
       'currentLocation.lastUpdated': new Date(),
       updatedAt: new Date()
     };

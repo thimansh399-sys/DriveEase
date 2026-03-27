@@ -34,7 +34,7 @@ function Login({ onLogin }) {
         setStep('otp');
       }
     } catch (err) {
-      setError('Failed to send OTP. Please try again.');
+      setError(err?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ function Login({ onLogin }) {
         navigate(response.user.role === 'admin' ? '/admin' : response.user.role === 'driver' ? '/driver-dashboard' : '/browse');
       }
     } catch (err) {
-      setError('Failed to verify OTP. Please try again.');
+      setError(err?.message || 'Failed to verify OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ function Login({ onLogin }) {
         navigate('/admin');
       }
     } catch (err) {
-      setError('Failed to login. Please try again.');
+      setError(err?.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
     }

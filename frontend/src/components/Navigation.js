@@ -1,33 +1,80 @@
-import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import '../styles/Navigation.css';
 
-function Navigation() {
-  // No need for useLocation or navLinkStyle with NavLink's active class
+function Navigation({ isLoggedIn, userRole, onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const isDriver = isLoggedIn && userRole === 'driver';
+  const isCustomer = isLoggedIn && (userRole === 'customer' || userRole === 'user');
+
+  const handleLogout = () => {
+    onLogout();
+    navigate('/');
+  };
+
+  const tabs = [
+    { to: '/', label: 'Home', end: true },
+    { to: '/drivers', label: 'Drivers' },
+    { to: '/subscriptions', label: 'Plans' },
+    { to: '/insurance', label: 'Insurance' },
+    { to: '/pay', label: 'Pay' },
+  ];
+
+  if (isCustomer) tabs.push({ to: '/my-bookings', label: 'My Bookings' });
+  if (isDriver) tabs.push({ to: '/my-bookings', label: 'My Rides' });
+
   return (
-    <header className="navbar sticky-header" style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '18px 40px', background: 'rgba(16,24,32,0.98)', color: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
-      width: '100%', boxSizing: 'border-box', margin: 0, overflowX: 'hidden'
-    }}>
-      <div className="logo" style={{ fontSize: '28px', fontWeight: 900, letterSpacing: 1, color: '#16a34a' }}>
-        DriveEase
+    <nav className="navigation">
+      <div className="nav-content">
+        {/* Logo */}
+        <Link to="/" className="nav-brand">
+          <span>🚗</span> DriveEase
+        </Link>
+
+        {/* Mobile Toggle */}
+        <button className="nav-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? '✕' : '☰'}
+        </button>
+
+        {/* Tabs */}
+        <ul className={`nav-links ${menuOpen ? 'active' : ''}`}>
+          {tabs.map(({ to, label, end }) => (
+            <li key={to + label}>
+              <NavLink
+                to={to}
+                end={end}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        {/* Right Buttons */}
+        <div className="nav-actions">
+          {!isLoggedIn ? (
+            <>
+              <Link to="/login" className="nav-button btn-outline">Login</Link>
+              <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+            </>
+          ) : (
+            <>
+              {isDriver && (
+                <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
+              )}
+              {!isDriver && (
+                <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+              )}
+              <button onClick={handleLogout} className="nav-button btn-logout">Logout</button>
+            </>
+          )}
+          <Link to="/book-driver" className="nav-button btn-primary">🚗 Book a Driver</Link>
+        </div>
       </div>
-      <nav style={{ display: 'flex', gap: '28px', fontWeight: 600 }}>
-        <NavLink to="/" className={({ isActive }) => isActive ? "active" : ""} end>Home</NavLink>
-        <NavLink to="/drivers" className={({ isActive }) => isActive ? "active" : ""}>Drivers</NavLink>
-        <NavLink to="/subscriptions" className={({ isActive }) => isActive ? "active" : ""}>Plans</NavLink>
-        <NavLink to="/insurance" className={({ isActive }) => isActive ? "active" : ""}>Insurance</NavLink>
-        <NavLink to="/pay" className={({ isActive }) => isActive ? "active" : ""}>Pay</NavLink>
-        <NavLink to="/my-bookings" className={({ isActive }) => isActive ? "active" : ""}>My Bookings</NavLink>
-      </nav>
-      <div className="actions" style={{ display: 'flex', gap: '12px' }}>
-        <Link to="/login" className="btn" style={{ background: 'transparent', color: '#16a34a', border: '1.5px solid #16a34a', padding: '10px 22px', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}>Login</Link>
-        <Link to="/register-driver" className="btn" style={{ background: '#16a34a', color: '#fff', padding: '10px 22px', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}>Register as Driver</Link>
-        <Link to="/booking" className="btn" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', padding: '10px 22px', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)' }}>Book a Driver</Link>
-      </div>
-    </header>
+    </nav>
   );
 }
 
