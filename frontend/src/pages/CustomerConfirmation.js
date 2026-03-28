@@ -16,6 +16,14 @@ const STATUS_LABELS = {
 
 const canConfirm = (status) => ['pending', 'driver_assigned'].includes(status);
 
+const formatMoney = (value) => Number(value || 0).toFixed(2);
+const formatDateTime = (value) => {
+  if (!value) return 'Not available';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+  return date.toLocaleString();
+};
+
 export default function CustomerConfirmation() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
@@ -96,6 +104,62 @@ export default function CustomerConfirmation() {
     }
   };
 
+  const handleDownloadInvoice = () => {
+    if (!booking || !invoice) return;
+
+    const driver = booking?.driverId || booking?.driver || null;
+    const invoiceHtml = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>DriveEase Invoice ${invoice.invoiceId}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+      h1 { margin: 0 0 8px; }
+      .muted { color: #475569; }
+      .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-top: 14px; }
+      .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+      .row:last-child { border-bottom: none; }
+      .strong { font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DriveEase Ride Invoice</h1>
+    <div class="muted">Invoice ID: ${invoice.invoiceId}</div>
+    <div class="muted">Booking ID: ${booking.bookingId || booking._id}</div>
+    <div class="muted">Generated At: ${new Date().toLocaleString()}</div>
+
+    <div class="card">
+      <div class="row"><span>Status</span><span class="strong">${booking.status || 'pending'}</span></div>
+      <div class="row"><span>Pickup</span><span>${booking?.pickupLocation?.address || 'Not available'}</span></div>
+      <div class="row"><span>Drop</span><span>${booking?.dropLocation?.address || 'Not available'}</span></div>
+      <div class="row"><span>Ride Time</span><span>${formatDateTime(booking?.startDate)}</span></div>
+      <div class="row"><span>Driver</span><span>${driver?.name || 'Pending assignment'}</span></div>
+      <div class="row"><span>Driver Phone</span><span>${driver?.phone || 'Not assigned yet'}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span>Subtotal</span><span>INR ${formatMoney(invoice.subtotal)}</span></div>
+      <div class="row"><span>Insurance</span><span>INR ${formatMoney(invoice.insurance)}</span></div>
+      <div class="row"><span class="strong">Total</span><span class="strong">INR ${formatMoney(invoice.total)}</span></div>
+      <div class="row"><span>Payment Method</span><span>${invoice.paymentMethod || 'upi'}</span></div>
+      <div class="row"><span>Payment Status</span><span>${invoice.paymentStatus || 'pending'}</span></div>
+    </div>
+  </body>
+</html>`;
+
+    const blob = new Blob([invoiceHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${invoice.invoiceId || 'DriveEase-Invoice'}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="ux-page">
@@ -137,6 +201,12 @@ export default function CustomerConfirmation() {
             Status: <strong>{STATUS_LABELS[status] || status}</strong>
           </p>
 
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
+            <span className={`ux-chip ${status === 'pending' ? 'warning' : ''}`}>Pending: {status === 'pending' ? 'Yes' : 'No'}</span>
+            <span className={`ux-chip ${status === 'confirmed' ? 'success' : ''}`}>Confirmed: {status === 'confirmed' ? 'Yes' : 'No'}</span>
+            <span className="ux-chip">Payment: {booking?.paymentStatus || 'pending'}</span>
+          </div>
+
           <div className="ux-stat-grid" style={{ marginTop: '14px' }}>
             <div className="ux-stat-card">
               <h4>Pickup</h4>
@@ -151,8 +221,12 @@ export default function CustomerConfirmation() {
               <p>{invoice?.invoiceId || 'Generating...'}</p>
             </div>
             <div className="ux-stat-card">
-              <h4>Total Paid</h4>
-              <p>₹{Number(invoice?.total || 0)}</p>
+              <h4>Total Price</h4>
+              <p>₹{formatMoney(invoice?.total || 0)}</p>
+            </div>
+            <div className="ux-stat-card">
+              <h4>Ride Timing</h4>
+              <p>{formatDateTime(booking?.startDate)}</p>
             </div>
           </div>
 
@@ -191,6 +265,9 @@ export default function CustomerConfirmation() {
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '16px' }}>
             <button type="button" className="ux-btn primary" onClick={() => navigate(`/track-booking/${booking?._id || bookingId}`)}>
               Track Live Ride
+            </button>
+            <button type="button" className="ux-btn" onClick={handleDownloadInvoice}>
+              Download Invoice
             </button>
             <Link className="ux-btn" to="/my-bookings">Go to My Bookings</Link>
           </div>

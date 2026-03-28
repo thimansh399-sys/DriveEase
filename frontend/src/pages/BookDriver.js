@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
 import { INDIA_LOCATION_SUGGESTIONS } from '../utils/locationData';
+import { useNotification } from '../context/NotificationContext';
 import '../styles/Booking.css';
 import '../styles/BookDriver.css';
 
@@ -126,6 +127,7 @@ function splitCityState(rawAddress) {
 export default function BookDriver() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { addNotification } = useNotification();
   const preferredDriverId = searchParams.get('driverId') || '';
   const authToken = localStorage.getItem('token');
   const currentRole = String(localStorage.getItem('userRole') || '').toLowerCase();
@@ -146,6 +148,7 @@ export default function BookDriver() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [assignedRide, setAssignedRide] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const estimatedDistance = useMemo(() => {
     if (!form.pickup || !form.drop) return 0;
@@ -274,7 +277,7 @@ export default function BookDriver() {
       perKm,
       rideFare,
       insurance: Number(form.insurance),
-      total: rideFare + Number(form.insurance),
+      total: Number((rideFare + Number(form.insurance)).toFixed(2)),
     };
   }, [distance, form.insurance, form.ride]);
 
@@ -344,7 +347,20 @@ export default function BookDriver() {
       }
 
       setAssignedRide(response.ride);
-      setMapStatus('Driver assigned successfully. Review driver details below and start tracking.');
+      setShowConfirmation(true);
+      addNotification(
+        response.ride?.driver
+          ? `Booking confirmed! Your Booking ID is ${response.ride.bookingId}. Driver has been assigned.`
+          : `Booking request submitted! Your Booking ID is ${response.ride.bookingId}. Driver assignment is pending.`,
+        'success',
+        8000,
+        response.ride?.driver ? 'Ride Booked Successfully' : 'Booking Request Submitted'
+      );
+      setMapStatus(
+        response.ride?.driver
+          ? 'Driver assigned successfully. Review driver details below and start tracking.'
+          : 'Booking request submitted. No driver is assigned yet; status will update automatically once confirmed.'
+      );
     } catch (error) {
       setBookingError(error.message || 'Booking failed. Please try again.');
     } finally {
@@ -473,7 +489,7 @@ export default function BookDriver() {
               </div>
               <div className="summary-row summary-total">
                 <span className="summary-label">Total</span>
-                <span className="summary-value">₹{fare.total}</span>
+                <span className="summary-value">₹{fare.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -487,36 +503,38 @@ export default function BookDriver() {
               </div>
             )}
 
-            {assignedRide?.driver && (
+            {assignedRide && (
               <div className="book-driver-assigned-card">
                 <div className="book-driver-assigned-head">
-                  <h4>Assigned Driver Details</h4>
+                  <h4>{assignedRide.driver ? 'Assigned Driver Details' : 'Booking Request Submitted'}</h4>
                   <span>Booking #{assignedRide.bookingId}</span>
                 </div>
                 <div className="book-driver-assigned-grid">
                   <div>
                     <span>Name</span>
-                    <strong>{assignedRide.driver.name || 'Driver'}</strong>
+                    <strong>{assignedRide.driver?.name || 'Pending assignment'}</strong>
                   </div>
                   <div>
                     <span>Phone</span>
-                    <strong>{assignedRide.driver.phone || 'N/A'}</strong>
+                    <strong>{assignedRide.driver?.phone || 'Pending assignment'}</strong>
                   </div>
                   <div>
                     <span>Rating</span>
-                    <strong>{assignedRide.driver.rating ? `⭐ ${assignedRide.driver.rating}` : 'N/A'}</strong>
+                    <strong>{assignedRide.driver?.rating ? `⭐ ${assignedRide.driver.rating}` : 'N/A'}</strong>
                   </div>
                   <div>
                     <span>Location</span>
                     <strong>
-                      {assignedRide.driver.currentLocation?.city || 'Unknown'}
-                      {assignedRide.driver.currentLocation?.state ? `, ${assignedRide.driver.currentLocation.state}` : ''}
+                      {assignedRide.driver?.currentLocation?.city || 'Pending assignment'}
+                      {assignedRide.driver?.currentLocation?.state ? `, ${assignedRide.driver.currentLocation.state}` : ''}
                     </strong>
                   </div>
                 </div>
-                <p className="book-driver-assigned-otp">
-                  Ride OTP: <strong>{assignedRide.otp}</strong> (share this only when the driver arrives)
-                </p>
+                {assignedRide.otp && (
+                  <p className="book-driver-assigned-otp">
+                    Ride OTP: <strong>{assignedRide.otp}</strong> (share this only when the driver arrives)
+                  </p>
+                )}
                 {assignedRide.confirmationMessage && (
                   <p className="book-driver-assigned-otp">{assignedRide.confirmationMessage}</p>
                 )}
@@ -646,7 +664,7 @@ export default function BookDriver() {
               </div>
               <div>
                 <span>Estimated Fare</span>
-                <strong>₹{fare.total}</strong>
+                <strong>₹{fare.total.toFixed(2)}</strong>
               </div>
             </div>
 
@@ -658,6 +676,107 @@ export default function BookDriver() {
           </div>
         </motion.div>
       </div>
+
+      {/* Booking Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmation && assignedRide && (
+          <motion.div
+            className="booking-confirm-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              background: 'rgba(0,0,0,0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                background: '#0f172a',
+                border: '1.5px solid #16a34a',
+                borderRadius: '16px',
+                padding: '32px 28px',
+                maxWidth: '460px',
+                width: '100%',
+                textAlign: 'center',
+                boxShadow: '0 0 40px rgba(34,197,94,0.25)',
+              }}
+            >
+              <div style={{ fontSize: '52px', marginBottom: '8px' }}>✅</div>
+              <h2 style={{ color: '#22c55e', marginBottom: '6px', fontSize: '22px' }}>Ride Booked Successfully!</h2>
+              <p style={{ color: '#94a3b8', marginBottom: '20px', fontSize: '14px' }}>
+                Your driver has been assigned and notified.
+              </p>
+
+              <div style={{ background: '#1e293b', borderRadius: '10px', padding: '16px', marginBottom: '16px', textAlign: 'left' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#64748b', fontSize: '13px' }}>Booking ID</span>
+                  <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '14px', letterSpacing: '1px' }}>
+                    {assignedRide.bookingId}
+                  </span>
+                </div>
+                {assignedRide.otp && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '13px' }}>Ride OTP</span>
+                    <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '18px', letterSpacing: '4px' }}>
+                      {assignedRide.otp}
+                    </span>
+                  </div>
+                )}
+                {assignedRide.driver?.name && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '13px' }}>Driver</span>
+                    <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{assignedRide.driver.name}</span>
+                  </div>
+                )}
+                {assignedRide.driver?.phone && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '13px' }}>Driver Phone</span>
+                    <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{assignedRide.driver.phone}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b', fontSize: '13px' }}>Total Paid</span>
+                  <span style={{ color: '#22c55e', fontWeight: 700 }}>
+                    ₹{assignedRide.finalPrice != null ? Number(assignedRide.finalPrice).toFixed(2) : fare.total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '20px' }}>
+                Share the OTP only when your driver arrives at pickup.
+              </p>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowConfirmation(false);
+                    navigate(`/booking-confirmation/${assignedRide.id}`);
+                  }}
+                >
+                  View Full Details
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ background: 'rgba(148,163,184,0.15)', color: '#e2e8f0' }}
+                  onClick={() => setShowConfirmation(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

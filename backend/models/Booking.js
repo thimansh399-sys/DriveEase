@@ -124,6 +124,9 @@ const bookingSchema = new mongoose.Schema({
     otp: String,
     otpGenerated: Date,
     otpExpiry: Date,
+    otpSharedWithDriver: { type: Boolean, default: false },
+    otpSharedAt: Date,
+    otpSharedByCustomer: { type: Boolean, default: false },
     otpVerified: { type: Boolean, default: false },
     otpVerificationTime: Date
   },

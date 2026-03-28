@@ -15,6 +15,8 @@ const bookingsEnhancedRoutes = require('./routes/bookingsEnhanced');
 const adminDashboardRoutes = require('./routes/adminDashboard');
 const publicRoutes = require('./routes/public');
 const rideFlowRoutes = require('./routes/rideFlow');
+const supportTicketsRoutes = require('./routes/supportTickets');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const server = http.createServer(app);
@@ -53,6 +55,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin-dashboard', adminDashboardRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/ride', rideFlowRoutes);
+app.use('/api/support-tickets', supportTicketsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

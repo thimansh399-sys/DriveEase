@@ -20,6 +20,7 @@ router.get('/customer', authMiddleware, customerMiddleware, (req, res, next) => 
 }, bookingController.getCustomerBookings);
 
 router.post('/book-ride', authMiddleware, customerMiddleware, bookingController.bookRide);
+router.put('/:id/share-otp', authMiddleware, customerMiddleware, bookingController.shareRideOTP);
 
 // Driver-specific routes (must come before '/:id' route)
 router.get('/driver/my-bookings', authMiddleware, driverMiddleware, bookingController.getDriverBookings);

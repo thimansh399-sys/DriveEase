@@ -224,6 +224,14 @@ export const api = {
       body: JSON.stringify({ otp })
     }).then(r => r.json()),
 
+  shareBookingOtp: (id) =>
+    fetch(`${API_BASE_URL}/bookings/${id}/share-otp`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(r => r.json()),
+
   completeRide: (id) =>
     fetch(`${API_BASE_URL}/bookings/${id}/complete-ride`, {
       method: 'PUT',

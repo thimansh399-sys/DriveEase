@@ -26,6 +26,7 @@ function MyBookings() {
   const [ratingByBooking, setRatingByBooking] = useState({});
   const [commentByBooking, setCommentByBooking] = useState({});
   const [feedbackBusy, setFeedbackBusy] = useState('');
+  const [otpShareBusy, setOtpShareBusy] = useState('');
   const role = (localStorage.getItem('userRole') || localStorage.getItem('role') || '').toLowerCase();
   const isDriverView = role === 'driver';
 
@@ -79,6 +80,22 @@ function MyBookings() {
       alert(error.message || 'Unable to submit feedback.');
     } finally {
       setFeedbackBusy('');
+    }
+  };
+
+  const handleShareOtp = async (bookingId) => {
+    try {
+      setOtpShareBusy(bookingId);
+      const response = await api.shareBookingOtp(bookingId);
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+      await fetchMyBookings();
+      alert('OTP shared with driver successfully.');
+    } catch (error) {
+      alert(error.message || 'Unable to share OTP right now.');
+    } finally {
+      setOtpShareBusy('');
     }
   };
 
@@ -308,7 +325,11 @@ function MyBookings() {
                           <span>🔐</span>
                           <div>
                             <strong>Ride Start OTP: {booking.verification.otp}</strong>
-                            <p>Share this OTP with the driver only after the driver arrives.</p>
+                            <p>
+                              {booking.verification.otpSharedWithDriver
+                                ? `Shared with driver${booking.verification.otpSharedAt ? ` at ${new Date(booking.verification.otpSharedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}.`
+                                : 'Share this OTP with the driver only after the driver arrives.'}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -396,6 +417,19 @@ function MyBookings() {
                         {!isDriverView && booking.status === 'pending' && (
                           <button className="mb-btn cancel" onClick={(e) => { e.stopPropagation(); handleCancel(booking._id); }}>
                             ❌ Cancel Request
+                          </button>
+                        )}
+                        {!isDriverView && ['pending', 'confirmed', 'driver_assigned', 'driver_arrived'].includes(booking.status) && booking.verification?.otp && (
+                          <button
+                            className="mb-btn confirm"
+                            onClick={(e) => { e.stopPropagation(); handleShareOtp(booking._id); }}
+                            disabled={otpShareBusy === booking._id || booking.verification?.otpSharedWithDriver}
+                          >
+                            {booking.verification?.otpSharedWithDriver
+                              ? '🔒 OTP Shared'
+                              : otpShareBusy === booking._id
+                                ? 'Sharing OTP...'
+                                : '🔐 Share OTP With Driver'}
                           </button>
                         )}
                         {!isDriverView && ACTIVE_STATUSES.includes(booking.status) && (

@@ -68,21 +68,39 @@ function buildDriverSummary(driver) {
   };
 }
 
+function buildVerificationSummary(booking, { includeOtp = true } = {}) {
+  const otpValue = booking?.verification?.otp || null;
+  return {
+    otp: includeOtp ? otpValue : null,
+    otpSharedWithDriver: Boolean(booking?.verification?.otpSharedWithDriver),
+    otpSharedAt: booking?.verification?.otpSharedAt || null,
+    otpVerified: Boolean(booking?.verification?.otpVerified),
+    otpExpiry: booking?.verification?.otpExpiry || null,
+  };
+}
+
 async function findAssignableDrivers(excludeDriverId = null) {
-  const query = {
+  const baseExclude = excludeDriverId ? { _id: { $ne: excludeDriverId } } : {};
+
+  // First: look for actively online drivers
+  let candidates = await Driver.find({
+    ...baseExclude,
     status: { $in: ['approved', 'online'] },
     $or: [
       { isOnline: true },
       { 'onlineStatus.isCurrentlyOnline': true },
       { status: 'online' },
     ],
-  };
+  });
 
-  if (excludeDriverId) {
-    query._id = { $ne: excludeDriverId };
+  // Fallback: any approved driver (covers cases where isOnline field is not set)
+  if (!candidates.length) {
+    candidates = await Driver.find({
+      ...baseExclude,
+      status: 'approved',
+    });
   }
 
-  const candidates = await Driver.find(query);
   if (!candidates.length) return [];
 
   const candidateIds = candidates.map((d) => d._id);
@@ -274,12 +292,6 @@ exports.bookRide = async (req, res) => {
 
     const availableDrivers = await findAssignableDrivers();
 
-    if (!availableDrivers.length) {
-      return res.status(404).json({
-        error: 'No drivers available right now. Please retry in a minute while we refresh online driver availability.'
-      });
-    }
-
     const pickupLat = Number(pickupLocation?.latitude);
     const pickupLng = Number(pickupLocation?.longitude);
     const dropLat = Number(dropLocation?.latitude);
@@ -296,40 +308,41 @@ exports.bookRide = async (req, res) => {
 
     let assignedDriver = null;
 
-    if (preferredDriverId) {
-      assignedDriver = availableDrivers.find((driver) => String(driver._id) === String(preferredDriverId));
-      if (!assignedDriver) {
-        return res.status(400).json({ error: 'Selected driver is not available right now' });
+    if (availableDrivers.length) {
+      if (preferredDriverId) {
+        assignedDriver = availableDrivers.find((driver) => String(driver._id) === String(preferredDriverId));
       }
-    } else {
-      const driversByDistance = hasPickupCoords
-        ? availableDrivers
-          .filter((driver) =>
-            Number.isFinite(Number(driver?.currentLocation?.latitude))
-            && Number.isFinite(Number(driver?.currentLocation?.longitude))
-          )
-          .map((driver) => ({
-            driver,
-            distanceKm: calculateDistance(
-              pickupLat,
-              pickupLng,
-              Number(driver.currentLocation.latitude),
-              Number(driver.currentLocation.longitude)
-            ),
-          }))
-          .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm))
-        : [];
 
-      assignedDriver = driversByDistance.length
-        ? driversByDistance[0].driver
-        : availableDrivers[Math.floor(Math.random() * availableDrivers.length)];
+      if (!assignedDriver) {
+        const driversByDistance = hasPickupCoords
+          ? availableDrivers
+            .filter((driver) =>
+              Number.isFinite(Number(driver?.currentLocation?.latitude))
+              && Number.isFinite(Number(driver?.currentLocation?.longitude))
+            )
+            .map((driver) => ({
+              driver,
+              distanceKm: calculateDistance(
+                pickupLat,
+                pickupLng,
+                Number(driver.currentLocation.latitude),
+                Number(driver.currentLocation.longitude)
+              ),
+            }))
+            .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm))
+          : [];
+
+        assignedDriver = driversByDistance.length
+          ? driversByDistance[0].driver
+          : availableDrivers[Math.floor(Math.random() * availableDrivers.length)];
+      }
     }
     const otp = generateRideOTP();
 
     const booking = new Booking({
       bookingId: generateBookingId(),
       customerId,
-      driverId: assignedDriver._id,
+      driverId: assignedDriver?._id || null,
       pickupLocation,
       dropLocation,
       bookingType: rideType,
@@ -347,34 +360,43 @@ exports.bookRide = async (req, res) => {
         otp,
         otpGenerated: new Date(),
         otpExpiry: new Date(Date.now() + 30 * 60 * 1000),
+        otpSharedWithDriver: false,
+        otpSharedAt: null,
+        otpSharedByCustomer: false,
         otpVerified: false,
       },
     });
 
     await booking.save();
 
-    const notifyMessage = `DriveEase: New Ride Request. Booking ${booking.bookingId}.`;
-    try {
-      await sendSMSToDriver(assignedDriver.phone, notifyMessage);
-    } catch (notifyError) {
-      console.error('Driver notification failed:', notifyError.message);
+    if (assignedDriver?.phone) {
+      const notifyMessage = `DriveEase: New Ride Request. Booking ${booking.bookingId}.`;
+      try {
+        await sendSMSToDriver(assignedDriver.phone, notifyMessage);
+      } catch (notifyError) {
+        console.error('Driver notification failed:', notifyError.message);
+      }
     }
 
     res.status(201).json({
       success: true,
-      message: 'Ride booked successfully. Driver assignment invoice generated.',
+      message: assignedDriver
+        ? 'Ride booked successfully. Driver assignment invoice generated.'
+        : 'Ride request submitted successfully. Booking is pending driver assignment.',
       ride: {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
         paymentStatus: booking.paymentStatus,
         otp,
-        driver: buildDriverSummary(assignedDriver),
+        driver: assignedDriver ? buildDriverSummary(assignedDriver) : null,
         estimatedDistance,
         estimatedPrice,
         finalPrice,
         invoice: buildInvoiceSummary(booking),
-        confirmationMessage: 'Ride request sent to driver. Once accepted, your booking status will show Confirmed and the OTP can be shared to start the ride.',
+        confirmationMessage: assignedDriver
+          ? 'Ride request sent to driver. Once accepted, your booking status will show Confirmed and the OTP can be shared to start the ride.'
+          : 'No driver accepted yet. Your request is saved with this booking ID. We will assign a driver soon and update your booking status automatically.',
         pickupLocation: booking.pickupLocation,
         dropLocation: booking.dropLocation,
         date: booking.startDate,
@@ -427,6 +449,8 @@ exports.getCustomerBookings = async (req, res) => {
       },
       verification: {
         otp: b.verification?.otp || null,
+        otpSharedWithDriver: b.verification?.otpSharedWithDriver || false,
+        otpSharedAt: b.verification?.otpSharedAt || null,
         otpVerified: b.verification?.otpVerified || false,
         otpExpiry: b.verification?.otpExpiry || null,
       },
@@ -463,7 +487,7 @@ exports.getBookingById = async (req, res) => {
     const bookingData = booking.toObject();
     bookingData.invoice = buildInvoiceSummary(bookingData);
 
-    if (req.user?.role === 'driver' && bookingData.verification) {
+    if (req.user?.role === 'driver' && bookingData.verification && !bookingData.verification.otpSharedWithDriver) {
       delete bookingData.verification.otp;
     }
 
@@ -504,6 +528,8 @@ exports.updateBookingStatus = async (req, res) => {
         finalPrice: booking.finalPrice,
         verification: {
           otp: booking.verification?.otp || null,
+          otpSharedWithDriver: booking.verification?.otpSharedWithDriver || false,
+          otpSharedAt: booking.verification?.otpSharedAt || null,
           otpVerified: booking.verification?.otpVerified || false,
           otpExpiry: booking.verification?.otpExpiry
         }
@@ -545,6 +571,8 @@ exports.confirmBooking = async (req, res) => {
         finalPrice: booking.finalPrice,
         verification: {
           otp: booking.verification?.otp || null,
+          otpSharedWithDriver: booking.verification?.otpSharedWithDriver || false,
+          otpSharedAt: booking.verification?.otpSharedAt || null,
           otpVerified: booking.verification?.otpVerified || false,
           otpExpiry: booking.verification?.otpExpiry
         }
@@ -890,10 +918,13 @@ exports.getDriverBookings = async (req, res) => {
         phone: b.customerId.phone,
       } : null,
       verification: {
+        otp: b.verification?.otpSharedWithDriver ? (b.verification?.otp || null) : null,
+        otpSharedWithDriver: b.verification?.otpSharedWithDriver || false,
+        otpSharedAt: b.verification?.otpSharedAt || null,
         otpVerified: b.verification?.otpVerified || false,
         otpExpiry: b.verification?.otpExpiry || null,
       },
-      canStartRide: b.status === 'confirmed' && !(b.verification?.otpVerified),
+      canStartRide: b.status === 'confirmed' && !!b.verification?.otpSharedWithDriver && !(b.verification?.otpVerified),
       invoice: buildInvoiceSummary(b),
       insurance: {
         opted: b.insuranceOpted || false,
@@ -981,7 +1012,9 @@ exports.driverRespondBooking = async (req, res) => {
           driver: buildDriverSummary(driver),
           invoice,
           verification: {
-            otp: booking.verification?.otp || null,
+            otp: booking.verification?.otpSharedWithDriver ? (booking.verification?.otp || null) : null,
+            otpSharedWithDriver: booking.verification?.otpSharedWithDriver || false,
+            otpSharedAt: booking.verification?.otpSharedAt || null,
             otpVerified: booking.verification?.otpVerified || false,
             otpExpiry: booking.verification?.otpExpiry
           },
@@ -1143,6 +1176,10 @@ exports.startRideWithOTP = async (req, res) => {
       return res.status(403).json({ error: 'This ride is not assigned to you' });
     }
 
+    if (!booking.verification?.otpSharedWithDriver) {
+      return res.status(400).json({ error: 'Customer has not shared the OTP yet' });
+    }
+
     if (booking.verification?.otp !== enteredOTP) {
       return res.status(400).json({ error: 'Invalid OTP' });
     }
@@ -1181,6 +1218,70 @@ exports.startRideWithOTP = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.shareRideOTP = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const bookingId = req.params.id;
+
+    const booking = await Booking.findOne({ _id: bookingId, customerId }).populate('driverId', 'name phone');
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const shareAllowedStatuses = ['pending', 'confirmed', 'driver_assigned', 'driver_arrived'];
+    if (!shareAllowedStatuses.includes(booking.status)) {
+      return res.status(400).json({ error: `OTP cannot be shared when booking is ${booking.status}` });
+    }
+
+    if (!booking.verification?.otp) {
+      return res.status(400).json({ error: 'No OTP found for this booking' });
+    }
+
+    if (booking.verification?.otpExpiry && new Date() > new Date(booking.verification.otpExpiry)) {
+      return res.status(400).json({ error: 'OTP expired. Please contact support to regenerate OTP.' });
+    }
+
+    if (booking.verification?.otpVerified) {
+      return res.status(400).json({ error: 'OTP already verified and ride started' });
+    }
+
+    booking.verification.otpSharedWithDriver = true;
+    booking.verification.otpSharedAt = new Date();
+    booking.verification.otpSharedByCustomer = true;
+
+    if (booking.status === 'pending') {
+      booking.status = 'confirmed';
+    }
+
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    if (booking.driverId?.phone) {
+      const msg = `DriveEase OTP: Booking ${booking.bookingId}, Start OTP ${booking.verification.otp}.`;
+      try {
+        await sendSMSToDriver(booking.driverId.phone, msg);
+      } catch (smsErr) {
+        console.error('SMS to driver failed while sharing OTP:', smsErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'OTP shared with driver successfully',
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        verification: buildVerificationSummary(booking, { includeOtp: true }),
+        driver: booking.driverId ? buildDriverSummary(booking.driverId) : null,
+        updatedAt: booking.updatedAt,
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };
 

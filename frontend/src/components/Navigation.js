@@ -63,13 +63,13 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
             </>
           ) : (
             <>
+              <button onClick={handleLogout} className="nav-button btn-logout">Logout</button>
               {isDriver && (
                 <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
               )}
               {!isDriver && (
                 <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
               )}
-              <button onClick={handleLogout} className="nav-button btn-logout">Logout</button>
             </>
           )}
           <Link to="/book-driver" className="nav-button btn-primary">🚗 Book a Driver</Link>

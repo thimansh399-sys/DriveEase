@@ -502,6 +502,12 @@
 
 .mb-btn:hover { transform: translateY(-2px); }
 
+.mb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .mb-btn.confirm {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   color: #fff;

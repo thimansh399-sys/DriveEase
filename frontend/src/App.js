@@ -26,6 +26,8 @@ import TrackBooking from './pages/TrackBooking';
 import Messages from './pages/Messages';
 import BookDriver from './pages/BookDriver';
 import CustomerConfirmation from './pages/CustomerConfirmation';
+import AdminSupport from './pages/AdminSupport';
+import AdminAnalytics from './pages/AdminAnalytics';
 import SplashScreen from './components/SplashScreen';
 
 function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
@@ -61,6 +63,8 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-dashboard" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-analytics" element={localStorage.getItem('adminAuth') === 'true' ? <AdminAnalytics /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-support" element={localStorage.getItem('adminAuth') === 'true' ? <AdminSupport /> : <Navigate to="/admin-login" />} />
           <Route path="/drivers" element={<Drivers />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/track-booking" element={<TrackBooking />} />

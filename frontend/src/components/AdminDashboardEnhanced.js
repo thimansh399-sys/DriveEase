@@ -1,469 +1,437 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import '../styles/AdminDashboardEnhanced.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+const MODULES = [
+  { key: 'dashboard', label: 'Dashboard', icon: '▣' },
+  { key: 'bookings', label: 'Bookings', icon: '◎' },
+  { key: 'drivers', label: 'Drivers', icon: '◉' },
+  { key: 'customers', label: 'Customers', icon: '◌' },
+  { key: 'support', label: 'Support', icon: '◇' },
+  { key: 'finance', label: 'Finance', icon: '△' },
+  { key: 'live', label: 'Live Tracking', icon: '◈' },
+];
+
+const statusColorClass = (status = '') => {
+  const value = String(status).toLowerCase();
+  if (value === 'completed' || value === 'resolved' || value === 'online') return 'good';
+  if (value === 'pending' || value === 'open' || value === 'confirmed') return 'warn';
+  if (value === 'cancelled' || value === 'rejected' || value === 'failed') return 'bad';
+  return 'neutral';
+};
+
+const safeArray = (value) => (Array.isArray(value) ? value : []);
+
 export default function AdminDashboardEnhanced() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeModule, setActiveModule] = useState('dashboard');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
   const [dashboardData, setDashboardData] = useState(null);
-  const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [liveBookings, setLiveBookings] = useState([]);
   const [liveDrivers, setLiveDrivers] = useState([]);
-  const [selectedRegistration, setSelectedRegistration] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const audioRef = useRef(new Audio('/notification.mp3'));
-  const refreshIntervalRef = useRef(null);
+  const [allBookings, setAllBookings] = useState([]);
+  const [allDrivers, setAllDrivers] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [supportStats, setSupportStats] = useState(null);
+  const [revenueAnalytics, setRevenueAnalytics] = useState(null);
 
-  // Fetch dashboard stats (no auto-refresh, manual only)
-  const fetchDashboardStats = async () => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/dashboard/stats`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await response.json();
-      setDashboardData(data.stats);
-    } catch (error) {
-      console.error('Dashboard stats error:', error);
-    }
+  const authHeaders = {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    'Content-Type': 'application/json',
   };
 
-  // Fetch pending registrations
-  const fetchPendingRegistrations = async () => {
+  const fetchJson = async (path) => {
+    const response = await fetch(`${API_BASE_URL}${path}`, { headers: authHeaders });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error || `Request failed for ${path}`);
+    }
+    return payload;
+  };
+
+  const fetchAllData = async (isManual = false) => {
     try {
-      setLoading(true);
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin/registrations/pending`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
-      );
-      const data = await response.json();
-      setPendingRegistrations(data.registrations);
-      
-      // Play notification if new pending registrations
-      if (data.registrations.length > 0 && soundEnabled) {
-        playNotificationSound();
-      }
-    } catch (error) {
-      console.error('Registrations error:', error);
+      setError('');
+      if (isManual) setRefreshing(true);
+      else setLoading(true);
+
+      const [
+        dashboardRes,
+        liveBookingsRes,
+        liveDriversRes,
+        allBookingsRes,
+        allDriversRes,
+        customersRes,
+        supportStatsRes,
+        supportTicketsRes,
+        financeRes,
+      ] = await Promise.all([
+        fetchJson('/admin-dashboard/stats'),
+        fetchJson('/admin-dashboard/bookings/live'),
+        fetchJson('/admin-dashboard/drivers/live-status'),
+        fetchJson('/admin/bookings'),
+        fetchJson('/admin/drivers/registrations?status=all'),
+        fetchJson('/admin/customers'),
+        fetchJson('/support-tickets/admin/stats'),
+        fetchJson('/support-tickets/all?status=open'),
+        fetchJson('/admin-dashboard/revenue/analytics'),
+      ]);
+
+      setDashboardData(dashboardRes?.stats || null);
+      setLiveBookings(safeArray(liveBookingsRes?.bookings));
+      setLiveDrivers(safeArray(liveDriversRes?.drivers));
+      setAllBookings(safeArray(allBookingsRes));
+      setAllDrivers(safeArray(allDriversRes));
+      setCustomers(safeArray(customersRes));
+      setSupportStats(supportStatsRes || null);
+      setSupportTickets(safeArray(supportTicketsRes?.tickets));
+      setRevenueAnalytics(financeRes?.analytics || null);
+    } catch (fetchError) {
+      setError(fetchError.message || 'Unable to load CRM data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Fetch live bookings
-  const fetchLiveBookings = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin/bookings/live`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
-      );
-      const data = await response.json();
-      setLiveBookings(data.bookings);
-    } catch (error) {
-      console.error('Live bookings error:', error);
-    }
-  };
-
-  // Fetch live driver locations
-  const fetchLiveDrivers = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin/drivers/live-status`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
-      );
-      const data = await response.json();
-      setLiveDrivers(data.drivers);
-    } catch (error) {
-      console.error('Live drivers error:', error);
-    }
-  };
-
-  // Play notification sound
-  const playNotificationSound = () => {
-    try {
-      audioRef.current.play();
-    } catch (error) {
-      console.error('Audio play error:', error);
-    }
-  };
-
-  // Initial load
   useEffect(() => {
-    fetchDashboardStats();
-    fetchPendingRegistrations();
-    fetchLiveBookings();
-    fetchLiveDrivers();
+    fetchAllData(false);
   }, []);
 
-  // Setup manual refresh based on tab (no auto-refresh, user triggered)
-  useEffect(() => {
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
+  const computed = useMemo(() => {
+    const pendingBookings = allBookings.filter((b) => String(b?.status || '').toLowerCase() === 'pending').length;
+    const confirmedBookings = allBookings.filter((b) => String(b?.status || '').toLowerCase() === 'confirmed').length;
+    const activeDrivers = allDrivers.filter((d) => Boolean(d?.isOnline)).length;
+    const pendingDrivers = allDrivers.filter((d) => String(d?.status || '').toLowerCase() === 'pending').length;
+    const totalFinance = safeArray(allBookings)
+      .filter((b) => String(b?.paymentStatus || '').toLowerCase() === 'completed')
+      .reduce((sum, b) => sum + Number(b?.finalPrice || 0), 0);
+
+    return {
+      pendingBookings,
+      confirmedBookings,
+      activeDrivers,
+      pendingDrivers,
+      totalFinance,
     };
-  }, []);
+  }, [allBookings, allDrivers]);
 
-  const handleApprovePayment = async (driverId) => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin/drivers/${driverId}/payment/approve`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ adminNotes: 'Approved by admin' })
-        }
-      );
+  const renderDashboard = () => {
+    const stats = dashboardData || {};
+    return (
+      <div className="crm-grid">
+        <div className="crm-kpi-row">
+          <article className="crm-kpi-card accent-a">
+            <span>Total Bookings</span>
+            <strong>{stats?.bookings?.total || allBookings.length || 0}</strong>
+            <small>{computed.pendingBookings} pending, {computed.confirmedBookings} confirmed</small>
+          </article>
+          <article className="crm-kpi-card accent-b">
+            <span>Drivers</span>
+            <strong>{stats?.drivers?.total || allDrivers.length || 0}</strong>
+            <small>{computed.activeDrivers} online, {computed.pendingDrivers} pending approval</small>
+          </article>
+          <article className="crm-kpi-card accent-c">
+            <span>Customers</span>
+            <strong>{stats?.customers?.total || customers.length || 0}</strong>
+            <small>Live CRM audience</small>
+          </article>
+          <article className="crm-kpi-card accent-d">
+            <span>Revenue</span>
+            <strong>Rs {Math.round(stats?.revenue?.total || computed.totalFinance).toLocaleString('en-IN')}</strong>
+            <small>This month: Rs {Math.round(stats?.revenue?.thisMonth || 0).toLocaleString('en-IN')}</small>
+          </article>
+        </div>
 
-      if (response.ok) {
-        fetchPendingRegistrations();
-        setSelectedRegistration(null);
-        playNotificationSound();
-      }
-    } catch (error) {
-      console.error('Approval error:', error);
-    }
+        <section className="crm-panel">
+          <header className="crm-panel-head">
+            <h3>Operational Snapshot</h3>
+          </header>
+          <div className="crm-badges">
+            <span className="chip good">Live bookings: {liveBookings.length}</span>
+            <span className="chip warn">Open support tickets: {supportTickets.length}</span>
+            <span className="chip neutral">Online drivers: {safeArray(liveDrivers).filter((d) => d.isOnline).length}</span>
+            <span className="chip good">Pending registrations: {computed.pendingDrivers}</span>
+          </div>
+        </section>
+      </div>
+    );
   };
 
-  const handleRejectPayment = async (driverId, reason) => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin/drivers/${driverId}/payment/reject`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ reason })
-        }
-      );
+  const renderBookings = () => (
+    <section className="crm-panel">
+      <header className="crm-panel-head">
+        <h3>Bookings Module</h3>
+      </header>
+      <div className="crm-table">
+        <div className="crm-thead">
+          <span>ID</span>
+          <span>Customer</span>
+          <span>Driver</span>
+          <span>Status</span>
+          <span>Amount</span>
+        </div>
+        {allBookings.slice(0, 120).map((booking) => (
+          <div className="crm-trow" key={String(booking?._id || booking?.bookingId)}>
+            <span>{booking?.bookingId || String(booking?._id || '').slice(-6)}</span>
+            <span>{booking?.customerId?.name || 'NA'}</span>
+            <span>{booking?.driverId?.name || 'Unassigned'}</span>
+            <span className={`status-tag ${statusColorClass(booking?.status)}`}>{booking?.status || 'NA'}</span>
+            <span>Rs {Math.round(Number(booking?.finalPrice || booking?.estimatedPrice || 0)).toLocaleString('en-IN')}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 
-      if (response.ok) {
-        fetchPendingRegistrations();
-        setSelectedRegistration(null);
-      }
-    } catch (error) {
-      console.error('Rejection error:', error);
-    }
+  const renderDrivers = () => (
+    <section className="crm-panel">
+      <header className="crm-panel-head">
+        <h3>Drivers Module</h3>
+      </header>
+      <div className="crm-cards-grid">
+        {allDrivers.slice(0, 100).map((driver) => (
+          <article className="mini-card" key={String(driver?._id)}>
+            <h4>{driver?.name || 'Driver'}</h4>
+            <p>{driver?.phone || 'NA'}</p>
+            <div className="mini-row">
+              <span className={`status-tag ${statusColorClass(driver?.status)}`}>{driver?.status || 'unknown'}</span>
+              <span className={`status-tag ${driver?.isOnline ? 'good' : 'neutral'}`}>{driver?.isOnline ? 'online' : 'offline'}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderCustomers = () => (
+    <section className="crm-panel">
+      <header className="crm-panel-head">
+        <h3>Customers Module</h3>
+      </header>
+      <div className="crm-table">
+        <div className="crm-thead">
+          <span>Name</span>
+          <span>Phone</span>
+          <span>Email</span>
+          <span>Role</span>
+          <span>Status</span>
+        </div>
+        {customers.slice(0, 200).map((customer) => (
+          <div className="crm-trow" key={String(customer?._id)}>
+            <span>{customer?.name || 'NA'}</span>
+            <span>{customer?.phone || 'NA'}</span>
+            <span>{customer?.email || 'NA'}</span>
+            <span>{customer?.role || 'customer'}</span>
+            <span className={`status-tag ${statusColorClass(customer?.status || 'active')}`}>{customer?.status || 'active'}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderSupport = () => {
+    const counts = supportStats?.stats || {};
+    return (
+      <div className="crm-grid">
+        <div className="crm-kpi-row">
+          <article className="crm-kpi-card accent-b"><span>Open</span><strong>{counts.openTickets || 0}</strong></article>
+          <article className="crm-kpi-card accent-c"><span>In Progress</span><strong>{counts.inProgressTickets || 0}</strong></article>
+          <article className="crm-kpi-card accent-d"><span>Resolved</span><strong>{counts.resolvedTickets || 0}</strong></article>
+        </div>
+
+        <section className="crm-panel">
+          <header className="crm-panel-head">
+            <h3>Support Module</h3>
+          </header>
+          <div className="crm-table">
+            <div className="crm-thead">
+              <span>Ticket</span>
+              <span>User</span>
+              <span>Issue</span>
+              <span>Status</span>
+              <span>Updated</span>
+            </div>
+            {supportTickets.slice(0, 80).map((ticket) => (
+              <div className="crm-trow" key={String(ticket?._id)}>
+                <span>{ticket?.ticketId || String(ticket?._id || '').slice(-6)}</span>
+                <span>{ticket?.userId?.name || 'NA'}</span>
+                <span>{ticket?.subject || 'General issue'}</span>
+                <span className={`status-tag ${statusColorClass(ticket?.status)}`}>{ticket?.status || 'open'}</span>
+                <span>{ticket?.updatedAt ? new Date(ticket.updatedAt).toLocaleString('en-IN') : 'NA'}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
   };
 
-  // Update dark mode
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) {
-      root.style.setProperty('--background-color', '#121212');
-      root.style.setProperty('--text-color', '#ffffff');
-    } else {
-      root.style.setProperty('--background-color', '#ffffff');
-      root.style.setProperty('--text-color', '#000000');
-    }
-  }, [darkMode]);
+  const renderFinance = () => {
+    const cityRevenue = safeArray(revenueAnalytics?.cityRevenue);
+    const dailyRevenue = safeArray(revenueAnalytics?.dailyRevenue);
+    return (
+      <div className="crm-grid">
+        <section className="crm-panel">
+          <header className="crm-panel-head">
+            <h3>Finance Module</h3>
+          </header>
+          <div className="crm-kpi-row compact">
+            <article className="crm-kpi-card accent-a">
+              <span>Gross Collected</span>
+              <strong>Rs {Math.round(computed.totalFinance).toLocaleString('en-IN')}</strong>
+            </article>
+            <article className="crm-kpi-card accent-c">
+              <span>Revenue Days</span>
+              <strong>{dailyRevenue.length}</strong>
+            </article>
+            <article className="crm-kpi-card accent-d">
+              <span>Top Cities</span>
+              <strong>{cityRevenue.length}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className="crm-panel">
+          <header className="crm-panel-head">
+            <h3>Top Revenue Cities</h3>
+          </header>
+          <div className="crm-table">
+            <div className="crm-thead">
+              <span>City</span>
+              <span>Revenue</span>
+              <span>Bookings</span>
+              <span>Avg Ticket</span>
+            </div>
+            {cityRevenue.map((cityRow) => {
+              const revenue = Number(cityRow?.revenue || 0);
+              const bookings = Number(cityRow?.bookings || 0);
+              const avg = bookings > 0 ? revenue / bookings : 0;
+              return (
+                <div className="crm-trow" key={String(cityRow?._id || 'unknown')}>
+                  <span>{cityRow?._id || 'Unknown'}</span>
+                  <span>Rs {Math.round(revenue).toLocaleString('en-IN')}</span>
+                  <span>{bookings}</span>
+                  <span>Rs {Math.round(avg).toLocaleString('en-IN')}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  const renderLive = () => (
+    <div className="crm-grid two-col">
+      <section className="crm-panel">
+        <header className="crm-panel-head">
+          <h3>Live Bookings</h3>
+        </header>
+        <div className="crm-table">
+          <div className="crm-thead">
+            <span>Ride ID</span>
+            <span>Customer</span>
+            <span>Driver</span>
+            <span>Status</span>
+            <span>OTP</span>
+          </div>
+          {liveBookings.slice(0, 80).map((ride) => (
+            <div className="crm-trow" key={String(ride?.bookingId)}>
+              <span>{ride?.rideId || String(ride?.bookingId || '').slice(-6)}</span>
+              <span>{ride?.customer || 'NA'}</span>
+              <span>{ride?.driver || 'NA'}</span>
+              <span className={`status-tag ${statusColorClass(ride?.status)}`}>{ride?.status || 'pending'}</span>
+              <span className={`status-tag ${ride?.otpVerified ? 'good' : 'warn'}`}>{ride?.otpVerified ? 'verified' : 'pending'}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="crm-panel">
+        <header className="crm-panel-head">
+          <h3>Driver Live Tracking</h3>
+        </header>
+        <div className="crm-cards-grid">
+          {liveDrivers.slice(0, 120).map((driver) => (
+            <article className="mini-card" key={String(driver?.driverId)}>
+              <h4>{driver?.name || 'Driver'}</h4>
+              <p>{driver?.phone || 'NA'}</p>
+              <div className="mini-row">
+                <span className={`status-tag ${driver?.isOnline ? 'good' : 'neutral'}`}>{driver?.isOnline ? 'online' : 'offline'}</span>
+                <span>{driver?.totalRides || 0} rides</span>
+              </div>
+              <small>
+                {driver?.location?.city || 'Unknown city'} {driver?.location?.state ? `, ${driver.location.state}` : ''}
+              </small>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderModule = () => {
+    if (activeModule === 'dashboard') return renderDashboard();
+    if (activeModule === 'bookings') return renderBookings();
+    if (activeModule === 'drivers') return renderDrivers();
+    if (activeModule === 'customers') return renderCustomers();
+    if (activeModule === 'support') return renderSupport();
+    if (activeModule === 'finance') return renderFinance();
+    if (activeModule === 'live') return renderLive();
+    return null;
+  };
 
   return (
-    <div className={`admin-dashboard-enhanced ${darkMode ? 'dark-mode' : ''}`}>
-      {/* Header */}
-      <div className="admin-header">
-        <div className="header-left">
-          <h1>DriveEase Admin Dashboard</h1>
-          <p>Live operations management system</p>
+    <div className="crm-shell">
+      <aside className="crm-sidebar">
+        <div className="crm-brand">
+          <h1>DriveEase CRM</h1>
+          <p>Ops Control Portal</p>
         </div>
-        <div className="header-right">
+        <nav className="crm-nav">
+          {MODULES.map((module) => (
+            <button
+              key={module.key}
+              type="button"
+              className={`crm-nav-item ${activeModule === module.key ? 'active' : ''}`}
+              onClick={() => setActiveModule(module.key)}
+            >
+              <span>{module.icon}</span>
+              <span>{module.label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <main className="crm-main">
+        <header className="crm-header">
+          <div>
+            <h2>{MODULES.find((module) => module.key === activeModule)?.label || 'Dashboard'}</h2>
+            <p>Screenshot-style full CRM portal with real operational metrics</p>
+          </div>
           <button
-            className={`btn-settings ${soundEnabled ? 'active' : ''}`}
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            title="Toggle notification sounds"
+            type="button"
+            className="crm-refresh"
+            onClick={() => fetchAllData(true)}
+            disabled={refreshing}
           >
-            🔔
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
           </button>
-          <button
-            className={`btn-settings ${darkMode ? 'active' : ''}`}
-            onClick={() => setDarkMode(!darkMode)}
-            title="Toggle dark mode"
-          >
-            🌙
-          </button>
-          <button
-            className="btn-refresh"
-            onClick={() => {
-              fetchDashboardStats();
-              fetchPendingRegistrations();
-              fetchLiveBookings();
-              fetchLiveDrivers();
-            }}
-            title="Manual refresh - No auto-refresh to prevent interruption"
-          >
-            ↻ Refresh Now
-          </button>
-        </div>
-      </div>
+        </header>
 
-      {/* Tab Navigation */}
-      <div className="admin-tabs">
-        <button
-          className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          📊 Dashboard
-        </button>
-        <button
-          className={`tab ${activeTab === 'registrations' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('registrations'); fetchPendingRegistrations(); }}
-        >
-          👤 Registrations {pendingRegistrations.length > 0 && <span className="badge">{pendingRegistrations.length}</span>}
-        </button>
-        <button
-          className={`tab ${activeTab === 'bookings' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('bookings'); fetchLiveBookings(); }}
-        >
-          🚗 Live Bookings
-        </button>
-        <button
-          className={`tab ${activeTab === 'drivers' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('drivers'); fetchLiveDrivers(); }}
-        >
-          📍 Driver Tracking
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="admin-content">
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && dashboardData && (
-          <div className="dashboard-grid">
-            {/* Stats Cards */}
-            <div className="stats-row">
-              <div className="stat-card drivers">
-                <div className="stat-icon">👥</div>
-                <div className="stat-content">
-                  <div className="stat-label">Total Drivers</div>
-                  <div className="stat-value">{dashboardData.drivers.total}</div>
-                  <div className="stat-detail">
-                    {dashboardData.drivers.approved} approved, {dashboardData.drivers.pending} pending
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card online">
-                <div className="stat-icon">🟢</div>
-                <div className="stat-content">
-                  <div className="stat-label">Online Now</div>
-                  <div className="stat-value">{dashboardData.drivers.online}</div>
-                  <div className="stat-detail">{dashboardData.drivers.offline} offline</div>
-                </div>
-              </div>
-
-              <div className="stat-card bookings">
-                <div className="stat-icon">📋</div>
-                <div className="stat-content">
-                  <div className="stat-label">Active Bookings</div>
-                  <div className="stat-value">{dashboardData.bookings.pending}</div>
-                  <div className="stat-detail">{dashboardData.bookings.completed} completed</div>
-                </div>
-              </div>
-
-              <div className="stat-card revenue">
-                <div className="stat-icon">💰</div>
-                <div className="stat-content">
-                  <div className="stat-label">This Month Revenue</div>
-                  <div className="stat-value">₹{dashboardData.revenue.thisMonth.toLocaleString()}</div>
-                  <div className="stat-detail">Total: ₹{dashboardData.revenue.total.toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="stat-card customers">
-                <div className="stat-icon">👨‍💼</div>
-                <div className="stat-content">
-                  <div className="stat-label">Total Customers</div>
-                  <div className="stat-value">{dashboardData.customers.total}</div>
-                  <div className="stat-detail">Active users</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Info */}
-            <div className="dashboard-info">
-              <div className="info-box">
-                <h3>📌 Quick Summary</h3>
-                <ul>
-                  <li>✓ System Status: <strong className="status-online">Online</strong></li>
-                  <li>✓ Database Sync: <strong className="status-online">Active</strong></li>
-                  <li>✓ Pending Approvals: <strong>{pendingRegistrations.length}</strong></li>
-                  <li>✓ Active Rides: <strong>{liveBookings.filter(b => b.status === 'in_progress').length}</strong></li>
-                </ul>
-              </div>
-
-              <div className="info-box">
-                <h3>🔧 Settings</h3>
-                <label className="setting-item">
-                  <input
-                    type="checkbox"
-                    checked={soundEnabled}
-                    onChange={(e) => setSoundEnabled(e.target.checked)}
-                  />
-                  <span>Sound Notifications</span>
-                </label>
-                <label className="setting-item">
-                  <input
-                    type="checkbox"
-                    checked={darkMode}
-                    onChange={(e) => setDarkMode(e.target.checked)}
-                  />
-                  <span>Dark Mode</span>
-                </label>
-                <label className="setting-item info">
-                  <span>💡 Manual refresh enabled - No auto-refresh to prevent interruption</span>
-                </label>
-              </div>
-            </div>
-          </div>
+        {loading ? (
+          <section className="crm-loader">Loading CRM data...</section>
+        ) : error ? (
+          <section className="crm-error">{error}</section>
+        ) : (
+          renderModule()
         )}
-
-        {/* Registrations Tab */}
-        {activeTab === 'registrations' && (
-          <div className="registrations-view">
-            <div className="view-header">
-              <h2>Payment Verification Pending</h2>
-              <p>{pendingRegistrations.length} drivers awaiting approval</p>
-            </div>
-
-            {pendingRegistrations.length === 0 ? (
-              <div className="empty-state">
-                <p>✓ No pending registrations</p>
-              </div>
-            ) : (
-              <div className="registrations-table">
-                {pendingRegistrations.map(reg => (
-                  <div key={reg.driverId} className="registration-row">
-                    <div className="reg-info">
-                      <h4>{reg.name}</h4>
-                      <p>{reg.phone} • {reg.email}</p>
-                      <p className="timestamp">Submitted: {reg.submittedAt}</p>
-                      <p className="wait-time">⏱️ {reg.waitTime}</p>
-                    </div>
-
-                    <div className="reg-screenshot">
-                      <img src={reg.screenshotUrl} alt="Payment proof" />
-                      <p className="screenshot-label">Payment Screenshot</p>
-                    </div>
-
-                    <div className="reg-vehicle">
-                      <p><strong>Vehicle:</strong> {reg.vehicle?.model}</p>
-                      <p><strong>Reg #:</strong> {reg.vehicle?.registrationNumber}</p>
-                    </div>
-
-                    <div className="reg-actions">
-                      <button
-                        className="btn-approve"
-                        onClick={() => handleApprovePayment(reg.driverId)}
-                      >
-                        ✓ Approve
-                      </button>
-                      <button
-                        className="btn-reject"
-                        onClick={() => handleRejectPayment(reg.driverId, 'Invalid screenshot')}
-                      >
-                        ✗ Reject
-                      </button>
-                      <button
-                        className="btn-details"
-                        onClick={() => setSelectedRegistration(reg)}
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Bookings Tab */}
-        {activeTab === 'bookings' && (
-          <div className="bookings-view">
-            <div className="view-header">
-              <h2>Live Bookings</h2>
-              <p>{liveBookings.length} active bookings</p>
-            </div>
-
-            <div className="bookings-table">
-              <div className="table-header">
-                <div className="col-id">Booking ID</div>
-                <div className="col-customer">Customer</div>
-                <div className="col-driver">Driver</div>
-                <div className="col-status">Status</div>
-                <div className="col-price">Price</div>
-                <div className="col-otp">OTP</div>
-              </div>
-
-              {liveBookings.map(booking => (
-                <div key={booking.bookingId} className="table-row">
-                  <div className="col-id">{booking.rideId.substring(0, 8)}</div>
-                  <div className="col-customer">
-                    {booking.customer}
-                    <span className="city">{booking.pickupCity}</span>
-                  </div>
-                  <div className="col-driver">{booking.driver}</div>
-                  <div className={`col-status status-${booking.status}`}>
-                    {booking.status}
-                  </div>
-                  <div className="col-price">₹{booking.estimatedPrice}</div>
-                  <div className={`col-otp ${booking.otpVerified ? 'verified' : ''}`}>
-                    {booking.otpVerified ? '✓ Verified' : '⏳ Pending'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Driver Tracking Tab */}
-        {activeTab === 'drivers' && (
-          <div className="drivers-view">
-            <div className="view-header">
-              <h2>Live Driver Tracking</h2>
-              <p>{liveDrivers.filter(d => d.isOnline).length} drivers online</p>
-            </div>
-
-            <div className="drivers-list">
-              {liveDrivers.map(driver => (
-                <div key={driver.driverId} className={`driver-item ${driver.isOnline ? 'online' : 'offline'}`}>
-                  <div className="driver-status-indicator"></div>
-                  <div className="driver-info">
-                    <h4>{driver.name}</h4>
-                    <p>{driver.phone}</p>
-                  </div>
-                  <div className="driver-stats">
-                    <span>Rides: {driver.totalRides}</span>
-                    <span>Online: {driver.onlineHours.toFixed(1)}h</span>
-                  </div>
-                  <div className="driver-location">
-                    📍 {driver.location?.city || 'Unknown'}, {driver.location?.state || ''}
-                  </div>
-                  <div className="driver-last-update">
-                    Last update: {driver.lastLocationUpdate}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Detail Modal */}
-      {selectedRegistration && (
-        <div className="modal-overlay" onClick={() => setSelectedRegistration(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedRegistration(null)}>×</button>
-            <h3>{selectedRegistration.name} - Registration Details</h3>
-            {/* Add detailed view content here */}
-          </div>
-        </div>
-      )}
+      </main>
     </div>
   );
 }
