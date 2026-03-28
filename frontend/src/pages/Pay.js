@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import '../styles/Pay.css';
 import { buildApiUrl } from '../utils/network';
 
@@ -164,7 +164,7 @@ function Pay() {
             </div>
 
             <div className="pay-small-qr">
-              <QRCode
+              <QRCodeSVG
                 value={upiLink}
                 size={120}
                 bgColor="transparent"
@@ -181,7 +181,7 @@ function Pay() {
           <div className="pay-section pay-qr">
             <div className="pay-qr-box">
               <div className="pay-qr-frame">
-                <QRCode
+                <QRCodeSVG
                   value={upiLink}
                   size={220}
                   bgColor="#ffffff"
