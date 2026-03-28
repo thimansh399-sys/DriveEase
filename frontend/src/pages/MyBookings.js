@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { downloadInvoice } from '../utils/invoiceUtils';
 import '../styles/MyBookings.css';
+import { buildAssetUrl } from '../utils/network';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: '#f59e0b', icon: '⏳', class: 'status-pending' },
@@ -239,7 +240,7 @@ function MyBookings() {
                         <>
                           <div className="mb-driver-avatar">
                             {counterpart.profilePicture
-                              ? <img src={`http://localhost:5000/${counterpart.profilePicture}`} alt="" />
+                              ? <img src={buildAssetUrl(counterpart.profilePicture)} alt="" />
                               : <span>🧑</span>
                             }
                           </div>

@@ -1,19 +1,7 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL, getApiCandidates } from './network';
 
 const getAuthBaseUrls = () => {
-  const urls = [];
-
-  if (typeof API_BASE_URL === 'string' && API_BASE_URL.trim()) {
-    urls.push(API_BASE_URL.trim());
-  }
-
-  // Fallback for local backend in development.
-  urls.push('http://localhost:5000/api');
-
-  // Fallback for setups using frontend proxy/same-origin API gateway.
-  urls.push('/api');
-
-  return [...new Set(urls)];
+  return getApiCandidates();
 };
 
 const parseJsonSafe = async (response) => {
@@ -51,7 +39,7 @@ const postAuthWithFallback = async (path, payload) => {
 
   throw new Error(
     lastNetworkError?.message ||
-    'Unable to connect to backend API. Please ensure backend is running on port 5000.'
+    'Unable to connect to backend API. Check REACT_APP_API_URL or your deployed /api proxy.'
   );
 };
 
@@ -156,7 +144,7 @@ export const api = {
     if (response.status === 404) {
       return {
         ...result,
-        error: result.error || 'Booking endpoint not found. Ensure backend/server.js is running on port 5000.'
+        error: result.error || 'Booking endpoint not found. Verify the deployed backend is exposing /api/bookings/book-ride.'
       };
     }
 

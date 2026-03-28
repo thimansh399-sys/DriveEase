@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
+import { buildAssetUrl } from '../utils/network';
 
 /**
  * Track Booking Page
@@ -89,7 +90,7 @@ export default function TrackBooking() {
                 plate: driver.vehicle?.registrationNumber || 'N/A',
               },
               avatar: driver.profilePicture
-                ? `http://localhost:5000/${driver.profilePicture}`
+                ? buildAssetUrl(driver.profilePicture)
                 : 'https://randomuser.me/api/portraits/men/32.jpg',
               location: {
                 lat: Number(driver.currentLocation?.latitude),

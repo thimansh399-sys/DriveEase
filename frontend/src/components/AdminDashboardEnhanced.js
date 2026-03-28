@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import '../styles/AdminDashboardEnhanced.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { buildApiUrl } from '../utils/network';
 
 const MODULES = [
   { key: 'dashboard', label: 'Dashboard', icon: '▣' },
@@ -45,7 +44,7 @@ export default function AdminDashboardEnhanced() {
   };
 
   const fetchJson = async (path) => {
-    const response = await fetch(`${API_BASE_URL}${path}`, { headers: authHeaders });
+    const response = await fetch(buildApiUrl(path), { headers: authHeaders });
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload?.error || `Request failed for ${path}`);
@@ -53,7 +52,7 @@ export default function AdminDashboardEnhanced() {
     return payload;
   };
 
-  const fetchAllData = async (isManual = false) => {
+  const fetchAllData = useCallback(async (isManual = false) => {
     try {
       setError('');
       if (isManual) setRefreshing(true);
@@ -96,11 +95,11 @@ export default function AdminDashboardEnhanced() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAllData(false);
-  }, []);
+  }, [fetchAllData]);
 
   const computed = useMemo(() => {
     const pendingBookings = allBookings.filter((b) => String(b?.status || '').toLowerCase() === 'pending').length;

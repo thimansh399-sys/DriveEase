@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AvailableDrivers.css';
+import { buildApiUrl } from '../utils/network';
 
 export default function AvailableDriversPage() {
   const navigate = useNavigate();
@@ -22,9 +23,7 @@ export default function AvailableDriversPage() {
   const fetchDrivers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/public/available`
-      );
+      const response = await fetch(buildApiUrl('/public/available'));
       
       if (!response.ok) throw new Error('Failed to fetch drivers');
       

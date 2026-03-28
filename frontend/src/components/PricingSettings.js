@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/PricingSettings.css';
+import { buildApiUrl } from '../utils/network';
 
 export default function PricingSettings() {
   const [pricing, setPricing] = useState({
@@ -33,12 +34,9 @@ export default function PricingSettings() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin-dashboard/pricing/settings`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await fetch(buildApiUrl('/admin-dashboard/pricing/settings'), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -95,17 +93,14 @@ export default function PricingSettings() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/admin-dashboard/pricing/update`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(pricing)
-        }
-      );
+      const response = await fetch(buildApiUrl('/admin-dashboard/pricing/update'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pricing)
+      });
 
       if (response.ok) {
         setSaved(true);

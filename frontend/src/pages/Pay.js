@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode.react';
-import api from '../utils/api';
 import '../styles/Pay.css';
+import { buildApiUrl } from '../utils/network';
 
 const PAYMENT_INFO = {
   upi: '7836887228@okaxis',
@@ -53,14 +53,11 @@ function Pay() {
       formData.append('method', activeMethod);
       if (screenshot) formData.append('screenshot', screenshot);
 
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/payments/confirm`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          body: formData,
-        }
-      ).then((r) => r.json());
+      const res = await fetch(buildApiUrl('/payments/confirm'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData,
+      }).then((r) => r.json());
 
       if (res.success) {
         setPaymentStatus('success');

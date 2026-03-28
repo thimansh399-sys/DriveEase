@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/DriverOnlineTimer.css';
+import { buildApiUrl } from '../utils/network';
 
 export default function DriverOnlineTimer({ driverId = null }) {
   const [timerData, setTimerData] = useState({
@@ -35,12 +36,9 @@ export default function DriverOnlineTimer({ driverId = null }) {
   const fetchTimerData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/driver-registration/${driverId}/timer`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await fetch(buildApiUrl(`/driver-registration/${driverId}/timer`), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -74,17 +72,14 @@ export default function DriverOnlineTimer({ driverId = null }) {
   const handleToggleOnline = async (goOnline) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/driver-registration/${driverId}/online-status`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ isOnline: goOnline })
-        }
-      );
+      const response = await fetch(buildApiUrl(`/driver-registration/${driverId}/online-status`), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isOnline: !isOnline })
+      });
 
       if (response.ok) {
         fetchTimerData();

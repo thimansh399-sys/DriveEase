@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import { annotateDriversWithDistance } from '../utils/geo';
+import { buildAssetUrl } from '../utils/network';
 import '../styles/Browse.css';
 
 function Browse() {
@@ -281,9 +282,9 @@ function Browse() {
               <div className="browse-card-top">
                 <img
                   src={driver.profilePicture
-                    ? `http://localhost:5000/${driver.profilePicture}`
+                    ? buildAssetUrl(driver.profilePicture)
                     : driver.documents?.selfie?.file
-                      ? `http://localhost:5000/${driver.documents.selfie.file.replace(/^.*uploads[/\\]/, 'uploads/')}`
+                      ? buildAssetUrl(driver.documents.selfie.file)
                       : 'https://randomuser.me/api/portraits/men/31.jpg'}
                   alt={driver.name}
                   className="browse-card-img"
@@ -358,9 +359,9 @@ function Browse() {
             <div className="browse-modal-header">
               <img
                 src={bookingDriver.profilePicture
-                  ? `http://localhost:5000/${bookingDriver.profilePicture}`
+                  ? buildAssetUrl(bookingDriver.profilePicture)
                   : bookingDriver.documents?.selfie?.file
-                    ? `http://localhost:5000/${bookingDriver.documents.selfie.file.replace(/^.*uploads[/\\]/, 'uploads/')}`
+                    ? buildAssetUrl(bookingDriver.documents.selfie.file)
                     : 'https://randomuser.me/api/portraits/men/31.jpg'}
                 alt={bookingDriver.name}
                 className="browse-modal-img"

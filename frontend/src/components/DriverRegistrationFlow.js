@@ -1,10 +1,8 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/DriverRegistration.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { buildApiUrl } from '../utils/network';
 
 export default function DriverRegistrationFlow() {
   const [loading, setLoading] = useState(false);
@@ -31,7 +29,7 @@ export default function DriverRegistrationFlow() {
 
   // Unified input handler
   const handleInputChange = (e) => {
-    const { name, value, type, files } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -75,7 +73,7 @@ export default function DriverRegistrationFlow() {
       formPayload.append('pincode', formData.pincode);
       formPayload.append('selfie', selfieFile);
 
-      const res = await fetch(`${API_BASE_URL}/driver-registration/register-driver`, {
+      const res = await fetch(buildApiUrl('/driver-registration/register-driver'), {
         method: 'POST',
         body: formPayload
       });

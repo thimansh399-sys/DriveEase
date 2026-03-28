@@ -20,9 +20,24 @@ const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const server = http.createServer(app);
+const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -62,6 +77,18 @@ app.use('/api/analytics', analyticsRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'DriveEase API is running' });
 });
+
+if (require('fs').existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+      return next();
+    }
+
+    return res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+}
 
 // Error handling
 app.use((err, req, res, next) => {

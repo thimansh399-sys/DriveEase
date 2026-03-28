@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/PaymentEarnings.css';
+import { buildApiUrl } from '../utils/network';
 
 export default function PaymentEarnings({ bookingId = null, driverId = null, role = 'customer' }) {
   const [payment, setPayment] = useState(null);
@@ -23,12 +24,9 @@ export default function PaymentEarnings({ bookingId = null, driverId = null, rol
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/bookings-enhanced/${bookingId}/payment`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await fetch(buildApiUrl(`/bookings-enhanced/${bookingId}/payment`), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -46,12 +44,9 @@ export default function PaymentEarnings({ bookingId = null, driverId = null, rol
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/driver-registration/${driverId}/earnings`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
+      const response = await fetch(buildApiUrl(`/driver-registration/${driverId}/earnings`), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -86,20 +81,17 @@ export default function PaymentEarnings({ bookingId = null, driverId = null, rol
             handler: async (response) => {
               // Verify payment and update booking
               const token = localStorage.getItem('token');
-              const verifyResponse = await fetch(
-                `${process.env.REACT_APP_API_URL}/bookings-enhanced/${bookingId}/payment/verify`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    razorpayPaymentId: response.razorpay_payment_id,
-                    razorpaySignature: response.razorpay_signature
-                  })
-                }
-              );
+              const verifyResponse = await fetch(buildApiUrl(`/bookings-enhanced/${bookingId}/payment/verify`), {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature
+                })
+              });
 
               if (verifyResponse.ok) {
                 setSuccess(true);
@@ -138,17 +130,14 @@ export default function PaymentEarnings({ bookingId = null, driverId = null, rol
 
       setProcessing(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/driver-registration/${driverId}/withdrawal`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ amount: parseFloat(withdrawalAmount) })
-        }
-      );
+      const response = await fetch(buildApiUrl(`/driver-registration/${driverId}/withdrawal`), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount: parseFloat(withdrawalAmount) })
+      });
 
       if (response.ok) {
         setSuccess(true);

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import { annotateDriversWithDistance } from '../utils/geo';
+import { buildAssetUrl } from '../utils/network';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
 
@@ -36,9 +37,7 @@ const mapDriverCard = (driver, index) => ({
   profileImg: (() => {
     const pic = driver.profilePicture || driver.documents?.selfie?.file;
     if (!pic) return `https://randomuser.me/api/portraits/men/${index + 30}.jpg`;
-    if (pic.startsWith('http')) return pic;
-    const relative = pic.replace(/^.*uploads[/\\]/, 'uploads/');
-    return `http://localhost:5000/${relative}`;
+    return buildAssetUrl(pic);
   })(),
   phone: driver.phone || '-',
   vehicle: driver.vehicle?.model || driver.vehicle?.registrationNumber || '-',
