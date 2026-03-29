@@ -121,13 +121,47 @@ exports.adminLogin = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
+    const role = String(req.user?.role || '').toLowerCase();
+
+    if (role === 'driver') {
+      const driver = await Driver.findById(userId);
+      if (!driver) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      return res.json({
+        id: driver._id,
+        role: 'driver',
+        name: driver.name,
+        phone: driver.phone,
+        email: driver.email || '',
+        profilePicture: driver.profilePicture || null,
+        location: {
+          address: driver.personalDetails?.address || '',
+          city: driver.personalDetails?.city || driver.currentLocation?.city || '',
+          state: driver.personalDetails?.state || driver.currentLocation?.state || '',
+          pincode: driver.personalDetails?.pincode || driver.currentLocation?.pincode || ''
+        },
+        personalDetails: driver.personalDetails || {}
+      });
+    }
+
     const user = await User.findById(userId).populate('subscriptionPlan');
-    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    res.json({
+      ...user.toObject(),
+      location: user.savedAddresses?.[0]
+        ? {
+            address: user.savedAddresses[0].address || '',
+            city: user.savedAddresses[0].city || '',
+            state: user.savedAddresses[0].state || '',
+            pincode: user.savedAddresses[0].pincode || ''
+          }
+        : { address: '', city: '', state: '', pincode: '' }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -136,11 +170,54 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, email, profilePicture } = req.body;
+    const role = String(req.user?.role || '').toLowerCase();
+    const { name, email, profilePicture, address, city, state, pincode } = req.body;
+
+    if (role === 'driver') {
+      const updateData = { updatedAt: new Date() };
+      if (name) updateData.name = name;
+      if (email) updateData.email = email;
+      if (profilePicture) updateData.profilePicture = profilePicture;
+      if (address) updateData['personalDetails.address'] = address;
+      if (city) {
+        updateData['personalDetails.city'] = city;
+        updateData['currentLocation.city'] = city;
+      }
+      if (state) {
+        updateData['personalDetails.state'] = state;
+        updateData['currentLocation.state'] = state;
+      }
+      if (pincode) {
+        const normalizedPin = String(pincode);
+        updateData['personalDetails.pincode'] = normalizedPin;
+        updateData['currentLocation.pincode'] = normalizedPin;
+      }
+
+      const driver = await Driver.findByIdAndUpdate(userId, updateData, { new: true });
+      return res.json({ message: 'Profile updated', user: driver });
+    }
+
+    const updateData = {
+      updatedAt: new Date()
+    };
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (profilePicture) updateData.profilePicture = profilePicture;
+
+    const normalizedPin = pincode ? String(pincode) : '';
+    if (address || city || state || normalizedPin) {
+      updateData.savedAddresses = [{
+        label: 'Home',
+        address: address || '',
+        city: city || '',
+        state: state || '',
+        pincode: normalizedPin || ''
+      }];
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { name, email, profilePicture, updatedAt: new Date() },
+      updateData,
       { new: true }
     );
 

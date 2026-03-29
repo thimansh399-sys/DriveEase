@@ -68,6 +68,21 @@ export const api = {
   verifyOTP: (phone, otp, name, role) =>
     postAuthWithFallback('/auth/verify-otp', { phone, otp, name, role }),
 
+  getProfile: () =>
+    requestJson(`${API_BASE_URL}/auth/profile`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }),
+
+  updateProfile: (payload) =>
+    requestJson(`${API_BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(payload)
+    }),
+
   adminLogin: (password) =>
     postAuthWithFallback('/auth/admin-login', { password }),
 
@@ -77,13 +92,14 @@ export const api = {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }),
 
-  getNearbyDrivers: ({ latitude, longitude, city = '', state = '', area = '', radius = 25 } = {}) => {
+  getNearbyDrivers: ({ latitude, longitude, city = '', state = '', area = '', pincode = '', radius = 25 } = {}) => {
     const params = new URLSearchParams();
     if (Number.isFinite(Number(latitude))) params.set('latitude', latitude);
     if (Number.isFinite(Number(longitude))) params.set('longitude', longitude);
     if (city) params.set('city', city);
     if (state) params.set('state', state);
     if (area) params.set('area', area);
+    if (pincode) params.set('pincode', pincode);
     params.set('radius', radius);
 
     return requestJson(`${API_BASE_URL}/drivers/nearby?${params.toString()}`, {

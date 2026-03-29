@@ -200,4 +200,18 @@ const driverSchema = new mongoose.Schema({
   }
 });
 
+// Fast search/filter indexes
+driverSchema.index({ 'personalDetails.city': 1 });
+driverSchema.index({ 'personalDetails.state': 1 });
+driverSchema.index({ 'personalDetails.pincode': 1 });
+
+// Driving license normal index (non-text)
+driverSchema.index({ 'documents.drivingLicense.number': 1 });
+
+// Optional text search on string fields
+driverSchema.index({
+  'personalDetails.city': 'text',
+  'personalDetails.state': 'text'
+});
+
 module.exports = mongoose.model('Driver', driverSchema);

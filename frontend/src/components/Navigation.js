@@ -21,6 +21,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
     { to: '/pay', label: 'Pay' },
   ];
 
+  if (isLoggedIn) tabs.push({ to: '/profile', label: 'Profile' });
   if (isCustomer) tabs.push({ to: '/my-bookings', label: 'My Bookings' });
   if (isDriver) tabs.push({ to: '/my-bookings', label: 'My Rides' });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
@@ -13,10 +13,12 @@ const buildDriverLocation = (driver) => {
   const address = driver.personalDetails?.address || driver.currentLocation?.address;
   const city = driver.currentLocation?.city || driver.personalDetails?.city;
   const state = driver.currentLocation?.state || driver.personalDetails?.state;
+  const pincode = driver.currentLocation?.pincode || driver.personalDetails?.pincode;
 
   if (address) parts.push(address);
   if (city) parts.push(city);
   if (state) parts.push(state);
+  if (pincode) parts.push(String(pincode));
 
   if (!parts.length && Array.isArray(driver.serviceAreas) && driver.serviceAreas.length) {
     return driver.serviceAreas.join(', ');
@@ -55,6 +57,7 @@ export default function Drivers() {
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
   const [area, setArea] = useState('');
+  const [pincode, setPincode] = useState('');
   const [browserCoords, setBrowserCoords] = useState(null);
   const [locationStatus, setLocationStatus] = useState('Detecting your location for GPS-based nearby drivers...');
   const [locationError, setLocationError] = useState('');
@@ -62,8 +65,42 @@ export default function Drivers() {
 
   const cityOptions = useMemo(() => (state ? getCitiesByState(state) : []), [state]);
   const areaOptions = useMemo(() => (state && city ? getAreasByCity(state, city) : []), [state, city]);
+  const pincodeOptions = useMemo(() => {
+    const values = new Set();
+    drivers.forEach((driver) => {
+      const raw = String(driver.location || '');
+      const matches = raw.match(/\b\d{6}\b/g) || [];
+      matches.forEach((match) => values.add(match));
+    });
+    return [...values].sort();
+  }, [drivers]);
 
-  const detectLocation = () => {
+  const resolveLocationFromCoords = useCallback(async (latitude, longitude) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+        {
+          headers: { Accept: 'application/json' }
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const address = data?.address || {};
+      const detectedState = address.state || '';
+      const detectedCity = address.city || address.town || address.county || '';
+      const detectedPincode = address.postcode ? String(address.postcode).slice(0, 6) : '';
+
+      if (detectedState) setState(detectedState);
+      if (detectedCity) setCity(detectedCity);
+      if (detectedPincode) setPincode(detectedPincode);
+    } catch (_) {
+      // Silent fallback: manual filters still available.
+    }
+  }, []);
+
+  const detectLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('Browser location is not supported on this device.');
       setLocationStatus('Showing online drivers using manual city and area filters.');
@@ -79,6 +116,7 @@ export default function Drivers() {
           longitude: position.coords.longitude,
         });
         setLocationStatus('Nearby drivers are now sorted by your browser GPS distance.');
+        resolveLocationFromCoords(position.coords.latitude, position.coords.longitude);
       },
       (error) => {
         setLocationError(error.message || 'Location access denied.');
@@ -86,17 +124,18 @@ export default function Drivers() {
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 }
     );
-  };
+  }, [resolveLocationFromCoords]);
 
   const applyKanpurFilters = () => {
     setState(DEFAULT_LOCATION.state);
     setCity(DEFAULT_LOCATION.city);
     setArea(DEFAULT_LOCATION.area);
+    setPincode('208001');
   };
 
   useEffect(() => {
     detectLocation();
-  }, []);
+  }, [detectLocation]);
 
   useEffect(() => {
     if (city && !cityOptions.includes(city)) {
@@ -127,6 +166,7 @@ export default function Drivers() {
             state,
             city,
             area,
+            pincode,
             radius: 50,
           });
 
@@ -135,6 +175,7 @@ export default function Drivers() {
             if (state) fallbackQuery += `&state=${encodeURIComponent(state)}`;
             if (city) fallbackQuery += `&city=${encodeURIComponent(city)}`;
             if (area) fallbackQuery += `&area=${encodeURIComponent(area)}`;
+            if (pincode) fallbackQuery += `&pincode=${encodeURIComponent(pincode)}`;
             response = await api.getAllDrivers(fallbackQuery);
           }
         } else {
@@ -142,6 +183,7 @@ export default function Drivers() {
           if (state) query += `&state=${encodeURIComponent(state)}`;
           if (city) query += `&city=${encodeURIComponent(city)}`;
           if (area) query += `&area=${encodeURIComponent(area)}`;
+          if (pincode) query += `&pincode=${encodeURIComponent(pincode)}`;
           response = await api.getAllDrivers(query);
         }
 
@@ -173,12 +215,12 @@ export default function Drivers() {
     };
 
     fetchDrivers();
-    const interval = setInterval(fetchDrivers, 10000);
+    const interval = setInterval(fetchDrivers, 60000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [browserCoords, state, city, area]);
+  }, [browserCoords, state, city, area, pincode]);
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.toLowerCase();
@@ -260,6 +302,19 @@ export default function Drivers() {
             ))}
           </select>
           <input
+            placeholder="Pincode"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            className="ux-search"
+            list="drivers-pincode-options"
+            inputMode="numeric"
+          />
+          <datalist id="drivers-pincode-options">
+            {pincodeOptions.map((entry) => (
+              <option key={entry} value={entry} />
+            ))}
+          </datalist>
+          <input
             placeholder="Search driver, vehicle, or locality..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -268,7 +323,7 @@ export default function Drivers() {
         </div>
 
         <p className="ux-subtle" style={{ marginTop: 0, marginBottom: '8px' }}>
-          {locationStatus}
+          {locationStatus} Auto refresh: every 60 seconds.
         </p>
         {apiError && (
           <p className="ux-subtle" style={{ marginTop: 0, marginBottom: '8px', color: '#fca5a5', fontWeight: 'bold', padding: '8px', backgroundColor: 'rgba(252, 165, 165, 0.1)', borderRadius: '4px' }}>

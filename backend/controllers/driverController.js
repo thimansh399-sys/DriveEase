@@ -67,7 +67,7 @@ exports.getAllDrivers = async (req, res) => {
 
 exports.getNearbyDrivers = async (req, res) => {
   try {
-    const { latitude, longitude, city, state, area, radius = 25 } = req.query;
+    const { latitude, longitude, city, state, area, pincode, radius = 25 } = req.query;
     const parsedLatitude = Number(latitude);
     const parsedLongitude = Number(longitude);
     const hasCoords = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
@@ -106,6 +106,16 @@ exports.getNearbyDrivers = async (req, res) => {
         $or: [
           { serviceAreas: { $regex: area, $options: 'i' } },
           { 'personalDetails.address': { $regex: area, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (pincode) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { 'currentLocation.pincode': String(pincode) },
+          { 'personalDetails.pincode': String(pincode) }
         ]
       });
     }
@@ -217,7 +227,9 @@ exports.registerDriver = async (req, res) => {
 
     res.status(201).json({
       message: 'Driver registration complete',
-      driverId: driver._id
+      driverId: driver._id,
+      registrationId: String(driver._id),
+      waitingTimeMinutes: 30
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -328,11 +340,25 @@ exports.updateProfilePicture = async (req, res) => {
 exports.updateDriverProfile = async (req, res) => {
   try {
     const driverId = req.user.id;
-    const { name, email, bloodGroup } = req.body;
+    const { name, email, bloodGroup, city, state, pincode, address } = req.body;
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (bloodGroup) updateData['personalDetails.bloodGroup'] = bloodGroup;
+    if (city) {
+      updateData['personalDetails.city'] = city;
+      updateData['currentLocation.city'] = city;
+    }
+    if (state) {
+      updateData['personalDetails.state'] = state;
+      updateData['currentLocation.state'] = state;
+    }
+    if (pincode) {
+      updateData['personalDetails.pincode'] = String(pincode);
+      updateData['currentLocation.pincode'] = String(pincode);
+    }
+    if (address) updateData['personalDetails.address'] = address;
+    updateData.updatedAt = new Date();
 
     const driver = await Driver.findByIdAndUpdate(driverId, updateData, { new: true });
     res.json({ message: 'Profile updated', driver });

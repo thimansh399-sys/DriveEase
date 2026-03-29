@@ -64,7 +64,12 @@ exports.registerDriverSingleStep = async (req, res) => {
     });
 
     await driver.save();
-    res.json({ success: true, message: 'Driver registered successfully. Awaiting admin verification.' });
+    res.json({
+      success: true,
+      message: 'Driver registered successfully. Awaiting admin verification.',
+      registrationId: String(driver._id),
+      waitingTimeMinutes: 30
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../utils/api';
 import { downloadInvoice } from '../utils/invoiceUtils';
+import { STATE_OPTIONS } from '../utils/locationData';
 import '../styles/DriverDashboard.css';
 
 const SOUND_PRESETS = {
@@ -71,6 +72,16 @@ function DriverDashboard() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [mapToggleByRide, setMapToggleByRide] = useState({});
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    bloodGroup: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const previousPendingCountRef = useRef(0);
   const hasInitialFetchRef = useRef(false);
@@ -92,9 +103,34 @@ function DriverDashboard() {
       if (driver && !driver.error) {
         setDriverInfo(driver);
         setOnlineStatus(Boolean(driver.isOnline));
+        setProfileForm({
+          name: driver.name || '',
+          email: driver.email || '',
+          bloodGroup: driver.personalDetails?.bloodGroup || '',
+          address: driver.personalDetails?.address || '',
+          city: driver.personalDetails?.city || driver.currentLocation?.city || '',
+          state: driver.personalDetails?.state || driver.currentLocation?.state || '',
+          pincode: driver.personalDetails?.pincode || driver.currentLocation?.pincode || ''
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setProfileSaving(true);
+      const response = await api.updateDriverProfile(profileForm);
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+      await fetchDriverProfile();
+      alert('Profile updated successfully.');
+    } catch (error) {
+      alert(error?.message || 'Unable to update profile.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -362,11 +398,12 @@ function DriverDashboard() {
       </div>
 
       <div className="dd-tabs">
-        {['dashboard', 'history', 'withdrawals'].map((tab) => (
+        {['dashboard', 'history', 'withdrawals', 'profile'].map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`dd-tab-btn ${activeTab === tab ? 'active' : ''}`}>
             {tab === 'dashboard' && 'Dashboard'}
             {tab === 'history' && 'Ride History'}
             {tab === 'withdrawals' && 'Withdrawals'}
+            {tab === 'profile' && 'Profile'}
             {tab === 'dashboard' && newBookingCount > 0 && <span className="dd-tab-badge">{newBookingCount}</span>}
           </button>
         ))}
@@ -471,6 +508,35 @@ function DriverDashboard() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'profile' && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Personal Details</h3>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            <input className="form-input" placeholder="Name" value={profileForm.name} onChange={(event) => setProfileForm((prev) => ({ ...prev, name: event.target.value }))} />
+            <input className="form-input" placeholder="Phone" value={driverInfo?.phone || ''} disabled />
+            <input className="form-input" placeholder="Email" value={profileForm.email} onChange={(event) => setProfileForm((prev) => ({ ...prev, email: event.target.value }))} />
+            <input className="form-input" placeholder="Blood Group" value={profileForm.bloodGroup} onChange={(event) => setProfileForm((prev) => ({ ...prev, bloodGroup: event.target.value }))} />
+            <input className="form-input" placeholder="Address / Area" value={profileForm.address} onChange={(event) => setProfileForm((prev) => ({ ...prev, address: event.target.value }))} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <select className="form-input" value={profileForm.state} onChange={(event) => setProfileForm((prev) => ({ ...prev, state: event.target.value }))}>
+                <option value="">Select state</option>
+                {STATE_OPTIONS.map((entry) => (
+                  <option key={entry} value={entry}>{entry}</option>
+                ))}
+              </select>
+              <input className="form-input" placeholder="City" value={profileForm.city} onChange={(event) => setProfileForm((prev) => ({ ...prev, city: event.target.value }))} />
+              <input className="form-input" placeholder="Pincode" inputMode="numeric" value={profileForm.pincode} onChange={(event) => setProfileForm((prev) => ({ ...prev, pincode: event.target.value.replace(/\D/g, '').slice(0, 6) }))} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '14px' }}>
+            <button className="btn btn-primary" onClick={handleSaveProfile} disabled={profileSaving}>
+              {profileSaving ? 'Saving...' : 'Save Profile'}
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ export default function DriverRegistrationFlow() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [registrationMeta, setRegistrationMeta] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -36,6 +37,7 @@ export default function DriverRegistrationFlow() {
     }));
     setError('');
     setSuccess('');
+    setRegistrationMeta(null);
   };
 
   // Unified submit handler
@@ -90,6 +92,12 @@ export default function DriverRegistrationFlow() {
       }
 
       setSuccess(data.message || 'Registration Success ✅');
+      if (data.registrationId || data.waitingTimeMinutes) {
+        setRegistrationMeta({
+          registrationId: data.registrationId || 'Will be assigned shortly',
+          waitingTimeMinutes: Number(data.waitingTimeMinutes) || 30
+        });
+      }
     } catch (err) {
       setError(err.message || 'Upload Failed ❌');
     } finally {
@@ -106,7 +114,17 @@ export default function DriverRegistrationFlow() {
         </div>
 
         {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">{success}</div>}
+        {success && (
+          <div className="success-message">
+            <p style={{ margin: '0 0 8px 0' }}>{success}</p>
+            {registrationMeta && (
+              <div style={{ fontSize: '0.92rem', lineHeight: 1.6 }}>
+                <div><strong>Registration ID:</strong> {registrationMeta.registrationId}</div>
+                <div><strong>Expected Review Time:</strong> ~{registrationMeta.waitingTimeMinutes} minutes</div>
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
