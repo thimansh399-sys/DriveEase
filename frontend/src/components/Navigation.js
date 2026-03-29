@@ -52,6 +52,48 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
               </NavLink>
             </li>
           ))}
+
+          {!isLoggedIn && (
+            <>
+              <li className="nav-mobile-only">
+                <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>Login</Link>
+              </li>
+              <li className="nav-mobile-only">
+                <Link to="/register-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Register as Driver</Link>
+              </li>
+            </>
+          )}
+
+          {isLoggedIn && (
+            <>
+              {isDriver && (
+                <li className="nav-mobile-only">
+                  <Link to="/driver-dashboard" className="nav-link" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+                </li>
+              )}
+              {!isDriver && (
+                <li className="nav-mobile-only">
+                  <Link to="/register-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Register as Driver</Link>
+                </li>
+              )}
+              <li className="nav-mobile-only">
+                <button
+                  type="button"
+                  className="nav-link nav-link-button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  Logout
+                </button>
+              </li>
+            </>
+          )}
+
+          <li className="nav-mobile-only">
+            <Link to="/book-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Book a Driver</Link>
+          </li>
         </ul>
 
         {/* Right Buttons */}
