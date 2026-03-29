@@ -57,14 +57,29 @@ function Login({ onLogin }) {
     try {
       const response = await api.verifyOTP(phone, otp, name, role);
       if (response.error) {
-        setError(response.error);
-      } else {
+        // Check if error is backend connectivity issue
+        if (response.error.includes('not reachable') || response.error.includes('Backend')) {
+          setError('⚠️ Server error: Backend not accessible. Please contact admin.');
+        } else if (response.error.includes('Invalid') || response.error.includes('expired')) {
+          setError('❌ ' + response.error + ' Please try sending OTP again.');
+        } else {
+          setError('❌ ' + response.error);
+        }
+      } else if (response.user && response.token) {
         localStorage.setItem('userId', response.user.id);
+        localStorage.setItem('token', response.token);
         onLogin(response.token, response.user.role);
         navigate(response.user.role === 'admin' ? '/admin' : response.user.role === 'driver' ? '/driver-dashboard' : '/browse');
+      } else {
+        setError('⚠️ Login failed: Invalid server response. Please try again.');
       }
     } catch (err) {
-      setError(err?.message || 'Failed to verify OTP. Please try again.');
+      const errorMsg = err?.message || 'Failed to verify OTP. Please try again.';
+      if (errorMsg.includes('not reachable') || errorMsg.includes('Backend')) {
+        setError('⚠️ Server error: Cannot reach authentication server.');
+      } else {
+        setError('❌ ' + errorMsg);
+      }
     } finally {
       setLoading(false);
     }

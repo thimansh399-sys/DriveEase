@@ -58,6 +58,7 @@ export default function Drivers() {
   const [browserCoords, setBrowserCoords] = useState(null);
   const [locationStatus, setLocationStatus] = useState('Detecting your location for GPS-based nearby drivers...');
   const [locationError, setLocationError] = useState('');
+  const [apiError, setApiError] = useState('');
 
   const cityOptions = useMemo(() => (state ? getCitiesByState(state) : []), [state]);
   const areaOptions = useMemo(() => (state && city ? getAreasByCity(state, city) : []), [state, city]);
@@ -159,7 +160,12 @@ export default function Drivers() {
       } catch (error) {
         if (isMounted) {
           setDrivers([]);
-          setLocationError(error.message || 'Unable to load nearby drivers.');
+          const errorMsg = error.message || 'Unable to load nearby drivers.';
+          if (errorMsg.includes('not reachable') || errorMsg.includes('Backend')) {
+            setApiError('⚠️ Backend server not accessible. Please check server status or contact admin.');
+          } else {
+            setLocationError(errorMsg);
+          }
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -264,7 +270,12 @@ export default function Drivers() {
         <p className="ux-subtle" style={{ marginTop: 0, marginBottom: '8px' }}>
           {locationStatus}
         </p>
-        {locationError && (
+        {apiError && (
+          <p className="ux-subtle" style={{ marginTop: 0, marginBottom: '8px', color: '#fca5a5', fontWeight: 'bold', padding: '8px', backgroundColor: 'rgba(252, 165, 165, 0.1)', borderRadius: '4px' }}>
+            {apiError}
+          </p>
+        )}
+        {locationError && !apiError && (
           <p className="ux-subtle" style={{ marginTop: 0, marginBottom: '18px', color: '#fca5a5' }}>
             {locationError}
           </p>

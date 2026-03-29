@@ -8,6 +8,7 @@ export default function AvailableDriversPage() {
   const [drivers, setDrivers] = useState([]);
   const [filteredDrivers, setFilteredDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     city: '',
     minRating: 0,
@@ -23,15 +24,25 @@ export default function AvailableDriversPage() {
   const fetchDrivers = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await fetch(buildApiUrl('/public/available'));
       
-      if (!response.ok) throw new Error('Failed to fetch drivers');
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Backend server not accessible. API returned non-JSON response.');
+        }
+        throw new Error('Failed to fetch drivers');
+      }
       
       const data = await response.json();
-      setDrivers(data);
-      setFilteredDrivers(data);
+      setDrivers(data || []);
+      setFilteredDrivers(data || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);
+      setError(error.message || 'Unable to fetch drivers. Please try again later.');
+      setDrivers([]);
+      setFilteredDrivers([]);
     } finally {
       setLoading(false);
     }
@@ -135,14 +146,26 @@ export default function AvailableDriversPage() {
 
         {/* Drivers Grid */}
         <div className="drivers-content">
-          {loading && (
+          {error && (
+            <div className="no-drivers" style={{ padding: '40px 20px', textAlign: 'center' }}>
+              <p style={{ color: '#fca5a5', fontWeight: 'bold', marginBottom: '16px' }}>⚠️ {error}</p>
+              <button 
+                onClick={fetchDrivers}
+                style={{ padding: '10px 20px', backgroundColor: '#22c55e', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!error && loading && (
             <div className="loading-container">
               <div className="loading-spinner"></div>
               <p>Loading available drivers...</p>
             </div>
           )}
 
-          {!loading && filteredDrivers.length === 0 && (
+          {!error && !loading && filteredDrivers.length === 0 && (
             <div className="no-drivers">
               <p>No drivers available with selected filters</p>
               <button onClick={() => setFilters({ city: '', minRating: 0, onlineOnly: false })}>

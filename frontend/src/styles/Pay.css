@@ -105,9 +105,11 @@
   font-family: 'Space Grotesk', sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
-  width: 160px;
+  width: 320px;
+  max-width: 100%;
   text-align: center;
   outline: none;
+  padding: 0 10px;
 }
 
 .pay-amount-input::placeholder { color: rgba(34,197,94,0.25); }
