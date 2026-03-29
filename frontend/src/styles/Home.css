@@ -1239,6 +1239,126 @@
   }
 }
 
+@media (max-width: 768px) {
+  .home-v2-hero {
+    padding: 84px 16px 18px;
+    gap: 16px;
+  }
+
+  .home-v2-badge {
+    font-size: 0.74rem;
+    padding: 5px 10px;
+    margin-bottom: 12px;
+  }
+
+  .home-v2-copy h1 {
+    font-size: 2.1rem;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  .home-v2-copy p {
+    margin-top: 12px;
+    font-size: 0.96rem;
+    line-height: 1.5;
+  }
+
+  .home-booking-card {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .home-input-group {
+    padding: 9px 10px;
+    border-radius: 10px;
+    gap: 8px;
+  }
+
+  .home-location-input {
+    font-size: 14px;
+  }
+
+  .home-book-btn {
+    margin-top: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .home-v2-quick-points,
+  .home-v2-stats {
+    margin-top: 12px;
+    padding-left: 0;
+    gap: 8px;
+  }
+
+  .home-v2-quick-points span,
+  .home-v2-stat-card {
+    min-width: 0;
+    flex: 1 1 calc(50% - 8px);
+    padding: 9px 10px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+  }
+
+  .home-v2-media,
+  .home-v2-media img {
+    min-height: 320px;
+    height: 320px;
+    border-radius: 16px;
+  }
+
+  .home-eta-card {
+    left: 12px;
+    bottom: 12px;
+    padding: 8px 10px;
+  }
+
+  .home-v2-section {
+    padding: 20px 16px 24px;
+  }
+
+  .home-v2-divider {
+    margin: 10px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-v2-hero {
+    padding: 78px 12px 14px;
+  }
+
+  .home-v2-copy h1 {
+    font-size: 1.88rem;
+  }
+
+  .home-v2-copy p {
+    font-size: 0.9rem;
+  }
+
+  .home-v2-badge {
+    width: 100%;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+
+  .home-v2-quick-points span,
+  .home-v2-stat-card {
+    flex-basis: 100%;
+  }
+
+  .home-v2-media,
+  .home-v2-media img {
+    min-height: 270px;
+    height: 270px;
+  }
+
+  .home-v2-section h2 {
+    margin-bottom: 14px;
+  }
+}
+
 /* ── Autocomplete suggestions ── */
 .home-location-wrap {
   position: relative;
