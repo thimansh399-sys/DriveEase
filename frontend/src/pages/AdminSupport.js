@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { buildApiUrl } from '../utils/network';
 import '../styles/AdminSupport.css';
 
 function AdminSupport() {
@@ -14,7 +15,7 @@ function AdminSupport() {
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/support-tickets/all?status=${filter}`,
+        buildApiUrl(`/support-tickets/all?status=${filter}`),
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -32,7 +33,7 @@ function AdminSupport() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/support-tickets/admin/stats', {
+      const response = await fetch(buildApiUrl('/support-tickets/admin/stats'), {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -52,7 +53,7 @@ function AdminSupport() {
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
       const response = await fetch(
-        `/api/support-tickets/${ticketId}/status`,
+        buildApiUrl(`/support-tickets/${ticketId}/status`),
         {
           method: 'PATCH',
           headers: {
@@ -77,7 +78,7 @@ function AdminSupport() {
     if (!response.trim()) return;
 
     try {
-      const res = await fetch(`/api/support-tickets/${ticketId}/response`, {
+      const res = await fetch(buildApiUrl(`/support-tickets/${ticketId}/response`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ function AdminSupport() {
 
   const resolveTicket = async (ticketId, action, amount = 0) => {
     try {
-      const res = await fetch(`/api/support-tickets/${ticketId}/resolve`, {
+      const res = await fetch(buildApiUrl(`/support-tickets/${ticketId}/resolve`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

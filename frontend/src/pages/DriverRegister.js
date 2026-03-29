@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { buildApiUrl } from '../utils/network';
 import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/DriverRegister.css';
 
@@ -123,7 +124,7 @@ function DriverRegister() {
     try {
       const formData = new FormData();
       formData.append('screenshot', paymentScreenshot);
-      const res = await fetch(`/api/driver-registration/${driverId}/payment/upload`, {
+      const res = await fetch(buildApiUrl(`/driver-registration/${driverId}/payment/upload`), {
         method: 'POST',
         body: formData
       });
@@ -149,7 +150,7 @@ function DriverRegister() {
     try {
       const formData = new FormData();
       formData.append(type, file);
-      const res = await fetch(`/api/driver-registration/${driverId}/upload/${type}`, {
+      const res = await fetch(buildApiUrl(`/driver-registration/${driverId}/upload/${type}`), {
         method: 'POST',
         body: formData
       });
@@ -172,7 +173,7 @@ function DriverRegister() {
   useEffect(() => {
     if (step === 5 && driverId) {
       const interval = setInterval(async () => {
-        const res = await fetch(`/api/driver-registration/${driverId}/registration-progress`);
+        const res = await fetch(buildApiUrl(`/driver-registration/${driverId}/registration-progress`));
         const data = await res.json();
         setProgress(data);
         if (data.steps && data.steps.approval.status === 'approved') {

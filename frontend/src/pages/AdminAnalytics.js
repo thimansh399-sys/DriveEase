@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { buildApiUrl } from '../utils/network';
 import '../styles/AdminAnalytics.css';
 
 function AdminAnalytics() {
@@ -12,7 +13,7 @@ function AdminAnalytics() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/analytics/dashboard/summary', {
+      const response = await fetch(buildApiUrl('/analytics/dashboard/summary'), {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -27,7 +28,7 @@ function AdminAnalytics() {
   const fetchTrend = useCallback(async () => {
     try {
       const response = await fetch(
-        `/api/analytics/trends/rides?period=${period}&days=${days}`,
+        buildApiUrl(`/analytics/trends/rides?period=${period}&days=${days}`),
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -45,7 +46,7 @@ function AdminAnalytics() {
 
   const fetchTopDrivers = useCallback(async () => {
     try {
-      const response = await fetch('/api/analytics/drivers/top?limit=10', {
+      const response = await fetch(buildApiUrl('/analytics/drivers/top?limit=10'), {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
