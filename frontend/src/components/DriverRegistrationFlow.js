@@ -78,10 +78,15 @@ export default function DriverRegistrationFlow() {
         body: formPayload
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      const data = isJson ? await res.json() : { error: await res.text() };
 
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
+        const fallbackMessage = res.status === 405
+          ? 'Registration API method is blocked (405). Please check backend API routing/proxy.'
+          : `Registration failed (${res.status})`;
+        throw new Error(data.error || fallbackMessage);
       }
 
       setSuccess(data.message || 'Registration Success ✅');

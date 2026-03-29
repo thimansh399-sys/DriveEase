@@ -1,4 +1,5 @@
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
+const PRODUCTION_API_BASE_URL = 'https://api.mydriveease.in/api';
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
@@ -13,6 +14,11 @@ export const API_BASE_URL = (() => {
   }
 
   if (isBrowser && !isLocalHostname(window.location.hostname)) {
+    const host = (window.location.hostname || '').toLowerCase();
+    if (host === 'mydriveease.in' || host === 'www.mydriveease.in') {
+      return PRODUCTION_API_BASE_URL;
+    }
+
     return '/api';
   }
 
