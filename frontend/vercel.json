@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api.mydriveease.in/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://api.mydriveease.in/uploads/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
