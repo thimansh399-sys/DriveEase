@@ -157,37 +157,38 @@ export default function Drivers() {
       setLoading(true);
       try {
         const hasCoords = Number.isFinite(Number(browserCoords?.latitude)) && Number.isFinite(Number(browserCoords?.longitude));
-        let response = [];
+        let query = '?status=all';
+        if (state) query += `&state=${encodeURIComponent(state)}`;
+        if (city) query += `&city=${encodeURIComponent(city)}`;
+        if (area) query += `&area=${encodeURIComponent(area)}`;
+        if (pincode) query += `&pincode=${encodeURIComponent(pincode)}`;
 
-        if (hasCoords) {
-          response = await api.getNearbyDrivers({
-            latitude: browserCoords.latitude,
-            longitude: browserCoords.longitude,
-            state,
-            city,
-            area,
-            pincode,
-            radius: 50,
-          });
+        const [allResponse, nearbyResponse] = await Promise.all([
+          api.getAllDrivers(query),
+          hasCoords
+            ? api.getNearbyDrivers({
+                latitude: browserCoords.latitude,
+                longitude: browserCoords.longitude,
+                state,
+                city,
+                area,
+                pincode,
+                radius: 50,
+              })
+            : Promise.resolve([])
+        ]);
 
-          if (!Array.isArray(response) || response.length === 0) {
-            let fallbackQuery = '?status=all';
-            if (state) fallbackQuery += `&state=${encodeURIComponent(state)}`;
-            if (city) fallbackQuery += `&city=${encodeURIComponent(city)}`;
-            if (area) fallbackQuery += `&area=${encodeURIComponent(area)}`;
-            if (pincode) fallbackQuery += `&pincode=${encodeURIComponent(pincode)}`;
-            response = await api.getAllDrivers(fallbackQuery);
-          }
-        } else {
-          let query = '?status=all';
-          if (state) query += `&state=${encodeURIComponent(state)}`;
-          if (city) query += `&city=${encodeURIComponent(city)}`;
-          if (area) query += `&area=${encodeURIComponent(area)}`;
-          if (pincode) query += `&pincode=${encodeURIComponent(pincode)}`;
-          response = await api.getAllDrivers(query);
-        }
+        const allList = Array.isArray(allResponse) ? allResponse : [];
+        const nearbyList = Array.isArray(nearbyResponse) ? nearbyResponse : [];
+        const nearbyMap = new Map(nearbyList.map((entry) => [String(entry._id), entry]));
 
-        const list = Array.isArray(response) ? response : [];
+        const list = allList.map((driver) => {
+          const key = String(driver._id);
+          const nearbyDriver = nearbyMap.get(key);
+          return nearbyDriver?.distance != null
+            ? { ...driver, distance: nearbyDriver.distance }
+            : driver;
+        });
         if (!isMounted) return;
 
         const distanceSortedDrivers = browserCoords

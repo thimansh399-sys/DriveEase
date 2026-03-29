@@ -70,6 +70,7 @@ function buildKanpurDriver(index, online = true) {
           languages: ['Hindi', 'English'],
           serviceAreas: ['Kanpur', location.area, 'Uttar Pradesh'],
           status: 'approved',
+          isPublic: true,
           isOnline: online,
           availabilityStatus: online ? 'AVAILABLE' : 'BUSY',
           currentLocation: {

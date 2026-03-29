@@ -13,7 +13,7 @@ router.get('/available', async (req, res) => {
     const Driver = require('../models/Driver');
     const drivers = await Driver.find({
       status: 'approved',
-      isPublic: true || undefined // Show drivers if isPublic is true or not set
+      $or: [{ isPublic: true }, { isPublic: { $exists: false } }]
     })
       .select('-password -pancard -documentVerification -activeSession -paymentVerification')
       .limit(100)
