@@ -20,7 +20,6 @@ import DriverRegistrationFlow from './components/DriverRegistrationFlow';
 import AvailableDrivers from './pages/AvailableDrivers';
 import AdminDashboardEnhanced from './components/AdminDashboardEnhanced';
 import Drivers from './pages/Drivers';
-import Live from './pages/Live';
 import Subscriptions from './pages/Plans';
 import TrackBooking from './pages/TrackBooking';
 import Messages from './pages/Messages';

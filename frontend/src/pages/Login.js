@@ -12,7 +12,6 @@ function Login({ onLogin }) {
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [displayedOtp, setDisplayedOtp] = useState('');
 
   const handleSendOTP = async (e) => {
@@ -66,27 +65,6 @@ function Login({ onLogin }) {
       }
     } catch (err) {
       setError(err?.message || 'Failed to verify OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await api.adminLogin(adminPassword);
-      if (response.error) {
-        setError(response.error);
-      } else {
-        localStorage.setItem('userId', 'admin');
-        onLogin(response.token, 'admin');
-        navigate('/admin');
-      }
-    } catch (err) {
-      setError(err?.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
     }

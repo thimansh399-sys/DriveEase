@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import '../styles/AdminAnalytics.css';
 
@@ -10,13 +10,7 @@ function AdminAnalytics() {
   const [period, setPeriod] = useState('daily');
   const [days, setDays] = useState(30);
 
-  useEffect(() => {
-    fetchStats();
-    fetchTrend();
-    fetchTopDrivers();
-  }, []);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/analytics/dashboard/summary', {
         headers: {
@@ -28,9 +22,9 @@ function AdminAnalytics() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
 
-  const fetchTrend = async () => {
+  const fetchTrend = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/analytics/trends/rides?period=${period}&days=${days}`,
@@ -47,9 +41,9 @@ function AdminAnalytics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [days, period]);
 
-  const fetchTopDrivers = async () => {
+  const fetchTopDrivers = useCallback(async () => {
     try {
       const response = await fetch('/api/analytics/drivers/top?limit=10', {
         headers: {
@@ -61,7 +55,17 @@ function AdminAnalytics() {
     } catch (error) {
       console.error('Error fetching top drivers:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    fetchTopDrivers();
+  }, [fetchStats, fetchTopDrivers]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchTrend();
+  }, [fetchTrend]);
 
   return (
     <div className="admin-analytics-page">

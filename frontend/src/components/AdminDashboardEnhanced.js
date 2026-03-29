@@ -38,19 +38,19 @@ export default function AdminDashboardEnhanced() {
   const [supportStats, setSupportStats] = useState(null);
   const [revenueAnalytics, setRevenueAnalytics] = useState(null);
 
-  const authHeaders = {
+  const authHeaders = useMemo(() => ({
     Authorization: `Bearer ${localStorage.getItem('token')}`,
     'Content-Type': 'application/json',
-  };
+  }), []);
 
-  const fetchJson = async (path) => {
+  const fetchJson = useCallback(async (path) => {
     const response = await fetch(buildApiUrl(path), { headers: authHeaders });
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload?.error || `Request failed for ${path}`);
     }
     return payload;
-  };
+  }, [authHeaders]);
 
   const fetchAllData = useCallback(async (isManual = false) => {
     try {
@@ -95,7 +95,7 @@ export default function AdminDashboardEnhanced() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchJson]);
 
   useEffect(() => {
     fetchAllData(false);

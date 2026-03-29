@@ -188,7 +188,6 @@ function NotificationItem({ notification, onDismiss }) {
  */
 export function NotificationCenter() {
   const { history, clearAll } = useNotification();
-  const [open, setOpen] = useState(false);
 
   const icons = {
     success: '✓',
@@ -336,7 +335,7 @@ export function NotificationCenter() {
  * Bell Icon / Notification Toggle
  */
 export function NotificationBell({ position = 'fixed' }) {
-  const { notifications, history } = useNotification();
+  const { history } = useNotification();
   const [showCenter, setShowCenter] = useState(false);
   const unreadCount = history.length;
 

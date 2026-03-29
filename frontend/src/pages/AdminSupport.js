@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/AdminSupport.css';
 
@@ -10,12 +10,7 @@ function AdminSupport() {
   const [response, setResponse] = useState('');
   const [stats, setStats] = useState(null);
 
-  useEffect(() => {
-    fetchTickets();
-    fetchStats();
-  }, [filter]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -33,9 +28,9 @@ function AdminSupport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/support-tickets/admin/stats', {
         headers: {
@@ -47,7 +42,12 @@ function AdminSupport() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTickets();
+    fetchStats();
+  }, [fetchStats, fetchTickets]);
 
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {

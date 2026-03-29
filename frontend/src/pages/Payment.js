@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
@@ -22,10 +22,11 @@ export default function PaymentPage() {
   const [upiId, setUpiId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const bookingId = searchParams.get('bookingId') || 'BOOK123456';
 
   // Sample booking data
-  const bookingData = {
-    bookingId: searchParams.get('bookingId') || 'BOOK123456',
+  const bookingData = useMemo(() => ({
+    bookingId,
     driverName: 'Rajesh Kumar',
     pickupLocation: 'Hazratganj, Lucknow',
     dropoffLocation: 'Gomti Nagar, Lucknow',
@@ -35,7 +36,7 @@ export default function PaymentPage() {
     distanceFare: 100,
     surgePricing: 0,
     taxes: 35,
-  };
+  }), [bookingId]);
 
   // Calculate total fare
   const fareBreakdown = useMemo(() => {

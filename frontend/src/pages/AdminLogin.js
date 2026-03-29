@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
 
 function AdminLogin() {
   const [password, setPassword] = useState('');
