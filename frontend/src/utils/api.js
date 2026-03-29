@@ -12,6 +12,23 @@ const parseJsonSafe = async (response) => {
   }
 };
 
+const requestJson = async (url, options = {}) => {
+  const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') || '';
+  const looksJson = contentType.includes('application/json');
+  const data = looksJson ? await parseJsonSafe(response) : await parseJsonSafe(response);
+
+  if (!response.ok) {
+    throw new Error(data.error || `Request failed (${response.status})`);
+  }
+
+  if (!looksJson) {
+    throw new Error('Backend API not reachable. Configure REACT_APP_API_URL or a working /api proxy.');
+  }
+
+  return data;
+};
+
 const postAuthWithFallback = async (path, payload) => {
   const bases = getAuthBaseUrls();
   let lastNetworkError = null;
@@ -56,9 +73,9 @@ export const api = {
 
   // Drivers
   getAllDrivers: (query = '') =>
-    fetch(`${API_BASE_URL}/drivers/all${query}`, {
+    requestJson(`${API_BASE_URL}/drivers/all${query}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }).then(r => r.json()),
+    }),
 
   getNearbyDrivers: ({ latitude, longitude, city = '', state = '', area = '', radius = 25 } = {}) => {
     const params = new URLSearchParams();
@@ -69,9 +86,9 @@ export const api = {
     if (area) params.set('area', area);
     params.set('radius', radius);
 
-    return fetch(`${API_BASE_URL}/drivers/nearby?${params.toString()}`, {
+    return requestJson(`${API_BASE_URL}/drivers/nearby?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }).then(r => r.json());
+    });
   },
 
   getDriverById: (id) =>
