@@ -4,6 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import '../styles/Login.css';
 
+
+function generateAIOtp() {
+  // Generate a random 4-digit OTP for demo
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
 function Login({ onLogin }) {
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
@@ -11,6 +17,12 @@ function Login({ onLogin }) {
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiOtp, setAiOtp] = useState(generateAIOtp());
+
+  // Regenerate OTP when phone or role changes
+  React.useEffect(() => {
+    setAiOtp(generateAIOtp());
+  }, [phone, role]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,8 +37,8 @@ function Login({ onLogin }) {
     setLoading(true);
     setError('');
     try {
-      // Directly call backend login endpoint (OTP removed)
-      const response = await api.verifyOTP(phone, '', name, role);
+      // Send AI OTP as part of login (for demo)
+      const response = await api.verifyOTP(phone, aiOtp, name, role);
       if (response.error) {
         setError('❌ ' + response.error);
       } else if (response.user && response.token) {
@@ -96,6 +108,18 @@ function Login({ onLogin }) {
           </div>
 
           <form onSubmit={handleLogin} className="login-form">
+            {/* Show AI OTP for demo */}
+            <div className="form-group">
+              <label className="form-label">AI OTP (for demo)</label>
+              <input
+                type="text"
+                className="form-input"
+                value={aiOtp}
+                readOnly
+                style={{ fontWeight: 'bold', color: '#16a34a', letterSpacing: '2px', background: '#f0fdf4' }}
+              />
+              <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>This OTP is auto-generated and visible for demo purposes.</small>
+            </div>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
               <input
