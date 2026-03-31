@@ -27,17 +27,18 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-// Middleware
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true
-}));
+// CORS Middleware
+if (process.env.NODE_ENV === 'production') {
+  app.use(cors({
+    origin: ["http://localhost:3002", "https://mydriveease.in"],
+    credentials: true
+  }));
+} else {
+  app.use(cors({
+    origin: '*',
+    credentials: true
+  }));
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

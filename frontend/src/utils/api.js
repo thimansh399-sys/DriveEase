@@ -62,11 +62,7 @@ const postAuthWithFallback = async (path, payload) => {
 
 export const api = {
   // Auth
-  sendOTP: (phone, role = 'customer') =>
-    postAuthWithFallback('/auth/send-otp', { phone, role }),
-
-  verifyOTP: (phone, otp, name, role) =>
-    postAuthWithFallback('/auth/verify-otp', { phone, otp, name, role }),
+  // sendOTP and verifyOTP removed for customer login (direct login now)
 
   getProfile: () =>
     requestJson(`${API_BASE_URL}/auth/profile`, {

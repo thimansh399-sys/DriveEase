@@ -1,4 +1,5 @@
 import CustomerProfile from './pages/CustomerProfile';
+import CustomerDashboard from './pages/CustomerDashboard';
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -58,6 +59,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
           <Route path="/insurance" element={<Insurance />} />
           <Route path="/pay" element={<Pay />} />
           <Route path="/payment" element={isLoggedIn ? <Payment /> : <Navigate to="/login" />} />
+          <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard /> : <Navigate to="/login" />} />
           <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />

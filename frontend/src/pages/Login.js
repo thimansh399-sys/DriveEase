@@ -14,72 +14,42 @@ function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [displayedOtp, setDisplayedOtp] = useState('');
 
+  // Direct login without OTP
   const handleSendOTP = async (e) => {
     e.preventDefault();
     if (!phone || phone.length < 10) {
       setError('Please enter a valid phone number');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const response = await api.sendOTP(phone, role);
-      if (response.error) {
-        setError(response.error);
-      } else {
-        setDisplayedOtp(response.otp || '');
-        setStep('otp');
-      }
+      // Direct login: store user and navigate
+      localStorage.setItem("user", JSON.stringify({ name: name || "Customer", phone, role }));
+      if (onLogin) onLogin(null, role);
+      navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (err) {
-      setError(err?.message || 'Failed to send OTP. Please try again.');
+      setError('Direct login failed.');
     } finally {
       setLoading(false);
     }
   };
 
+  // No OTP verification needed
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    if (!otp || otp.length < 6) {
-      setError('Please enter a valid 6-digit OTP');
-      return;
-    }
-
     if (!name.trim()) {
       setError('Please enter your name');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const response = await api.verifyOTP(phone, otp, name, role);
-      if (response.error) {
-        // Check if error is backend connectivity issue
-        if (response.error.includes('not reachable') || response.error.includes('Backend')) {
-          setError('⚠️ Server error: Backend not accessible. Please contact admin.');
-        } else if (response.error.includes('Invalid') || response.error.includes('expired')) {
-          setError('❌ ' + response.error + ' Please try sending OTP again.');
-        } else {
-          setError('❌ ' + response.error);
-        }
-      } else if (response.user && response.token) {
-        localStorage.setItem('userId', response.user.id);
-        localStorage.setItem('token', response.token);
-        onLogin(response.token, response.user.role);
-        navigate(response.user.role === 'admin' ? '/admin' : response.user.role === 'driver' ? '/driver-dashboard' : '/browse');
-      } else {
-        setError('⚠️ Login failed: Invalid server response. Please try again.');
-      }
+      localStorage.setItem("user", JSON.stringify({ name, phone, role }));
+      if (onLogin) onLogin(null, role);
+      navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (err) {
-      const errorMsg = err?.message || 'Failed to verify OTP. Please try again.';
-      if (errorMsg.includes('not reachable') || errorMsg.includes('Backend')) {
-        setError('⚠️ Server error: Cannot reach authentication server.');
-      } else {
-        setError('❌ ' + errorMsg);
-      }
+      setError('Direct login failed.');
     } finally {
       setLoading(false);
     }
@@ -148,14 +118,6 @@ function Login({ onLogin }) {
                   placeholder="10-digit phone number"
                 />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-                {loading ? 'Sending OTP...' : 'Send OTP'}
-              </button>
-            </form>
-          )}
-
-          {step === 'otp' && (
-            <form onSubmit={handleVerifyOTP} className="login-form">
               <div className="form-group">
                 <label className="form-label">Your Name</label>
                 <input
@@ -166,27 +128,8 @@ function Login({ onLogin }) {
                   placeholder="Full name"
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">OTP</label>
-                <input
-                  type="text"
-                  className="form-input otp-input"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="6-digit OTP"
-                />
-                <small style={{ color: '#94a3b8', marginTop: '5px', display: 'block' }}>OTP: {displayedOtp}</small>
-              </div>
               <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-                {loading ? 'Verifying...' : 'Verify OTP & Login'}
-              </button>
-              <button
-                type="button"
-                className="btn"
-                style={{ width: '100%', marginTop: '10px', backgroundColor: 'rgba(100, 116, 139, 0.2)', color: '#94a3b8' }}
-                onClick={() => { setStep('phoneNumber'); setOtp(''); }}
-              >
-                Change Phone Number
+                {loading ? 'Logging in...' : 'Login'}
               </button>
             </form>
           )}
