@@ -1,39 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
+// import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MapContainer, Polyline, TileLayer, Tooltip, useMap, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
-import { INDIA_LOCATION_SUGGESTIONS } from '../utils/locationData';
-import { useNotification } from '../context/NotificationContext';
+// import { INDIA_LOCATION_SUGGESTIONS } from '../utils/locationData';
+// import { useNotification } from '../context/NotificationContext';
 import '../styles/Booking.css';
 import '../styles/BookDriver.css';
 
 
 // --- New: India states for dropdown ---
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
-  'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim',
-  'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Puducherry', 'Chandigarh', 'Andaman and Nicobar Islands',
-  'Dadra and Nagar Haveli and Daman and Diu', 'Lakshadweep'
-];
+// const INDIAN_STATES = [ ... ];
 
 const DEFAULT_CENTER = [28.6139, 77.209];
 
-const insuranceOptions = [
-  { label: 'No Insurance', value: 0 },
-  { label: 'Basic Insurance (+₹50)', value: 50 },
-  { label: 'Premium Insurance (+₹100)', value: 100 },
-];
+// const insuranceOptions = [ ... ];
 
-const rideOptions = [
-  { label: 'Standard Driver', value: 'Standard' },
-  { label: 'Premium Driver', value: 'Premium' },
-  { label: 'Corporate Driver', value: 'Corporate' },
-];
+// const rideOptions = [ ... ];
 
 function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   const map = useMap();
@@ -65,76 +49,13 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   return null;
 }
 
-async function geocodeLocation(query, signal) {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`,
-    {
-      signal,
-      headers: {
-        Accept: 'application/json',
-      },
-    }
-  );
+// async function geocodeLocation(query, signal) { ... }
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch location');
-  }
+// async function fetchRouteData(pickup, drop, signal) { ... }
 
-  const data = await response.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    return null;
-  }
+// function mapRideType(rideLabel) { ... }
 
-  return {
-    lat: Number(data[0].lat),
-    lng: Number(data[0].lon),
-    displayName: data[0].display_name,
-  };
-}
-
-async function fetchRouteData(pickup, drop, signal) {
-  const response = await fetch(
-    `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?overview=full&geometries=geojson`,
-    {
-      signal,
-      headers: {
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch route');
-  }
-
-  const data = await response.json();
-  if (!data.routes || !data.routes[0]) {
-    return null;
-  }
-
-  const route = data.routes[0];
-  return {
-    distanceKm: route.distance / 1000,
-    durationMins: route.duration / 60,
-    coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-  };
-}
-
-function mapRideType(rideLabel) {
-  if (rideLabel === 'Premium') return 'hourly';
-  if (rideLabel === 'Corporate') return 'outstation';
-  return 'daily';
-}
-
-function splitCityState(rawAddress) {
-  const normalized = String(rawAddress || '').trim();
-  if (!normalized) return { city: '', state: '' };
-  const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
-  return {
-    city: parts[0] || '',
-    state: parts[1] || '',
-  };
-}
+// function splitCityState(rawAddress) { ... }
 
 export default function BookDriver() {
   // Modern header and search bar UI
@@ -188,20 +109,20 @@ export default function BookDriver() {
       // Bubble filter buttons (example for city, can be expanded)
       const cityBubbles = ["Kanpur", "Lucknow", "Delhi", "Mumbai", "Bangalore"];
     // --- Restore missing state and handlers for UI to compile ---
-    const [form, setForm] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
-    const updateField = (key, value) => setForm(f => ({ ...f, [key]: value }));
-    const [showConfirmation, setShowConfirmation] = useState(false);
-    const [assignedRide, setAssignedRide] = useState(null);
-    const [duration, setDuration] = useState(0);
-    const [mapLoading, setMapLoading] = useState(false);
-    const [mapStatus, setMapStatus] = useState('');
-    const [pickupGeo, setPickupGeo] = useState(null);
-    const [dropGeo, setDropGeo] = useState(null);
-    const [routeData, setRouteData] = useState(null);
-    const [fare, setFare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 });
-    const [distance, setDistance] = useState(0);
-    // Dummy handler for driver search (already defined above, but for ESLint)
-    const handleSearchDrivers = () => {};
+    const [form] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
+    // const updateField = (key, value) => setForm(f => ({ ...f, [key]: value }));
+    const [showConfirmation] = useState(false);
+    const [assignedRide] = useState(null);
+    const [duration] = useState(0);
+    const [mapLoading] = useState(false);
+    const [mapStatus] = useState('');
+    const [pickupGeo] = useState(null);
+    const [dropGeo] = useState(null);
+    const [routeData] = useState(null);
+    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 });
+    const [distance] = useState(0);
+    // const handleSearchDrivers = () => {};
+    // (commented out unused state and handlers)
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
   const [drivers, setDrivers] = useState([]);
@@ -236,7 +157,7 @@ export default function BookDriver() {
   // Fetch on mount and whenever filters change
   useEffect(() => {
     fetchDrivers();
-  }, [filters.state, filters.city, filters.area, filters.pincode]);
+  }, [filters.state, filters.city, filters.area, filters.pincode, fetchDrivers]);
 
   // Search button handler
   const handleSearch = () => {
