@@ -1,23 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, Polyline, TileLayer, Tooltip, useMap, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
-// import { INDIA_LOCATION_SUGGESTIONS } from '../utils/locationData';
-// import { useNotification } from '../context/NotificationContext';
 import '../styles/Booking.css';
 import '../styles/BookDriver.css';
 
 
 // --- New: India states for dropdown ---
-// const INDIAN_STATES = [ ... ];
+// const INDIAN_STATES = [ ... ]; // unused
 
 const DEFAULT_CENTER = [28.6139, 77.209];
 
-// const insuranceOptions = [ ... ];
+// const insuranceOptions = [ ... ]; // unused
 
-// const rideOptions = [ ... ];
+// const rideOptions = [ ... ]; // unused
 
 function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   const map = useMap();
@@ -49,13 +46,13 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   return null;
 }
 
-// async function geocodeLocation(query, signal) { ... }
+// async function geocodeLocation(query, signal) { ... } // unused
 
-// async function fetchRouteData(pickup, drop, signal) { ... }
+// async function fetchRouteData(pickup, drop, signal) { ... } // unused
 
-// function mapRideType(rideLabel) { ... }
+// function mapRideType(rideLabel) { ... } // unused
 
-// function splitCityState(rawAddress) { ... }
+// function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
   // Modern header and search bar UI
@@ -110,32 +107,30 @@ export default function BookDriver() {
       const cityBubbles = ["Kanpur", "Lucknow", "Delhi", "Mumbai", "Bangalore"];
     // --- Restore missing state and handlers for UI to compile ---
     const [form] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
-    // const updateField = (key, value) => setForm(f => ({ ...f, [key]: value }));
-    const [showConfirmation] = useState(false);
-    const [assignedRide] = useState(null);
-    const [duration] = useState(0);
-    const [mapLoading] = useState(false);
-    const [mapStatus] = useState('');
-    const [pickupGeo] = useState(null);
-    const [dropGeo] = useState(null);
-    const [routeData] = useState(null);
-    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 });
-    const [distance] = useState(0);
-    // const handleSearchDrivers = () => {};
-    // (commented out unused state and handlers)
+    // const updateField = (key, value) => setForm(f => ({ ...f, [key]: value })); // unused
+    const [showConfirmation] = useState(false); // used in JSX
+    const [assignedRide] = useState(null); // used in JSX
+    const [duration] = useState(0); // used in JSX
+    const [mapLoading] = useState(false); // used in JSX
+    const [mapStatus] = useState(''); // used in JSX
+    const [pickupGeo] = useState(null); // used in JSX
+    const [dropGeo] = useState(null); // used in JSX
+    const [routeData] = useState(null); // used in JSX
+    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 }); // used in JSX
+    const [distance] = useState(0); // used in JSX
+    // const handleSearchDrivers = () => {}; // unused
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
   const [drivers, setDrivers] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
-  const [driversError, setDriversError] = useState('');
+  // const [driversError, setDriversError] = useState(''); // unused
 
 
   // Fetch drivers from backend on mount and whenever filters change
 
   // Fetch drivers function
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     setDriversLoading(true);
-    setDriversError('');
     try {
       const params = new URLSearchParams();
       if (filters.state) params.append('state', filters.state);
@@ -147,17 +142,16 @@ export default function BookDriver() {
       const data = await api.getAllDrivers(query);
       setDrivers(Array.isArray(data) ? data : []);
     } catch (err) {
-      setDriversError('Failed to fetch drivers');
       setDrivers([]);
     } finally {
       setDriversLoading(false);
     }
-  };
+  }, [filters.state, filters.city, filters.area, filters.pincode]);
 
   // Fetch on mount and whenever filters change
   useEffect(() => {
     fetchDrivers();
-  }, [filters.state, filters.city, filters.area, filters.pincode, fetchDrivers]);
+  }, [fetchDrivers]);
 
   // Search button handler
   const handleSearch = () => {
@@ -172,11 +166,7 @@ export default function BookDriver() {
   };
 
   // Direct booking handler
-  // const handleDirectBook = (driver) => {
-  //   // Set selected driver and open booking form (expand as needed)
-  //   setAssignedRide({ driver });
-  //   setShowConfirmation(true);
-  // };
+  // const handleDirectBook = (driver) => { /* unused */ };
 
   // ...existing code for hooks, handlers, etc...
   return (

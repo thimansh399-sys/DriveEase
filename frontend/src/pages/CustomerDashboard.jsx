@@ -17,7 +17,7 @@ function Sidebar() {
   React.useEffect(() => {
     if (window.location.pathname.includes('my-bookings')) setActiveTab('bookings');
     else setActiveTab('profile');
-  }, []); // Remove window.location.pathname from deps
+  }, []); // window.location.pathname is not a valid dep
 
   const handleLogout = () => {
     localStorage.removeItem('token');

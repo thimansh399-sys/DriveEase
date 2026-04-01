@@ -9,7 +9,7 @@ function Login({ onLogin }) {
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // const [displayedOtp, setDisplayedOtp] = useState('');
+  // const [displayedOtp, setDisplayedOtp] = useState(''); // unused
 
   // Direct login without OTP
   const handleSendOTP = async (e) => {
@@ -33,24 +33,7 @@ function Login({ onLogin }) {
   };
 
   // No OTP verification needed
-  // const handleVerifyOTP = async (e) => {
-  //   e.preventDefault();
-  //   if (!name.trim()) {
-  //     setError('Please enter your name');
-  //     return;
-  //   }
-  //   setLoading(true);
-  //   setError('');
-  //   try {
-  //     localStorage.setItem("user", JSON.stringify({ name, phone, role }));
-  //     if (onLogin) onLogin(null, role);
-  //     navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
-  //   } catch (err) {
-  //     setError('Direct login failed.');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  // const handleVerifyOTP = async (e) => { /* unused */ };
 
   return (
     <div className="login-page">
