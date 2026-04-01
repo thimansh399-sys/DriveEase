@@ -55,6 +55,30 @@ function Login({ onLogin }) {
     }
   };
 
+  // Play sound if driver logs in
+  const playSound = () => {
+    if (role === 'driver') {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const freq = 1046;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.5);
+          setTimeout(() => ctx.close(), 700);
+        }
+      } catch (e) {}
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-car-decoration left">[CAB IN]</div>

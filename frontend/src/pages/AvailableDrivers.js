@@ -16,9 +16,12 @@ export default function AvailableDriversPage() {
   });
   const [selectedDriver, setSelectedDriver] = useState(null);
 
-  // Fetch all drivers - publicly accessible
+
+  // Fetch all drivers - publicly accessible, with polling for auto-refresh
   useEffect(() => {
     fetchDrivers();
+    const interval = setInterval(fetchDrivers, 10000); // 10 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDrivers = async () => {

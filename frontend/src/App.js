@@ -89,10 +89,11 @@ function App() {
     if (storedToken) {
       setUserRole(storedRole);
       setIsLoggedIn(true);
+      setShowSplash(false); // Skip splash if logged in
+    } else {
+      const splashTimer = setTimeout(() => setShowSplash(false), 1800);
+      return () => clearTimeout(splashTimer);
     }
-
-    const splashTimer = setTimeout(() => setShowSplash(false), 1800);
-    return () => clearTimeout(splashTimer);
   }, []);
 
   const handleLogin = (newToken, role) => {

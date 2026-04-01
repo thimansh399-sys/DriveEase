@@ -1,0 +1,131 @@
+.driver-login-bg {
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-login-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+  padding: 36px 32px 32px 32px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.driver-login-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.driver-avatar {
+  width: 64px;
+  height: 64px;
+  background: #e0f7e9;
+  color: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin-right: 18px;
+}
+
+.driver-info {
+  flex: 1;
+}
+
+.driver-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.driver-location {
+  font-size: 1rem;
+  color: #22c55e;
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+.location-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+.driver-status {
+  font-size: 0.95rem;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  background: #cbd5e1;
+}
+.driver-status.offline .status-dot {
+  background: #cbd5e1;
+}
+.driver-status.online .status-dot {
+  background: #22c55e;
+}
+.driver-login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.driver-login-form label {
+  font-size: 1rem;
+  color: #222;
+  font-weight: 500;
+}
+.driver-login-form input {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  background: #f9fafb;
+  margin-bottom: 4px;
+}
+.driver-login-btn {
+  margin-top: 10px;
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.driver-login-btn:disabled {
+  background: #a7f3d0;
+  cursor: not-allowed;
+}
+.driver-login-error {
+  color: #ef4444;
+  background: #fee2e2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.98rem;
+  margin-bottom: 4px;
+  text-align: center;
+}

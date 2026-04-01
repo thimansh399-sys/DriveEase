@@ -21,7 +21,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
     { to: '/pay', label: 'Pay' },
   ];
 
-  if (isLoggedIn) tabs.push({ to: '/profile', label: 'Profile' });
+  if (isLoggedIn) tabs.push({ to: '/customer-dashboard', label: 'Profile' });
   if (isCustomer) tabs.push({ to: '/my-bookings', label: 'My Bookings' });
   if (isDriver) tabs.push({ to: '/my-bookings', label: 'My Rides' });
 
@@ -106,7 +106,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
             </>
           ) : (
             <>
-              <button onClick={handleLogout} className="nav-button btn-logout">Logout</button>
+              {/* Remove logout from nav, move to profile page */}
               {isDriver && (
                 <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
               )}
@@ -115,7 +115,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
               )}
             </>
           )}
-          <Link to="/book-driver" className="nav-button btn-primary">🚗 Book a Driver</Link>
+          {/* Removed Book a Driver notification symbol from nav */}
         </div>
       </div>
     </nav>
