@@ -9,16 +9,16 @@ const router = express.Router();
 // Get all public drivers for guest browsing
 router.get('/available', async (req, res) => {
   try {
-    // Query drivers that are approved and have permission to be publicly listed
+    // Query drivers that are approved, public, and online
     const Driver = require('../models/Driver');
     const drivers = await Driver.find({
       status: 'approved',
+      isOnline: true,
       $or: [{ isPublic: true }, { isPublic: { $exists: false } }]
     })
       .select('-password -pancard -documentVerification -activeSession -paymentVerification')
       .limit(100)
       .sort({ rating: -1 });
-    
     res.json(drivers);
   } catch (error) {
     console.error('Error fetching public drivers:', error);
