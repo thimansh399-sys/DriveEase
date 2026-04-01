@@ -13,6 +13,10 @@ function Login({ onLogin }) {
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+<<<<<<< HEAD
+=======
+  // const [displayedOtp, setDisplayedOtp] = useState('');
+>>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -20,6 +24,7 @@ function Login({ onLogin }) {
       setError('Please enter a valid phone number');
       return;
     }
+<<<<<<< HEAD
     if (!name.trim()) {
       setError('Please enter your full name');
       return;
@@ -69,10 +74,44 @@ function Login({ onLogin }) {
       navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (error) {
       setError(error.message || 'Direct login failed.');
+=======
+    setLoading(true);
+    setError('');
+    try {
+      // Direct login: store user and navigate
+      localStorage.setItem("user", JSON.stringify({ name: name || "Customer", phone, role }));
+      if (onLogin) onLogin(null, role);
+      navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
+    } catch (err) {
+      setError('Direct login failed.');
+>>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
     } finally {
       setLoading(false);
     }
   };
+<<<<<<< HEAD
+=======
+
+  // No OTP verification needed
+  // const handleVerifyOTP = async (e) => {
+  //   e.preventDefault();
+  //   if (!name.trim()) {
+  //     setError('Please enter your name');
+  //     return;
+  //   }
+  //   setLoading(true);
+  //   setError('');
+  //   try {
+  //     localStorage.setItem("user", JSON.stringify({ name, phone, role }));
+  //     if (onLogin) onLogin(null, role);
+  //     navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
+  //   } catch (err) {
+  //     setError('Direct login failed.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+>>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
 
   return (
     <div className="login-page">
