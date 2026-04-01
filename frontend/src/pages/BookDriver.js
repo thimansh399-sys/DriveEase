@@ -251,11 +251,11 @@ export default function BookDriver() {
   };
 
   // Direct booking handler
-  const handleDirectBook = (driver) => {
-    // Set selected driver and open booking form (expand as needed)
-    setAssignedRide({ driver });
-    setShowConfirmation(true);
-  };
+  // const handleDirectBook = (driver) => {
+  //   // Set selected driver and open booking form (expand as needed)
+  //   setAssignedRide({ driver });
+  //   setShowConfirmation(true);
+  // };
 
   // ...existing code for hooks, handlers, etc...
   return (
