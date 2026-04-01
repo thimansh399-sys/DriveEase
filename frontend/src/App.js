@@ -97,6 +97,16 @@ function App() {
   }, []);
 
   const handleLogin = (newToken, role) => {
+    // Enforce single-role login: clear other role's session/token
+    if (role === 'driver') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('token');
+    } else if (role === 'customer' || role === 'user') {
+      localStorage.removeItem('driver');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('token');
+    }
     localStorage.setItem('token', newToken);
     localStorage.setItem('userRole', role);
     setUserRole(role);

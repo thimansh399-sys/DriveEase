@@ -99,6 +99,30 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
 
         {/* Right Buttons */}
         <div className="nav-actions">
+          <button
+            className="nav-button btn-driver"
+            style={{ marginRight: 12, background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600, cursor: 'pointer' }}
+            onClick={async () => {
+              // Try to get user location and route to /available-drivers with city param
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    // Optionally, use a reverse geocoding API to get city from lat/lng
+                    // For now, just route to /available-drivers
+                    navigate('/available-drivers');
+                  },
+                  (error) => {
+                    // On error, just route to /available-drivers
+                    navigate('/available-drivers');
+                  }
+                );
+              } else {
+                navigate('/available-drivers');
+              }
+            }}
+          >
+            Drivers
+          </button>
           {!isLoggedIn ? (
             <>
               <Link to="/login" className="nav-button btn-outline">Login</Link>
@@ -115,7 +139,6 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
               )}
             </>
           )}
-          {/* Removed Book a Driver notification symbol from nav */}
         </div>
       </div>
     </nav>

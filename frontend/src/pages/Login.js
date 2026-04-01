@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
-import '../styles/Login.css';
 
 function Login({ onLogin }) {
   const navigate = useNavigate();
   const [step, setStep] = useState('phoneNumber');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [displayedOtp, setDisplayedOtp] = useState('');
+  // const [displayedOtp, setDisplayedOtp] = useState(''); // unused
 
   // Direct login without OTP
   const handleSendOTP = async (e) => {
@@ -24,9 +21,22 @@ function Login({ onLogin }) {
     setLoading(true);
     setError('');
     try {
+      // Enforce single-role login: clear other role's session/token
+      if (role === 'driver') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('token');
+      } else if (role === 'customer' || role === 'user') {
+        localStorage.removeItem('driver');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('token');
+      }
       // Direct login: store user and navigate
       localStorage.setItem("user", JSON.stringify({ name: name || "Customer", phone, role }));
-      if (onLogin) onLogin(null, role);
+      localStorage.setItem("userRole", role);
+      // Optionally set a dummy token for demo
+      localStorage.setItem("token", "demo-token");
+      if (onLogin) onLogin("demo-token", role);
       navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (err) {
       setError('Direct login failed.');
@@ -36,53 +46,13 @@ function Login({ onLogin }) {
   };
 
   // No OTP verification needed
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      localStorage.setItem("user", JSON.stringify({ name, phone, role }));
-      if (onLogin) onLogin(null, role);
-      navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
-    } catch (err) {
-      setError('Direct login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Play sound if driver logs in
-  const playSound = () => {
-    if (role === 'driver') {
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const freq = 1046;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.15, ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.5);
-          setTimeout(() => ctx.close(), 700);
-        }
-      } catch (e) {}
-    }
-  };
+  // const handleVerifyOTP = async (e) => { /* unused */ };
 
   return (
     <div className="login-page">
-      <div className="login-car-decoration left">[CAB IN]</div>
-      <div className="login-car-decoration right">[CAB UP]</div>
+      {/* Hide cab icons if logged in */}
+      {!localStorage.getItem('token') && <div className="login-car-decoration left">[CAB IN]</div>}
+      {!localStorage.getItem('token') && <div className="login-car-decoration right">[CAB UP]</div>}
 
       <div className="login-container">
         <div className="login-card">

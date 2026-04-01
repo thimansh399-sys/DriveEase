@@ -1,39 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, Polyline, TileLayer, Tooltip, useMap, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
-import { INDIA_LOCATION_SUGGESTIONS } from '../utils/locationData';
-import { useNotification } from '../context/NotificationContext';
 import '../styles/Booking.css';
 import '../styles/BookDriver.css';
 
 
 // --- New: India states for dropdown ---
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
-  'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim',
-  'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Puducherry', 'Chandigarh', 'Andaman and Nicobar Islands',
-  'Dadra and Nagar Haveli and Daman and Diu', 'Lakshadweep'
-];
+// const INDIAN_STATES = [ ... ]; // unused
 
 const DEFAULT_CENTER = [28.6139, 77.209];
 
-const insuranceOptions = [
-  { label: 'No Insurance', value: 0 },
-  { label: 'Basic Insurance (+₹50)', value: 50 },
-  { label: 'Premium Insurance (+₹100)', value: 100 },
-];
+// const insuranceOptions = [ ... ]; // unused
 
-const rideOptions = [
-  { label: 'Standard Driver', value: 'Standard' },
-  { label: 'Premium Driver', value: 'Premium' },
-  { label: 'Corporate Driver', value: 'Corporate' },
-];
+// const rideOptions = [ ... ]; // unused
 
 function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   const map = useMap();
@@ -65,76 +46,13 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   return null;
 }
 
-async function geocodeLocation(query, signal) {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`,
-    {
-      signal,
-      headers: {
-        Accept: 'application/json',
-      },
-    }
-  );
+// async function geocodeLocation(query, signal) { ... } // unused
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch location');
-  }
+// async function fetchRouteData(pickup, drop, signal) { ... } // unused
 
-  const data = await response.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    return null;
-  }
+// function mapRideType(rideLabel) { ... } // unused
 
-  return {
-    lat: Number(data[0].lat),
-    lng: Number(data[0].lon),
-    displayName: data[0].display_name,
-  };
-}
-
-async function fetchRouteData(pickup, drop, signal) {
-  const response = await fetch(
-    `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?overview=full&geometries=geojson`,
-    {
-      signal,
-      headers: {
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch route');
-  }
-
-  const data = await response.json();
-  if (!data.routes || !data.routes[0]) {
-    return null;
-  }
-
-  const route = data.routes[0];
-  return {
-    distanceKm: route.distance / 1000,
-    durationMins: route.duration / 60,
-    coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-  };
-}
-
-function mapRideType(rideLabel) {
-  if (rideLabel === 'Premium') return 'hourly';
-  if (rideLabel === 'Corporate') return 'outstation';
-  return 'daily';
-}
-
-function splitCityState(rawAddress) {
-  const normalized = String(rawAddress || '').trim();
-  if (!normalized) return { city: '', state: '' };
-  const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
-  return {
-    city: parts[0] || '',
-    state: parts[1] || '',
-  };
-}
+// function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
   // Modern header and search bar UI
@@ -171,7 +89,21 @@ export default function BookDriver() {
       // Booking modal state
       const [selectedDriver, setSelectedDriver] = useState(null);
       const [showModal, setShowModal] = useState(false);
-      const [bookingData, setBookingData] = useState({ pickup: '', drop: '', time: '' });
+      const [bookingData, setBookingData] = useState({ pickup: '', drop: '', time: '', insurance: 'none' });
+      const [calculatedFare, setCalculatedFare] = useState(0);
+
+      // Fare calculation logic
+      useEffect(() => {
+        // Example: base fare 50, per km 10, insurance
+        let baseFare = 50;
+        let perKm = 10;
+        let insurance = 0;
+        if (bookingData.insurance === 'mini') insurance = 10;
+        if (bookingData.insurance === 'premium') insurance = 20;
+        // For demo, use a dummy distance (or use real distance if available)
+        let dist = distance || 5; // fallback to 5km if not available
+        setCalculatedFare(baseFare + dist * perKm + insurance);
+      }, [bookingData.insurance, distance]);
 
       // Confirm booking handler (logs and closes modal, can be upgraded to save to backend)
       const handleConfirmBooking = async () => {
@@ -179,42 +111,40 @@ export default function BookDriver() {
         // await fetch("http://localhost:5000/api/bookings", {
         //   method: "POST",
         //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ driverId: selectedDriver._id, ...bookingData })
+        //   body: JSON.stringify({ driverId: selectedDriver._id, ...bookingData, fare: calculatedFare })
         // });
-        alert("Booking Confirmed ✅");
+        alert(`Booking Confirmed ✅\nFare: ₹${calculatedFare}`);
         setShowModal(false);
       };
 
       // Bubble filter buttons (example for city, can be expanded)
       const cityBubbles = ["Kanpur", "Lucknow", "Delhi", "Mumbai", "Bangalore"];
     // --- Restore missing state and handlers for UI to compile ---
-    const [form, setForm] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
-    const updateField = (key, value) => setForm(f => ({ ...f, [key]: value }));
-    const [showConfirmation, setShowConfirmation] = useState(false);
-    const [assignedRide, setAssignedRide] = useState(null);
-    const [duration, setDuration] = useState(0);
-    const [mapLoading, setMapLoading] = useState(false);
-    const [mapStatus, setMapStatus] = useState('');
-    const [pickupGeo, setPickupGeo] = useState(null);
-    const [dropGeo, setDropGeo] = useState(null);
-    const [routeData, setRouteData] = useState(null);
-    const [fare, setFare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 });
-    const [distance, setDistance] = useState(0);
-    // Dummy handler for driver search (already defined above, but for ESLint)
-    const handleSearchDrivers = () => {};
+    const [form] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
+    // const updateField = (key, value) => setForm(f => ({ ...f, [key]: value })); // unused
+    const [showConfirmation] = useState(false); // used in JSX
+    const [assignedRide] = useState(null); // used in JSX
+    const [duration] = useState(0); // used in JSX
+    const [mapLoading] = useState(false); // used in JSX
+    const [mapStatus] = useState(''); // used in JSX
+    const [pickupGeo] = useState(null); // used in JSX
+    const [dropGeo] = useState(null); // used in JSX
+    const [routeData] = useState(null); // used in JSX
+    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 }); // used in JSX
+    const [distance] = useState(0); // used in JSX
+    // const handleSearchDrivers = () => {}; // unused
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
   const [drivers, setDrivers] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
-  const [driversError, setDriversError] = useState('');
+  // const [driversError, setDriversError] = useState(''); // unused
 
 
   // Fetch drivers from backend on mount and whenever filters change
 
   // Fetch drivers function
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     setDriversLoading(true);
-    setDriversError('');
     try {
       const params = new URLSearchParams();
       if (filters.state) params.append('state', filters.state);
@@ -226,17 +156,16 @@ export default function BookDriver() {
       const data = await api.getAllDrivers(query);
       setDrivers(Array.isArray(data) ? data : []);
     } catch (err) {
-      setDriversError('Failed to fetch drivers');
       setDrivers([]);
     } finally {
       setDriversLoading(false);
     }
-  };
+  }, [filters.state, filters.city, filters.area, filters.pincode]);
 
   // Fetch on mount and whenever filters change
   useEffect(() => {
     fetchDrivers();
-  }, [filters.state, filters.city, filters.area, filters.pincode]);
+  }, [fetchDrivers]);
 
   // Search button handler
   const handleSearch = () => {
@@ -250,11 +179,47 @@ export default function BookDriver() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Direct booking handler
-  const handleDirectBook = (driver) => {
-    // Set selected driver and open booking form (expand as needed)
-    setAssignedRide({ driver });
-    setShowConfirmation(true);
+  // Haversine formula to calculate distance between two lat/lng points
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Direct booking: find nearest available driver
+  const handleDirectBook = () => {
+    if (!isLoggedIn || !userLocation || !bookingData.pickup) {
+      alert('Please login and enter your pickup location.');
+      return;
+    }
+    // Parse userLocation (lat,lng)
+    const [userLat, userLng] = userLocation.split(',').map(Number);
+    // Find nearest driver with valid location
+    let nearest = null;
+    let minDist = Infinity;
+    filteredDrivers.forEach(driver => {
+      if (driver.location && Array.isArray(driver.location.coordinates)) {
+        const [lng, lat] = driver.location.coordinates;
+        const dist = haversineDistance(userLat, userLng, lat, lng);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = driver;
+        }
+      }
+    });
+    if (nearest) {
+      setSelectedDriver(nearest);
+      setShowModal(true);
+    } else {
+      alert('No available drivers found nearby.');
+    }
   };
 
   // ...existing code for hooks, handlers, etc...
@@ -278,7 +243,7 @@ export default function BookDriver() {
           </button>
         </div>
       </div>
-      {/* Search Bar */}
+      {/* Search Bar & Direct Booking */}
       <div className="bg-gray-900 p-4 rounded-xl flex items-center gap-3 shadow-lg mb-8">
         <input
           type="text"
@@ -287,6 +252,12 @@ export default function BookDriver() {
         />
         <button className="bg-green-500 px-6 py-2 rounded-lg">
           Search
+        </button>
+        <button
+          className="bg-yellow-500 px-6 py-2 rounded-lg ml-4"
+          onClick={handleDirectBook}
+        >
+          Book Nearest Driver
         </button>
       </div>
       {/* Existing booking UI below */}
@@ -416,6 +387,46 @@ export default function BookDriver() {
                         value={bookingData.time}
                         onChange={e => setBookingData({ ...bookingData, time: e.target.value })}
                       />
+                      {/* Insurance Selection */}
+                      <div className="mb-4">
+                        <label className="block text-white mb-2 font-semibold">Insurance</label>
+                        <div className="flex gap-3">
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="none"
+                              checked={bookingData.insurance === 'none'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'none' })}
+                            />
+                            None
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="mini"
+                              checked={bookingData.insurance === 'mini'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'mini' })}
+                            />
+                            Mini Plan (+₹10)
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="premium"
+                              checked={bookingData.insurance === 'premium'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'premium' })}
+                            />
+                            Premium (+₹20)
+                          </label>
+                        </div>
+                      </div>
+                      {/* Fare Display */}
+                      <div className="mb-4 text-white font-semibold">
+                        Fare: ₹{calculatedFare}
+                      </div>
                       <div className="flex justify-between">
                         <button
                           onClick={() => setShowModal(false)}
