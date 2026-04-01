@@ -14,9 +14,13 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   // const [displayedOtp, setDisplayedOtp] = useState('');
 >>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
+=======
+  // const [displayedOtp, setDisplayedOtp] = useState(''); // unused
+>>>>>>> 2705470 (Fix: Resolve all ESLint warnings and make frontend ready for deployment)
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -93,6 +97,7 @@ function Login({ onLogin }) {
 =======
 
   // No OTP verification needed
+<<<<<<< HEAD
   // const handleVerifyOTP = async (e) => {
   //   e.preventDefault();
   //   if (!name.trim()) {
@@ -112,6 +117,9 @@ function Login({ onLogin }) {
   //   }
   // };
 >>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
+=======
+  // const handleVerifyOTP = async (e) => { /* unused */ };
+>>>>>>> 2705470 (Fix: Resolve all ESLint warnings and make frontend ready for deployment)
 
   return (
     <div className="login-page">
