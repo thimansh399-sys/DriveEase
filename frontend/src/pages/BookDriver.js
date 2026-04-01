@@ -6,15 +6,18 @@ import api from '../utils/api';
 import '../styles/Booking.css';
 import '../styles/BookDriver.css';
 
-
 // --- New: India states for dropdown ---
-// const INDIAN_STATES = [ ... ]; // unused
+// const INDIAN_STATES = [ ... ];
 
 const DEFAULT_CENTER = [28.6139, 77.209];
 
-// const insuranceOptions = [ ... ]; // unused
+// const insuranceOptions = [ ... ];
+// const rideOptions = [ ... ];
 
-// const rideOptions = [ ... ]; // unused
+// async function geocodeLocation(query, signal) { ... }
+// async function fetchRouteData(pickup, drop, signal) { ... }
+// function mapRideType(rideLabel) { ... }
+// function splitCityState(rawAddress) { ... }
 
 function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
   const map = useMap();
@@ -45,14 +48,6 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
 
   return null;
 }
-
-// async function geocodeLocation(query, signal) { ... } // unused
-
-// async function fetchRouteData(pickup, drop, signal) { ... } // unused
-
-// function mapRideType(rideLabel) { ... } // unused
-
-// function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
   // --- Fix: Declare distance state at the top ---
@@ -123,18 +118,16 @@ export default function BookDriver() {
       const cityBubbles = ["Kanpur", "Lucknow", "Delhi", "Mumbai", "Bangalore"];
     // --- Restore missing state and handlers for UI to compile ---
     const [form] = useState({ name: '', phone: '', pickup: '', drop: '', ride: 'Standard', insurance: 0 });
-    // const updateField = (key, value) => setForm(f => ({ ...f, [key]: value })); // unused
-    const [showConfirmation] = useState(false); // used in JSX
-    const [assignedRide] = useState(null); // used in JSX
-    const [duration] = useState(0); // used in JSX
-    const [mapLoading] = useState(false); // used in JSX
-    const [mapStatus] = useState(''); // used in JSX
-    const [pickupGeo] = useState(null); // used in JSX
-    const [dropGeo] = useState(null); // used in JSX
-    const [routeData] = useState(null); // used in JSX
-    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 }); // used in JSX
-    // (distance state is now declared at the top)
-    // const handleSearchDrivers = () => {}; // unused
+    const [showConfirmation] = useState(false);
+    const [assignedRide] = useState(null);
+    const [duration] = useState(0);
+    const [mapLoading] = useState(false);
+    const [mapStatus] = useState('');
+    const [pickupGeo] = useState(null);
+    const [dropGeo] = useState(null);
+    const [routeData] = useState(null);
+    const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 });
+    const [distance] = useState(0);
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
   const [drivers, setDrivers] = useState([]);
@@ -167,7 +160,7 @@ export default function BookDriver() {
   // Fetch on mount and whenever filters change
   useEffect(() => {
     fetchDrivers();
-  }, [fetchDrivers]);
+  }, [filters.state, filters.city, filters.area, filters.pincode, fetchDrivers]);
 
   // Search button handler
   const handleSearch = () => {

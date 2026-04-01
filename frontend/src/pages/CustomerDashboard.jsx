@@ -5,11 +5,11 @@ import api from '../utils/api';
 
 function Sidebar() {
   // Determine active tab from location
-  const [activeTab, setActiveTab] = React.useState('profile');
-  React.useEffect(() => {
+  const [activeTab, setActiveTab] = useState('profile');
+  useEffect(() => {
     if (window.location.pathname.includes('my-bookings')) setActiveTab('bookings');
     else setActiveTab('profile');
-  }, []); // Remove window.location.pathname from deps
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -26,13 +26,6 @@ function Sidebar() {
       <button type="button" className="logout-btn" onClick={handleLogout}>
         Logout
       </button>
-    </div>
-  );
-}
-  return (
-    <div className="sidebar">
-      <h2>🚗 DriveEase</h2>
-      <a href="/customer-dashboard" className="active">Dashboard</a>
     </div>
   );
 }
