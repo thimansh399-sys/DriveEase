@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
-import '../styles/Login.css';
 
 function Login({ onLogin }) {
   const navigate = useNavigate();
   const [step, setStep] = useState('phoneNumber');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('customer');
   const [loading, setLoading] = useState(false);
@@ -52,30 +49,6 @@ function Login({ onLogin }) {
       setError('Direct login failed.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Play sound if driver logs in
-  const playSound = () => {
-    if (role === 'driver') {
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const freq = 1046;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.15, ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.5);
-          setTimeout(() => ctx.close(), 700);
-        }
-      } catch (e) {}
     }
   };
 
