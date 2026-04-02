@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.mydriveease.in/api/:path*"
+      "destination": "https://driveease-pshj.onrender.com/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://api.mydriveease.in/uploads/:path*"
+      "destination": "https://driveease-pshj.onrender.com/uploads/:path*"
     },
     {
       "source": "/(.*)",

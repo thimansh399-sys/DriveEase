@@ -1,5 +1,5 @@
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
-const PRODUCTION_API_BASE_URL = 'https://api.mydriveease.in/api';
+const PRODUCTION_API_BASE_URL = 'https://driveease-pshj.onrender.com/api';
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
