@@ -1,0 +1,405 @@
+.book-ride-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(34, 197, 94, 0.16), transparent 48%),
+    radial-gradient(circle at 85% 12%, rgba(16, 185, 129, 0.14), transparent 42%),
+    linear-gradient(145deg, #0b0f1a 0%, #05070f 65%, #0b1220 100%);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 12px;
+}
+
+.book-ride-layout {
+  width: 100%;
+  max-width: 1080px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.book-ride-card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.book-ride-card::before {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  top: -60px;
+  right: -56px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.28), rgba(74, 222, 128, 0));
+  pointer-events: none;
+}
+
+.book-ride-card h2 {
+  font-size: 1.45rem;
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.book-ride-subtitle {
+  text-align: center;
+  color: #b7bfcd;
+  margin: 0 0 18px;
+  font-size: 0.92rem;
+}
+
+.book-ride-back {
+  border: none;
+  background: transparent;
+  color: #c5cddd;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 8px;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-input-group {
+  display: grid;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #111827;
+  color: #fff;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.book-ride-input:focus {
+  border-color: rgba(74, 222, 128, 0.9);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+}
+
+.book-ride-types {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-type-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.78rem;
+  color: #d5dbe8;
+  background: #374151;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.book-ride-type-btn:hover {
+  transform: translateY(-1px);
+}
+
+.book-ride-type-btn.active {
+  background: #22c55e;
+  color: #081018;
+  font-weight: 700;
+}
+
+.book-ride-error {
+  margin-top: 14px;
+  color: #fca5a5;
+  font-size: 0.88rem;
+}
+
+.book-ride-submit {
+  width: 100%;
+  margin-top: 18px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #4ade80, #16a34a);
+  color: #0b1220;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 13px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(22, 163, 74, 0.35);
+  transition: transform 0.2s ease, filter 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-submit:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.book-ride-map-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.book-ride-map-card::before {
+  content: '';
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  bottom: -52px;
+  left: -44px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.24), rgba(52, 211, 153, 0));
+  pointer-events: none;
+}
+
+.book-ride-map-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-map-subtitle {
+  margin: 6px 0 14px;
+  color: #bac4d7;
+  font-size: 0.86rem;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-map-frame-wrap {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-map-frame {
+  width: 100%;
+  height: 260px;
+  border: 0;
+  display: block;
+}
+
+.book-ride-map-summary {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-map-summary p {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(17, 24, 39, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.book-ride-map-summary span {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.book-ride-map-summary b {
+  color: #f8fafc;
+  font-size: 0.86rem;
+  text-transform: capitalize;
+  text-align: right;
+}
+
+.book-ride-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.book-ride-success-card {
+  text-align: center;
+}
+
+.book-ride-success-badge {
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #9df0ba;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 999px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+}
+
+.book-ride-success-icon {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+}
+
+.book-ride-success-panel {
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  text-align: left;
+  padding: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-success-panel p {
+  margin: 0 0 8px;
+  color: #e4eaf5;
+  font-size: 0.9rem;
+}
+
+.book-ride-status {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.book-ride-otp {
+  margin-top: 10px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.book-ride-otp-hint {
+  color: #a7b1c2;
+  font-size: 0.76rem;
+}
+
+.book-ride-success-actions {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.book-ride-secondary {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.book-ride-secondary:hover {
+  background: rgba(148, 163, 184, 0.2);
+  transform: translateY(-1px);
+}
+
+.book-ride-reveal {
+  animation: rideReveal 0.5s ease both;
+}
+
+.book-ride-reveal.delay-1 {
+  animation-delay: 80ms;
+}
+
+.book-ride-reveal.delay-2 {
+  animation-delay: 140ms;
+}
+
+.book-ride-reveal.delay-3 {
+  animation-delay: 200ms;
+}
+
+@keyframes rideReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  .book-ride-page {
+    padding: 30px 20px;
+  }
+
+  .book-ride-card {
+    padding: 24px;
+    border-radius: 22px;
+  }
+
+  .book-ride-card h2 {
+    font-size: 1.7rem;
+  }
+
+  .book-ride-input {
+    font-size: 0.96rem;
+  }
+
+  .book-ride-type-btn {
+    font-size: 0.86rem;
+  }
+
+  .book-ride-submit {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .book-ride-layout {
+    grid-template-columns: minmax(360px, 1fr) minmax(320px, 0.95fr);
+    align-items: start;
+  }
+
+  .book-ride-map-frame {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .book-ride-layout {
+    grid-template-columns: minmax(420px, 1fr) minmax(380px, 0.95fr);
+  }
+
+  .book-ride-map-card {
+    position: sticky;
+    top: 20px;
+  }
+
+  .book-ride-map-frame {
+    height: 380px;
+  }
+}

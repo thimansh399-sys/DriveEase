@@ -55,6 +55,8 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
 // function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
+  // --- Fix: Declare distance state at the top ---
+  const [distance, setDistance] = useState(5); // Default to 5km for demo, update as needed
   // Modern header and search bar UI
   // Handler for GPS location
   const getLocation = () => {
@@ -100,8 +102,8 @@ export default function BookDriver() {
         let insurance = 0;
         if (bookingData.insurance === 'mini') insurance = 10;
         if (bookingData.insurance === 'premium') insurance = 20;
-        // For demo, use a dummy distance (or use real distance if available)
-        let dist = distance || 5; // fallback to 5km if not available
+        // Use distance state directly (already defaulted to 5)
+        let dist = distance;
         setCalculatedFare(baseFare + dist * perKm + insurance);
       }, [bookingData.insurance, distance]);
 
@@ -131,7 +133,7 @@ export default function BookDriver() {
     const [dropGeo] = useState(null); // used in JSX
     const [routeData] = useState(null); // used in JSX
     const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 }); // used in JSX
-    const [distance] = useState(0); // used in JSX
+    // (distance state is now declared at the top)
     // const handleSearchDrivers = () => {}; // unused
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
@@ -339,7 +341,7 @@ export default function BookDriver() {
                 >
                   <h2 className="text-white text-lg font-semibold">{driver.name}</h2>
                   <p className="text-gray-400 text-sm">{driver.carModel || driver.car || 'N/A'}</p>
-                  <p className="text-gray-400 text-sm">⭐ {driver.rating || 'N/A'} • ₹{driver.price || 'N/A'}/km</p>
+                  <p className="text-gray-400 text-sm">⭐ {driver.rating?.averageRating ?? driver.rating ?? 'N/A'} • ₹{driver.price || 'N/A'}/km</p>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => handleBook(driver)}

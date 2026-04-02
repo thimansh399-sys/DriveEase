@@ -25,6 +25,7 @@ import Subscriptions from './pages/Plans';
 import TrackBooking from './pages/TrackBooking';
 import Messages from './pages/Messages';
 import BookDriver from './pages/BookDriver';
+import BookRide from './pages/BookRide';
 import CustomerConfirmation from './pages/CustomerConfirmation';
 import AdminSupport from './pages/AdminSupport';
 import AdminAnalytics from './pages/AdminAnalytics';
@@ -47,6 +48,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/book-driver" element={<BookDriver />} />
+          <Route path="/book-ride" element={isLoggedIn ? <BookRide /> : <Navigate to="/login" />} />
           <Route path="/browse" element={isLoggedIn ? <Browse /> : <Navigate to="/login" />} />
           <Route path="/available-drivers" element={<AvailableDrivers />} />
           <Route path="/booking/:driverId" element={<BookDriver />} />

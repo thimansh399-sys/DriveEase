@@ -1351,6 +1351,68 @@ exports.completeRide = async (req, res) => {
   }
 };
 
+// Simple book-now endpoint (auto-assigns nearest online driver)
+exports.bookNow = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const { pickup, drop, rideType = 'daily' } = req.body;
+
+    if (!pickup || !drop) {
+      return res.status(400).json({ message: 'Pickup and drop locations are required' });
+    }
+
+    const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
+    const normalizedRideType = validRideTypes.includes(rideType) ? rideType : 'daily';
+
+    // Auto-assign an online driver
+    const availableDrivers = await findAssignableDrivers();
+    let assignedDriver = availableDrivers.length
+      ? availableDrivers[Math.floor(Math.random() * availableDrivers.length)]
+      : null;
+
+    const otp = generateRideOTP();
+    const bookingId = generateBookingId();
+
+    const booking = new Booking({
+      bookingId,
+      customerId,
+      driverId: assignedDriver ? assignedDriver._id : null,
+      pickupLocation: { address: pickup },
+      dropLocation: { address: drop },
+      bookingType: normalizedRideType,
+      startDate: new Date(),
+      status: assignedDriver ? 'driver_assigned' : 'pending',
+      paymentStatus: 'pending',
+      paymentMethod: 'upi',
+      verification: {
+        otp,
+        otpExpiry: new Date(Date.now() + 30 * 60 * 1000),
+        otpVerified: false,
+      },
+    });
+
+    await booking.save();
+
+    return res.status(201).json({
+      message: assignedDriver ? 'Ride booked! Driver assigned.' : 'Booking created. Finding a driver...',
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        pickup,
+        drop,
+        rideType: normalizedRideType,
+        status: booking.status,
+        otp,
+        driver: assignedDriver
+          ? { name: assignedDriver.name, phone: assignedDriver.phone }
+          : null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 // SMS sender function using Fast2SMS (free Indian SMS API)
 async function sendSMSToDriver(phone, message) {
   const apiKey = process.env.FAST2SMS_API_KEY;
