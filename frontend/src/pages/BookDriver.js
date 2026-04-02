@@ -55,6 +55,8 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
 // function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
+  // --- Fix: Declare distance state at the top ---
+  const [distance, setDistance] = useState(5); // Default to 5km for demo, update as needed
   // Modern header and search bar UI
   // Handler for GPS location
   const getLocation = () => {
@@ -89,7 +91,21 @@ export default function BookDriver() {
       // Booking modal state
       const [selectedDriver, setSelectedDriver] = useState(null);
       const [showModal, setShowModal] = useState(false);
-      const [bookingData, setBookingData] = useState({ pickup: '', drop: '', time: '' });
+      const [bookingData, setBookingData] = useState({ pickup: '', drop: '', time: '', insurance: 'none' });
+      const [calculatedFare, setCalculatedFare] = useState(0);
+
+      // Fare calculation logic
+      useEffect(() => {
+        // Example: base fare 50, per km 10, insurance
+        let baseFare = 50;
+        let perKm = 10;
+        let insurance = 0;
+        if (bookingData.insurance === 'mini') insurance = 10;
+        if (bookingData.insurance === 'premium') insurance = 20;
+        // Use distance state directly (already defaulted to 5)
+        let dist = distance;
+        setCalculatedFare(baseFare + dist * perKm + insurance);
+      }, [bookingData.insurance, distance]);
 
       // Confirm booking handler (logs and closes modal, can be upgraded to save to backend)
       const handleConfirmBooking = async () => {
@@ -97,9 +113,9 @@ export default function BookDriver() {
         // await fetch("http://localhost:5000/api/bookings", {
         //   method: "POST",
         //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ driverId: selectedDriver._id, ...bookingData })
+        //   body: JSON.stringify({ driverId: selectedDriver._id, ...bookingData, fare: calculatedFare })
         // });
-        alert("Booking Confirmed ✅");
+        alert(`Booking Confirmed ✅\nFare: ₹${calculatedFare}`);
         setShowModal(false);
       };
 
@@ -117,7 +133,7 @@ export default function BookDriver() {
     const [dropGeo] = useState(null); // used in JSX
     const [routeData] = useState(null); // used in JSX
     const [fare] = useState({ baseFare: 0, perKm: 0, insurance: 0, total: 0 }); // used in JSX
-    const [distance] = useState(0); // used in JSX
+    // (distance state is now declared at the top)
     // const handleSearchDrivers = () => {}; // unused
   // --- New: Driver search filters and results ---
   const [filters, setFilters] = useState({ state: '', city: '', area: '', pincode: '' });
@@ -165,8 +181,48 @@ export default function BookDriver() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Direct booking handler
-  // const handleDirectBook = (driver) => { /* unused */ };
+  // Haversine formula to calculate distance between two lat/lng points
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Direct booking: find nearest available driver
+  const handleDirectBook = () => {
+    if (!isLoggedIn || !userLocation || !bookingData.pickup) {
+      alert('Please login and enter your pickup location.');
+      return;
+    }
+    // Parse userLocation (lat,lng)
+    const [userLat, userLng] = userLocation.split(',').map(Number);
+    // Find nearest driver with valid location
+    let nearest = null;
+    let minDist = Infinity;
+    filteredDrivers.forEach(driver => {
+      if (driver.location && Array.isArray(driver.location.coordinates)) {
+        const [lng, lat] = driver.location.coordinates;
+        const dist = haversineDistance(userLat, userLng, lat, lng);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = driver;
+        }
+      }
+    });
+    if (nearest) {
+      setSelectedDriver(nearest);
+      setShowModal(true);
+    } else {
+      alert('No available drivers found nearby.');
+    }
+  };
 
   // ...existing code for hooks, handlers, etc...
   return (
@@ -189,7 +245,7 @@ export default function BookDriver() {
           </button>
         </div>
       </div>
-      {/* Search Bar */}
+      {/* Search Bar & Direct Booking */}
       <div className="bg-gray-900 p-4 rounded-xl flex items-center gap-3 shadow-lg mb-8">
         <input
           type="text"
@@ -198,6 +254,12 @@ export default function BookDriver() {
         />
         <button className="bg-green-500 px-6 py-2 rounded-lg">
           Search
+        </button>
+        <button
+          className="bg-yellow-500 px-6 py-2 rounded-lg ml-4"
+          onClick={handleDirectBook}
+        >
+          Book Nearest Driver
         </button>
       </div>
       {/* Existing booking UI below */}
@@ -279,7 +341,7 @@ export default function BookDriver() {
                 >
                   <h2 className="text-white text-lg font-semibold">{driver.name}</h2>
                   <p className="text-gray-400 text-sm">{driver.carModel || driver.car || 'N/A'}</p>
-                  <p className="text-gray-400 text-sm">⭐ {driver.rating || 'N/A'} • ₹{driver.price || 'N/A'}/km</p>
+                  <p className="text-gray-400 text-sm">⭐ {driver.rating?.averageRating ?? driver.rating ?? 'N/A'} • ₹{driver.price || 'N/A'}/km</p>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => handleBook(driver)}
@@ -327,6 +389,46 @@ export default function BookDriver() {
                         value={bookingData.time}
                         onChange={e => setBookingData({ ...bookingData, time: e.target.value })}
                       />
+                      {/* Insurance Selection */}
+                      <div className="mb-4">
+                        <label className="block text-white mb-2 font-semibold">Insurance</label>
+                        <div className="flex gap-3">
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="none"
+                              checked={bookingData.insurance === 'none'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'none' })}
+                            />
+                            None
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="mini"
+                              checked={bookingData.insurance === 'mini'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'mini' })}
+                            />
+                            Mini Plan (+₹10)
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="insurance"
+                              value="premium"
+                              checked={bookingData.insurance === 'premium'}
+                              onChange={() => setBookingData({ ...bookingData, insurance: 'premium' })}
+                            />
+                            Premium (+₹20)
+                          </label>
+                        </div>
+                      </div>
+                      {/* Fare Display */}
+                      <div className="mb-4 text-white font-semibold">
+                        Fare: ₹{calculatedFare}
+                      </div>
                       <div className="flex justify-between">
                         <button
                           onClick={() => setShowModal(false)}

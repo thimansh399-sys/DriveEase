@@ -719,3 +719,192 @@
   .dd-ride-top { flex-direction: column; align-items: flex-start; }
   .dd-ride-footer { flex-direction: column; gap: 8px; align-items: flex-start; }
 }
+
+/* ===== UPDATED DRIVER DASHBOARD (CUSTOM) ===== */
+.driver-dashboard-modern {
+  min-height: calc(100vh - 70px);
+  background:
+    radial-gradient(circle at 10% 12%, rgba(34, 197, 94, 0.14), transparent 45%),
+    radial-gradient(circle at 84% 16%, rgba(16, 185, 129, 0.11), transparent 40%),
+    linear-gradient(145deg, #0b0f1a 0%, #070b14 60%, #0b1220 100%);
+  color: #fff;
+  padding: 16px;
+}
+
+.driver-dashboard-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.driver-dashboard-head {
+  margin-bottom: 16px;
+}
+
+.driver-dashboard-head h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.driver-dashboard-head p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.driver-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.driver-modern-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.driver-modern-card h2,
+.driver-modern-card h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.driver-modern-card h3 {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.driver-metric {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.driver-metric.earnings {
+  color: #4ade80;
+}
+
+.driver-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.driver-status-pill {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.driver-status-pill.online {
+  color: #4ade80;
+}
+
+.driver-status-pill.offline {
+  color: #94a3b8;
+}
+
+.driver-actions-grid {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+
+.driver-primary-btn,
+.driver-secondary-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.driver-primary-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #07100d;
+}
+
+.driver-secondary-btn {
+  background: #374151;
+  color: #fff;
+}
+
+.card-hover-pop,
+.btn-hover-pop {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover-pop:hover,
+.btn-hover-pop:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 26px rgba(34, 197, 94, 0.1);
+}
+
+.withdraw-card {
+  max-width: 620px;
+}
+
+.driver-method-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.driver-method-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #374151;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.driver-method-btn.active {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #07100d;
+}
+
+.driver-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.driver-input:focus {
+  border-color: rgba(74, 222, 128, 0.8);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+}
+
+.full-width {
+  width: 100%;
+  margin-top: 4px;
+}
+
+@media (min-width: 640px) {
+  .driver-dashboard-modern {
+    padding: 22px;
+  }
+
+  .driver-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .driver-actions-grid {
+    flex-direction: row;
+  }
+}

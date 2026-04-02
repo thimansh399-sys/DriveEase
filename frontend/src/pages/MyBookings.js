@@ -307,10 +307,10 @@ function MyBookings() {
                             <span className="mb-detail-value">{counterpart.name}</span>
                           </div>
                         )}
-                        {booking.driver?.rating > 0 && (
+                        {booking.driver?.rating?.averageRating > 0 && (
                           <div className="mb-detail-item">
                             <span className="mb-detail-label">Driver Rating</span>
-                            <span className="mb-detail-value">⭐ {booking.driver.rating}</span>
+                            <span className="mb-detail-value">⭐ {booking.driver.rating.averageRating}</span>
                           </div>
                         )}
                         {booking.rideFlow?.isPeakRide && (

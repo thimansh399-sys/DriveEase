@@ -15,6 +15,7 @@ export default function AvailableDriversPage() {
     onlineOnly: false
   });
   const [selectedDriver, setSelectedDriver] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
 
   // Fetch all drivers - publicly accessible, with polling for auto-refresh
@@ -88,6 +89,126 @@ export default function AvailableDriversPage() {
 
   return (
     <div className="available-drivers-container">
+      {/* Floating Filter Button */}
+      <button
+        className="floating-filter-btn"
+        style={{
+          position: 'fixed',
+          bottom: 32,
+          right: 32,
+          zIndex: 1000,
+          background: '#22c55e',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '50%',
+          width: 60,
+          height: 60,
+          boxShadow: '0 4px 16px rgba(34,197,94,0.18)',
+          fontSize: 32,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+        onClick={() => setShowFilterModal(true)}
+        aria-label="Open Filters"
+      >
+        <span role="img" aria-label="filter">🔍</span>
+      </button>
+
+      {/* Filter Modal */}
+      {showFilterModal && (
+        <div
+          className="filter-modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            zIndex: 1100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setShowFilterModal(false)}
+        >
+          <div
+            className="filter-modal"
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              padding: 32,
+              minWidth: 320,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              color: '#222',
+              position: 'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 16,
+                background: 'none',
+                border: 'none',
+                fontSize: 28,
+                color: '#888',
+                cursor: 'pointer',
+              }}
+              onClick={() => setShowFilterModal(false)}
+              aria-label="Close"
+            >×</button>
+            <h2 style={{ marginBottom: 18, fontWeight: 700, fontSize: 22 }}>Filter Drivers</h2>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontWeight: 500 }}>
+                <input
+                  type="checkbox"
+                  name="onlineOnly"
+                  checked={filters.onlineOnly}
+                  onChange={e => setFilters(f => ({ ...f, onlineOnly: e.target.checked }))}
+                  style={{ marginRight: 8 }}
+                />
+                Online Only
+              </label>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontWeight: 500 }}>Minimum Rating</label>
+              <select
+                name="minRating"
+                value={filters.minRating}
+                onChange={e => setFilters(f => ({ ...f, minRating: Number(e.target.value) }))}
+                style={{ marginLeft: 12, padding: 6, borderRadius: 6, border: '1px solid #ccc' }}
+              >
+                <option value={0}>All Ratings</option>
+                <option value={3}>3+ Stars</option>
+                <option value={4}>4+ Stars</option>
+                <option value={4.5}>4.5+ Stars</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontWeight: 500 }}>City</label>
+              <input
+                type="text"
+                name="city"
+                placeholder="Enter city name"
+                value={filters.city}
+                onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
+                style={{ marginLeft: 12, padding: 6, borderRadius: 6, border: '1px solid #ccc' }}
+              />
+            </div>
+            <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
+              <button
+                style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setShowFilterModal(false)}
+              >Apply</button>
+              <button
+                style={{ background: '#f3f4f6', color: '#222', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 500, cursor: 'pointer' }}
+                onClick={() => { setFilters({ city: '', minRating: 0, onlineOnly: false }); setShowFilterModal(false); }}
+              >Reset</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero Section */}
       <div className="drivers-hero">
         <div className="hero-content">

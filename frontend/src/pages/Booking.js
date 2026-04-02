@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import '../styles/UnifiedUI.css';
@@ -8,6 +8,7 @@ import '../styles/EnhancedAnimations.css';
 const MAX_STEP = 5;
 
 function Booking() {
+  const navigate = useNavigate();
   const { driverId } = useParams();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
@@ -18,6 +19,7 @@ function Booking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const title = useMemo(() => {
     if (step === 1) return 'Pickup Location';
@@ -81,6 +83,12 @@ function Booking() {
         setError(response?.error || 'Booking failed. Please try again.');
       } else {
         setSuccess(response.ride || response.booking || response);
+        setShowModal(true);
+        // Redirect to summary after 2.5s
+        setTimeout(() => {
+          setShowModal(false);
+          navigate(`/my-bookings?bookingId=${response.ride?.bookingId || response.bookingId || response.id || ''}`);
+        }, 2500);
       }
     } catch {
       setError('Booking failed. Please try again.');
@@ -230,25 +238,22 @@ function Booking() {
               {error}
             </motion.div>
           )}
-
-          {success && (
-            <motion.div 
-              className="ux-alert success"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>✓ Booking Confirmed</div>
-              <div style={{ fontSize: 14 }}>Booking ID: {success.bookingId || success.id || 'Created'}</div>
-              {success.driver?.name && (
-                <div style={{ fontSize: 14, marginTop: 4 }}>
-                  Driver: {success.driver.name} ({success.driver.phone})
-                </div>
-              )}
-            </motion.div>
-          )}
         </AnimatePresence>
+
+        {/* Modal confirmation */}
+        {showModal && success && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+              <div className="text-5xl mb-4">✅</div>
+              <h2 className="text-2xl font-bold mb-2">Booking Confirmed!</h2>
+              <div className="mb-2">Booking ID: {success.bookingId || success.id || 'Created'}</div>
+              {success.driver?.name && (
+                <div className="mb-2">Driver: {success.driver.name} ({success.driver.phone})</div>
+              )}
+              <div className="mb-4">You will be redirected to your bookings shortly.</div>
+            </div>
+          </div>
+        )}
 
         <motion.div 
           className="ux-nav-row"

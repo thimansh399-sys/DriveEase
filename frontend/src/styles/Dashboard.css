@@ -101,6 +101,45 @@ body {
   gap: 24px;
   margin-bottom: 8px;
 }
+
+.dashboard-cta-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  padding: 0 16px;
+}
+
+.dashboard-book-cta {
+  width: 100%;
+  background: linear-gradient(90deg, #4ade80, #16a34a);
+  color: #0b1220;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 16px 38px rgba(22, 163, 74, 0.34);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-book-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 42px rgba(22, 163, 74, 0.4);
+}
+
+.dashboard-book-cta:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 640px) {
+  .dashboard-book-cta {
+    width: auto;
+    font-size: 1.1rem;
+    border-radius: 18px;
+  }
+}
 .stat-card {
   background: var(--glass);
   border-radius: var(--radius);
