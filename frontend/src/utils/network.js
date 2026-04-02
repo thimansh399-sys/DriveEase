@@ -9,20 +9,27 @@ const isLocalHostname = (hostname = '') => ['localhost', '127.0.0.1', '::1'].inc
 
 export const API_BASE_URL = (() => {
   const configured = trimTrailingSlash(process.env.REACT_APP_API_URL || '');
+
+  if (isBrowser) {
+    const host = (window.location.hostname || '').toLowerCase();
+
+    // For deployed frontend domains, always use same-origin proxy to avoid CORS and stale env URLs.
+    if (!isLocalHostname(host)) {
+      return '/api';
+    }
+
+    if (configured) {
+      return configured;
+    }
+
+    return LOCAL_API_BASE_URL;
+  }
+
   if (configured) {
     return configured;
   }
 
-  if (isBrowser && !isLocalHostname(window.location.hostname)) {
-    const host = (window.location.hostname || '').toLowerCase();
-    if (host === 'mydriveease.in' || host === 'www.mydriveease.in') {
-      return PRODUCTION_API_BASE_URL;
-    }
-
-    return '/api';
-  }
-
-  return LOCAL_API_BASE_URL;
+  return PRODUCTION_API_BASE_URL;
 })();
 
 export const buildApiUrl = (path = '') => {
