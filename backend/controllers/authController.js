@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Driver = require('../models/Driver');
 const { generateOTP, verifyOTP } = require('../utils/helpers');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'driveease-dev-secret';
 
@@ -50,6 +51,10 @@ async function findOrCreateUserByRole({ phone, name, role }) {
 
 exports.directLogin = async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database unavailable. Please try again in a moment.' });
+    }
+
     const phone = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
     const name = String(req.body?.name || '').trim();
     const role = normalizeRole(req.body?.role);
