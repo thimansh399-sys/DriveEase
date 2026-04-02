@@ -6,7 +6,7 @@ function Sidebar() {
   return (
     <div className="sidebar">
       <h2>🚗 DriveEase</h2>
-      <a href="#" className="active">Dashboard</a>
+      <a href="/customer-dashboard" className="active">Dashboard</a>
     </div>
   );
 }

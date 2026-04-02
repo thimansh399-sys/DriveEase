@@ -28,17 +28,10 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 
 // CORS Middleware
-if (process.env.NODE_ENV === 'production') {
-  app.use(cors({
-    origin: ["http://localhost:3002", "https://mydriveease.in"],
-    credentials: true
-  }));
-} else {
-  app.use(cors({
-    origin: ["http://localhost:3000", "http://localhost:3002"],
-    credentials: true
-  }));
-}
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

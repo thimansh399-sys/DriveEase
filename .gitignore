@@ -48,3 +48,10 @@ mongodb/
 # OS
 .DS_Store
 Thumbs.db
+
+# Git ignore rules
+
+.env
+node_modules
+build
+dist

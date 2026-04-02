@@ -56,7 +56,7 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
 
 export default function BookDriver() {
   // --- Fix: Declare distance state at the top ---
-  const [distance, setDistance] = useState(5); // Default to 5km for demo, update as needed
+  const [distance] = useState(5); // Default to 5km for demo, update as needed
   // Modern header and search bar UI
   // Handler for GPS location
   const getLocation = () => {
