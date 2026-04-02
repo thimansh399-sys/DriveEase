@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
+import api from '../utils/api';
 
 function Sidebar() {
   return (
     <div className="sidebar">
       <h2>🚗 DriveEase</h2>
-      <a href="#" className="active">Dashboard</a>
+      <a href="/customer-dashboard" className="active">Dashboard</a>
     </div>
   );
 }
 
-function Header({ user }) {
+function Header({ user, onLogout }) {
   return (
     <div className="header">
       <h2>Customer Dashboard</h2>
-      <div className="user">👋 Hi, {user?.name || 'User'}</div>
+      <div className="header-actions">
+        <div className="user">👋 Hi, {user?.name || 'User'}</div>
+        <button type="button" className="logout-btn" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
     </div>
   );
 }
@@ -88,10 +94,24 @@ function Stats({ bookings }) {
   );
 }
 
-export default function CustomerDashboard() {
+export default function CustomerDashboard({ onLogout }) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
+
+  const handleLogout = () => {
+    if (typeof onLogout === 'function') {
+      onLogout();
+      navigate('/login');
+      return;
+    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('user');
+    localStorage.removeItem('driver');
+    navigate('/login');
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -100,11 +120,11 @@ export default function CustomerDashboard() {
     if (storedUser && token) {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
-      fetch(`http://localhost:5000/api/bookings/${parsed.phone}`, {
-        headers: { Authorization: 'Bearer ' + token }
-      })
-        .then((res) => res.json())
-        .then((data) => setBookings(Array.isArray(data) ? data : []))
+      api.getMyBookings()
+        .then((data) => {
+          const list = data?.bookings || data || [];
+          setBookings(Array.isArray(list) ? list : []);
+        })
         .catch(() => setBookings([]));
     }
   }, []);
@@ -113,7 +133,7 @@ export default function CustomerDashboard() {
     <div className="dashboard">
       <Sidebar />
       <div className="main">
-        <Header user={user} />
+        <Header user={user} onLogout={handleLogout} />
         <div className="content">
           <div className="dashboard-cta-wrap full">
             <button

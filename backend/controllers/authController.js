@@ -5,6 +5,91 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'driveease-dev-secret';
 
+const normalizeRole = (role) => {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (normalized === 'driver') return 'driver';
+  return 'customer';
+};
+
+async function findOrCreateUserByRole({ phone, name, role }) {
+  if (role === 'driver') {
+    let driver = await Driver.findOne({ phone });
+    if (!driver) {
+      driver = new Driver({
+        phone,
+        name: name || 'Driver',
+        status: 'pending'
+      });
+      await driver.save();
+    }
+
+    return {
+      entity: driver,
+      role: 'driver'
+    };
+  }
+
+  let customer = await User.findOne({ phone });
+  if (!customer) {
+    customer = new User({
+      phone,
+      name: name || 'Customer',
+      role: 'customer'
+    });
+  } else if (name && String(name).trim()) {
+    customer.name = String(name).trim();
+  }
+
+  await customer.save();
+
+  return {
+    entity: customer,
+    role: 'customer'
+  };
+}
+
+exports.directLogin = async (req, res) => {
+  try {
+    const phone = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
+    const name = String(req.body?.name || '').trim();
+    const role = normalizeRole(req.body?.role);
+
+    if (phone.length < 10) {
+      return res.status(400).json({ error: 'Valid phone number required' });
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const { entity, role: finalRole } = await findOrCreateUserByRole({ phone, name, role });
+
+    const token = jwt.sign(
+      {
+        id: entity._id,
+        phone: entity.phone,
+        role: finalRole,
+        name: entity.name
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: entity._id,
+        name: entity.name,
+        phone: entity.phone,
+        role: finalRole
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.sendOTP = async (req, res) => {
   try {
     const { phone, role } = req.body;

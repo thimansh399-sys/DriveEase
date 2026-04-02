@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Login.css';
+import api from '../utils/api';
 
 function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -35,14 +36,36 @@ function Login({ onLogin }) {
         localStorage.removeItem('userRole');
         localStorage.removeItem('token');
       }
-      localStorage.setItem('user', JSON.stringify({ name: name.trim(), phone, role }));
-      localStorage.setItem('userRole', role);
-      localStorage.setItem('token', 'demo-token');
-      if (onLogin) onLogin('demo-token', role);
+      const response = await api.directLogin({
+        phone,
+        name: name.trim(),
+        role,
+      });
+
+      if (response?.error || !response?.token) {
+        throw new Error(response?.error || 'Login failed');
+      }
+
+      const sessionUser = {
+        id: response.user?.id,
+        name: response.user?.name || name.trim(),
+        phone: response.user?.phone || phone,
+        role: response.user?.role || role,
+      };
+
+      if (role === 'driver') {
+        localStorage.setItem('driver', JSON.stringify(sessionUser));
+      } else {
+        localStorage.setItem('user', JSON.stringify(sessionUser));
+      }
+
+      localStorage.setItem('userRole', response.user?.role || role);
+      localStorage.setItem('token', response.token);
+      if (onLogin) onLogin(response.token, response.user?.role || role);
 
       navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (error) {
-      setError('Direct login failed.');
+      setError(error.message || 'Direct login failed.');
     } finally {
       setLoading(false);
     }
