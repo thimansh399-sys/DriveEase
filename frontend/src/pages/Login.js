@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 <<<<<<< HEAD
 import '../styles/Login.css';
 import api from '../utils/api';
+<<<<<<< HEAD
 =======
 >>>>>>> f5ee9e1 (Build frontend: production build output)
+=======
+>>>>>>> 774a240 (Implement shared nearby ride flow, JWT direct login, notifications, and booking tracker)
 
 function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -78,6 +81,7 @@ function Login({ onLogin }) {
       navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (error) {
       setError(error.message || 'Direct login failed.');
+<<<<<<< HEAD
 =======
     setLoading(true);
     setError('');
@@ -89,6 +93,8 @@ function Login({ onLogin }) {
     } catch (err) {
       setError('Direct login failed.');
 >>>>>>> 0bf5313 (Cleanup: Remove unused variables and fix ESLint warnings)
+=======
+>>>>>>> 774a240 (Implement shared nearby ride flow, JWT direct login, notifications, and booking tracker)
     } finally {
       setLoading(false);
     }
