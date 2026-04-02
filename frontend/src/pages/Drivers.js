@@ -126,13 +126,6 @@ export default function Drivers() {
     );
   }, [resolveLocationFromCoords]);
 
-  const applyKanpurFilters = () => {
-    setState(DEFAULT_LOCATION.state);
-    setCity(DEFAULT_LOCATION.city);
-    setArea(DEFAULT_LOCATION.area);
-    setPincode('208001');
-  };
-
   useEffect(() => {
     detectLocation();
   }, [detectLocation]);
@@ -275,15 +268,12 @@ export default function Drivers() {
             style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}
           >
             <button type="button" className="ux-btn primary" onClick={detectLocation}>
-              Use My GPS
-            </button>
-            <button type="button" className="ux-btn" onClick={applyKanpurFilters}>
-              Show Kanpur
+              Use My Current Location
             </button>
           </motion.div>
         </motion.div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        <div className="ux-filter-row">
           <select className="ux-search" value={state} onChange={(e) => { setState(e.target.value); setCity(''); setArea(''); }}>
             <option value="">All States</option>
             {STATE_OPTIONS.map((entry) => (

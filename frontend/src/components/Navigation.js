@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Navigation.css';
 
 function Navigation({ isLoggedIn, userRole, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const isDriver = isLoggedIn && userRole === 'driver';
   const isCustomer = isLoggedIn && (userRole === 'customer' || userRole === 'user');
+  const showLogoutOnMainScreens =
+    location.pathname === '/' ||
+    location.pathname === '/driver-dashboard' ||
+    location.pathname === '/customer-dashboard';
 
   const handleLogout = () => {
     onLogout();
@@ -78,16 +83,18 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
                 </li>
               )}
               <li className="nav-mobile-only">
-                <button
-                  type="button"
-                  className="nav-link nav-link-button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    handleLogout();
-                  }}
-                >
-                  Logout
-                </button>
+                {showLogoutOnMainScreens && (
+                  <button
+                    type="button"
+                    className="nav-link nav-link-button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    Logout
+                  </button>
+                )}
               </li>
             </>
           )}
@@ -99,30 +106,6 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
 
         {/* Right Buttons */}
         <div className="nav-actions">
-          <button
-            className="nav-button btn-driver"
-            style={{ marginRight: 12, background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600, cursor: 'pointer' }}
-            onClick={async () => {
-              // Try to get user location and route to /available-drivers with city param
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (position) => {
-                    // Optionally, use a reverse geocoding API to get city from lat/lng
-                    // For now, just route to /available-drivers
-                    navigate('/available-drivers');
-                  },
-                  (error) => {
-                    // On error, just route to /available-drivers
-                    navigate('/available-drivers');
-                  }
-                );
-              } else {
-                navigate('/available-drivers');
-              }
-            }}
-          >
-            Drivers
-          </button>
           {!isLoggedIn ? (
             <>
               <Link to="/login" className="nav-button btn-outline">Login</Link>
@@ -130,12 +113,21 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
             </>
           ) : (
             <>
-              {/* Remove logout from nav, move to profile page */}
               {isDriver && (
-                <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
+                <>
+                  <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
+                  {showLogoutOnMainScreens && (
+                    <button type="button" className="nav-button btn-logout" onClick={handleLogout}>Logout</button>
+                  )}
+                </>
               )}
               {!isDriver && (
-                <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+                <>
+                  <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+                  {showLogoutOnMainScreens && (
+                    <button type="button" className="nav-button btn-logout" onClick={handleLogout}>Logout</button>
+                  )}
+                </>
               )}
             </>
           )}

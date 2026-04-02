@@ -178,8 +178,45 @@
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.06);
   color: #ffffff;
-  min-width: 220px;
+  min-width: 0;
   outline: none;
+}
+
+select.ux-search option {
+  color: #111111;
+  background: #ffffff;
+}
+
+select.ux-search optgroup {
+  color: #111111;
+  background: #ffffff;
+}
+
+.ux-filter-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.ux-filter-row .ux-search {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+}
+
+.ux-filter-row .ux-search:last-child {
+  flex: 1.6;
+}
+
+@media (max-width: 768px) {
+  .ux-filter-row {
+    flex-wrap: wrap;
+  }
+  .ux-filter-row .ux-search {
+    flex: 1 1 calc(50% - 5px);
+  }
 }
 
 .ux-card-grid {

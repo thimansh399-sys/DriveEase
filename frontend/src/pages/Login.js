@@ -63,6 +63,18 @@ function Login({ onLogin }) {
       localStorage.setItem('token', response.token);
       if (onLogin) onLogin(response.token, response.user?.role || role);
 
+      const pendingDraftRaw = localStorage.getItem('pendingRideDraft');
+      if ((role === 'customer' || role === 'user') && pendingDraftRaw) {
+        try {
+          const draft = JSON.parse(pendingDraftRaw);
+          localStorage.removeItem('pendingRideDraft');
+          navigate(`/book-ride?pickup=${encodeURIComponent(draft?.pickup || '')}&drop=${encodeURIComponent(draft?.drop || '')}`);
+          return;
+        } catch (_) {
+          localStorage.removeItem('pendingRideDraft');
+        }
+      }
+
       navigate(role === 'admin' ? '/admin' : role === 'driver' ? '/driver-dashboard' : '/customer-dashboard');
     } catch (error) {
       setError(error.message || 'Direct login failed.');

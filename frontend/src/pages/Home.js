@@ -105,7 +105,16 @@ function Home() {
       return;
     }
     setInputError('');
-    navigate(`/book-driver?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}`);
+    const target = `/book-ride?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}`;
+    const hasToken = Boolean(localStorage.getItem('token'));
+
+    if (hasToken) {
+      navigate(target);
+      return;
+    }
+
+    localStorage.setItem('pendingRideDraft', JSON.stringify({ pickup, drop }));
+    navigate('/login');
   };
 
   return (
@@ -129,8 +138,7 @@ function Home() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, duration: 0.4 }}
           >
-            <img src="/driveease-logo.svg" alt="DriveEase" className="home-brand-logo" />
-            🚗 India's #1 Personal Driver Service
+            India's #1 Trusted Personal Driver Service — Fast, Safe & Reliable
           </motion.div>
 
           <h1>
@@ -182,7 +190,7 @@ function Home() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              Book Driver →
+              Book Ride →
             </motion.button>
           </motion.div>
 

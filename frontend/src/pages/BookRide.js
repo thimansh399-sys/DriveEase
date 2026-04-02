@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/BookRide.css';
 import api from '../utils/api';
 
@@ -11,6 +11,7 @@ const RIDE_TYPES = [
 
 export default function BookRide() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
 
   const [form, setForm] = useState({
@@ -32,10 +33,42 @@ export default function BookRide() {
     ? `${form.pickup} to ${form.drop}`
     : (form.pickup || form.drop || 'India');
   const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`;
+  const firstEmptyField = !form.name
+    ? 'name'
+    : !form.phone
+      ? 'phone'
+      : !form.pickup
+        ? 'pickup'
+        : !form.drop
+          ? 'drop'
+          : '';
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
-    if (!stored) return;
+    const search = new URLSearchParams(location.search || '');
+    const draftPickup = search.get('pickup') || '';
+    const draftDrop = search.get('drop') || '';
+    const pendingDraftRaw = localStorage.getItem('pendingRideDraft');
+    let pendingDraft = null;
+
+    if (pendingDraftRaw) {
+      try {
+        pendingDraft = JSON.parse(pendingDraftRaw);
+      } catch (_) {
+        pendingDraft = null;
+      }
+      localStorage.removeItem('pendingRideDraft');
+    }
+
+    const seedPickup = draftPickup || pendingDraft?.pickup || '';
+    const seedDrop = draftDrop || pendingDraft?.drop || '';
+
+    if (!stored) {
+      if (seedPickup || seedDrop) {
+        setForm((prev) => ({ ...prev, pickup: seedPickup, drop: seedDrop }));
+      }
+      return;
+    }
 
     const parsed = JSON.parse(stored);
     setUser(parsed);
@@ -43,8 +76,10 @@ export default function BookRide() {
       ...prev,
       name: parsed?.name || '',
       phone: parsed?.phone || '',
+      pickup: seedPickup || prev.pickup,
+      drop: seedDrop || prev.drop,
     }));
-  }, []);
+  }, [location.search]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -226,6 +261,7 @@ export default function BookRide() {
               value={form.name}
               onChange={handleChange}
               className="book-ride-input"
+              autoFocus={firstEmptyField === 'name'}
             />
             <input
               name="phone"
@@ -233,6 +269,7 @@ export default function BookRide() {
               value={form.phone}
               onChange={handleChange}
               className="book-ride-input"
+              autoFocus={firstEmptyField === 'phone'}
             />
             <input
               name="pickup"
@@ -240,6 +277,7 @@ export default function BookRide() {
               value={form.pickup}
               onChange={handleChange}
               className="book-ride-input"
+              autoFocus={firstEmptyField === 'pickup'}
             />
             <input
               name="drop"
@@ -247,6 +285,7 @@ export default function BookRide() {
               value={form.drop}
               onChange={handleChange}
               className="book-ride-input"
+              autoFocus={firstEmptyField === 'drop'}
             />
           </div>
 
@@ -271,7 +310,6 @@ export default function BookRide() {
 
         <aside className="book-ride-map-card book-ride-reveal delay-2">
           <h3>Live Route Preview</h3>
-          <p className="book-ride-map-subtitle">Pickup aur drop ke hisaab se route preview</p>
 
           <div className="book-ride-map-frame-wrap">
             <iframe

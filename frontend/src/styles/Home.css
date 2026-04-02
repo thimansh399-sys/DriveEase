@@ -499,7 +499,7 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 82px 40px 28px;
+  padding: 46px 40px 28px;
   display: grid;
   grid-template-columns: minmax(460px, 0.96fr) minmax(560px, 1.04fr);
   gap: 28px;
@@ -516,7 +516,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  padding-top: 8px;
+  padding-top: 0;
 }
 
 .home-v2-copy h1 {
@@ -865,7 +865,7 @@
     grid-template-columns: 1fr;
     gap: 24px;
     min-height: auto;
-    padding: 94px 24px 24px;
+    padding: 48px 24px 24px;
   }
 
   .home-v2-copy {
@@ -933,9 +933,9 @@
   background: rgba(34, 197, 94, 0.12);
   border: 1px solid rgba(34, 197, 94, 0.3);
   color: #22c55e;
-  padding: 6px 14px;
+  padding: 6px 16px;
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
   margin-bottom: 16px;
 }

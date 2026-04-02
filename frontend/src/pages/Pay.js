@@ -85,19 +85,18 @@ function Pay() {
         {/* ===== AMOUNT HERO ===== */}
         <div className="pay-amount-hero">
           <span className="pay-amount-label">Amount to Pay</span>
-          {amount ? (
+          <div className="pay-amount-input-wrap">
+            <span className="pay-rupee">₹</span>
+            <input
+              type="number"
+              className="pay-amount-input"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+          {!!amount && (
             <span className="pay-amount-value">₹{Number(amount).toLocaleString('en-IN')}</span>
-          ) : (
-            <div className="pay-amount-input-wrap">
-              <span className="pay-rupee">₹</span>
-              <input
-                type="number"
-                className="pay-amount-input"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
           )}
           {refId && <span className="pay-ref">Booking: {refId}</span>}
           {!refId && (

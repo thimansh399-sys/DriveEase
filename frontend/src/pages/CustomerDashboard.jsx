@@ -3,24 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import api from '../utils/api';
 
-function Sidebar() {
+function Sidebar({ onBookRide }) {
   return (
     <div className="sidebar">
-      <h2>🚗 DriveEase</h2>
+      <h2>DriveEase</h2>
       <a href="/customer-dashboard" className="active">Dashboard</a>
+      <button
+        type="button"
+        className="sidebar-book-cta"
+        onClick={onBookRide}
+      >
+        <span className="sidebar-book-cta-text">Book a Ride</span>
+        <span className="sidebar-book-cta-arrow">→</span>
+      </button>
     </div>
   );
 }
 
-function Header({ user, onLogout }) {
+function Header({ user }) {
   return (
     <div className="header">
       <h2>Customer Dashboard</h2>
       <div className="header-actions">
         <div className="user">👋 Hi, {user?.name || 'User'}</div>
-        <button type="button" className="logout-btn" onClick={onLogout}>
-          Logout
-        </button>
       </div>
     </div>
   );
@@ -94,24 +99,10 @@ function Stats({ bookings }) {
   );
 }
 
-export default function CustomerDashboard({ onLogout }) {
+export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
-
-  const handleLogout = () => {
-    if (typeof onLogout === 'function') {
-      onLogout();
-      navigate('/login');
-      return;
-    }
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('user');
-    localStorage.removeItem('driver');
-    navigate('/login');
-  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -131,19 +122,10 @@ export default function CustomerDashboard({ onLogout }) {
 
   return (
     <div className="dashboard">
-      <Sidebar />
+      <Sidebar onBookRide={() => navigate('/book-ride')} />
       <div className="main">
-        <Header user={user} onLogout={handleLogout} />
+        <Header user={user} />
         <div className="content">
-          <div className="dashboard-cta-wrap full">
-            <button
-              onClick={() => navigate('/book-ride')}
-              className="dashboard-book-cta"
-            >
-              🚗 Where do you want to go?
-            </button>
-          </div>
-
           <div className="full">
             <Stats bookings={bookings} />
           </div>
