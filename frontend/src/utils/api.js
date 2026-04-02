@@ -82,6 +82,9 @@ export const api = {
   adminLogin: (password) =>
     postAuthWithFallback('/auth/admin-login', { password }),
 
+  directLogin: (payload) =>
+    postAuthWithFallback('/auth/direct-login', payload),
+
   // Drivers
   getAllDrivers: (query = '') =>
     requestJson(`${API_BASE_URL}/drivers/all${query}`, {
@@ -174,6 +177,26 @@ export const api = {
       return {
         ...result,
         error: result.error || 'Booking endpoint not found. Verify the deployed backend is exposing /api/bookings/book-ride.'
+      };
+    }
+
+    return result;
+  },
+
+  bookNow: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/bookings/book-now`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return {
+        ...result,
+        error: result?.error || result?.message || `Request failed (${response.status})`
       };
     }
 

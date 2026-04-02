@@ -61,7 +61,7 @@ const driverMiddleware = async (req, res, next) => {
 
 const customerMiddleware = (req, res, next) => {
   const role = String(req.user?.role || '').trim().toLowerCase();
-  if (role !== 'customer') {
+  if (role !== 'customer' && role !== 'user') {
     return res.status(403).json({ error: 'Customer access required' });
   }
   next();

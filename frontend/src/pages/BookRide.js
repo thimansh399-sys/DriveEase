@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/BookRide.css';
+import api from '../utils/api';
 
 const RIDE_TYPES = [
   { value: 'hourly', label: '⏱ Hourly' },
@@ -23,6 +24,9 @@ export default function BookRide() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
+  const [trackedBooking, setTrackedBooking] = useState(null);
+  const [trackerMessage, setTrackerMessage] = useState('');
+  const [shareOtpLoading, setShareOtpLoading] = useState(false);
 
   const mapQuery = form.pickup && form.drop
     ? `${form.pickup} to ${form.drop}`
@@ -54,31 +58,95 @@ export default function BookRide() {
     setError('');
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/bookings/book-now', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
+      const data = await api.bookNow({
+        pickup: form.pickup,
+        drop: form.drop,
+        rideType: form.rideType,
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (data?.booking?._id || data?.booking?.bookingId) {
         setSuccess(data);
+        setTrackedBooking(data.booking);
+        setTrackerMessage('Searching nearby drivers...');
       } else {
-        setError(data.message || 'Booking failed');
+        setError(data?.error || data?.message || 'Booking failed');
       }
     } catch (err) {
-      setError('Server Error. Please try again.');
+      setError(err?.message || 'Server Error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    const bookingId = success?.booking?._id;
+    if (!bookingId) return undefined;
+
+    let mounted = true;
+
+    const refreshBooking = async () => {
+      try {
+        const detail = await api.getBookingById(bookingId);
+        if (!mounted || detail?.error) return;
+
+        setTrackedBooking(detail);
+
+        const status = String(detail.status || '').toLowerCase();
+        if (status === 'pending') {
+          setTrackerMessage('Searching nearby drivers...');
+        } else if (status === 'confirmed') {
+          setTrackerMessage('Driver accepted your ride. Wait for arrival at pickup.');
+        } else if (status === 'driver_arrived') {
+          setTrackerMessage('Driver reached pickup. Share OTP to start ride.');
+        } else if (status === 'in_progress') {
+          setTrackerMessage('Ride started successfully.');
+        } else if (status === 'completed') {
+          setTrackerMessage('Ride completed.');
+        }
+      } catch (_) {
+        // Keep previous tracker state on transient network issues.
+      }
+    };
+
+    refreshBooking();
+    const timer = setInterval(refreshBooking, 8000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [success?.booking?._id]);
+
+  const handleShareOtp = async () => {
+    const bookingId = trackedBooking?._id || success?.booking?._id;
+    if (!bookingId) return;
+
+    try {
+      setShareOtpLoading(true);
+      setTrackerMessage('Sharing OTP with driver...');
+      const response = await api.shareBookingOtp(bookingId);
+      if (response?.error) {
+        setTrackerMessage(response.error);
+      } else {
+        setTrackerMessage('OTP shared with driver. Driver can start ride now.');
+        const detail = await api.getBookingById(bookingId);
+        if (!detail?.error) setTrackedBooking(detail);
+      }
+    } catch (err) {
+      setTrackerMessage(err?.message || 'Unable to share OTP right now.');
+    } finally {
+      setShareOtpLoading(false);
+    }
+  };
+
   if (success) {
+    const live = trackedBooking || success.booking || {};
+    const liveStatus = String(live.status || success.booking?.status || '').toLowerCase();
+    const driverInfo = live.driver || live.driverId || success.booking?.driver || null;
+    const pickupAddress = live.pickupLocation?.address || success.booking?.pickup || '-';
+    const dropAddress = live.dropLocation?.address || success.booking?.drop || '-';
+    const canShareOtp = liveStatus === 'driver_arrived' && !live.verification?.otpSharedWithDriver;
+
     return (
       <div className="book-ride-page">
         <div className="book-ride-card book-ride-success-card book-ride-reveal">
@@ -88,22 +156,49 @@ export default function BookRide() {
           <p className="book-ride-subtitle">{success.message}</p>
 
           <div className="book-ride-success-panel">
-            <p><b>Booking ID:</b> {success.booking?.bookingId}</p>
-            <p><b>Pickup:</b> {success.booking?.pickup}</p>
-            <p><b>Drop:</b> {success.booking?.drop}</p>
-            <p><b>Ride Type:</b> {success.booking?.rideType}</p>
-            <p><b>Status:</b> <span className="book-ride-status">{success.booking?.status}</span></p>
-            {success.booking?.driver && (
-              <p><b>Driver:</b> {success.booking.driver.name} - {success.booking.driver.phone}</p>
+            <p><b>Booking ID:</b> {live.bookingId || success.booking?.bookingId}</p>
+            <p><b>Pickup:</b> {pickupAddress}</p>
+            <p><b>Drop:</b> {dropAddress}</p>
+            <p><b>Ride Type:</b> {success.booking?.rideType || live.bookingType || '-'}</p>
+            <p><b>Status:</b> <span className="book-ride-status">{live.status || success.booking?.status}</span></p>
+            {driverInfo && (
+              <p><b>Driver:</b> {driverInfo.name} - {driverInfo.phone}</p>
             )}
-            <p className="book-ride-otp">OTP: {success.booking?.otp}</p>
+            <p className="book-ride-otp">AI Secure OTP: {success.booking?.otp || live.verification?.otp || '-'}</p>
             <p className="book-ride-otp-hint">Share this OTP with your driver to start the ride</p>
+            <p style={{ marginTop: 10, color: '#86efac', fontWeight: 600 }}>{trackerMessage}</p>
+
+            {canShareOtp && (
+              <button
+                type="button"
+                className="book-ride-submit"
+                onClick={handleShareOtp}
+                disabled={shareOtpLoading}
+                style={{ marginTop: 12 }}
+              >
+                {shareOtpLoading ? 'Sharing OTP...' : '🔐 Share OTP With Driver'}
+              </button>
+            )}
+
+            {live.verification?.otpSharedWithDriver && liveStatus !== 'in_progress' && (
+              <p style={{ marginTop: 10, color: '#c4b5fd', fontWeight: 600 }}>
+                OTP shared. Driver can now enter OTP and start trip.
+              </p>
+            )}
           </div>
 
           <div className="book-ride-success-actions">
             <button className="book-ride-secondary" onClick={() => setSuccess(null)}>
               Book Another Ride
             </button>
+            {!!(live._id || success.booking?._id) && (
+              <button
+                className="book-ride-secondary"
+                onClick={() => navigate(`/track-booking/${live._id || success.booking?._id}`)}
+              >
+                📍 Track Live Ride
+              </button>
+            )}
             <button className="book-ride-submit" onClick={() => navigate('/customer-dashboard')}>
               Back to Dashboard
             </button>

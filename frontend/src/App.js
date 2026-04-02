@@ -31,7 +31,7 @@ import AdminSupport from './pages/AdminSupport';
 import AdminAnalytics from './pages/AdminAnalytics';
 import SplashScreen from './components/SplashScreen';
 
-function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
+function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
   const location = useLocation();
 
   return (
@@ -61,7 +61,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin }) {
           <Route path="/insurance" element={<Insurance />} />
           <Route path="/pay" element={<Pay />} />
           <Route path="/payment" element={isLoggedIn ? <Payment /> : <Navigate to="/login" />} />
-          <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard /> : <Navigate to="/login" />} />
+          <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />
@@ -135,7 +135,7 @@ function App() {
           {isLoggedIn && <NotificationBell />}
           
           <main className="main-content">
-            <AppRoutes isLoggedIn={isLoggedIn} userRole={userRole} handleLogin={handleLogin} />
+            <AppRoutes isLoggedIn={isLoggedIn} userRole={userRole} handleLogin={handleLogin} handleLogout={handleLogout} />
           </main>
           {/* Footer is now only on Home page */}
           

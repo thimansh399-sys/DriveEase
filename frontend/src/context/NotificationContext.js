@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
+import api from '../utils/api';
+import { playNotificationSound } from '../utils/notificationService';
 
 /**
  * Notification Context for App-wide Notifications
@@ -20,6 +22,8 @@ export const useNotification = () => {
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [history, setHistory] = useState([]);
+  const previousStatusesRef = useRef({});
+  const hasInitializedStatusesRef = useRef(false);
 
   const addNotification = useCallback(
     (message, type = 'info', duration = 4000, title = '') => {
@@ -58,6 +62,63 @@ export const NotificationProvider = ({ children }) => {
     setNotifications([]);
   }, []);
 
+  useEffect(() => {
+    const checkForRideUpdates = async () => {
+      const token = localStorage.getItem('token');
+      const role = (localStorage.getItem('userRole') || '').toLowerCase();
+
+      if (!token || role === 'driver') {
+        previousStatusesRef.current = {};
+        hasInitializedStatusesRef.current = false;
+        return;
+      }
+
+      try {
+        const response = await api.getMyBookings();
+        const list = response?.bookings || response || [];
+        const currentStatuses = {};
+        const shouldNotify = [];
+
+        (Array.isArray(list) ? list : []).forEach((booking) => {
+          const bookingKey = booking?._id || booking?.bookingId;
+          if (!bookingKey) return;
+
+          const currentStatus = String(booking.status || '').toLowerCase();
+          currentStatuses[bookingKey] = currentStatus;
+
+          const previousStatus = previousStatusesRef.current[bookingKey];
+          if (!hasInitializedStatusesRef.current || !previousStatus || previousStatus === currentStatus) {
+            return;
+          }
+
+          if (currentStatus === 'confirmed' || currentStatus === 'driver_assigned') {
+            const idText = booking.bookingId || String(bookingKey).slice(-6);
+            shouldNotify.push(`Driver accepted your ride ${idText}.`);
+          }
+        });
+
+        previousStatusesRef.current = currentStatuses;
+        if (!hasInitializedStatusesRef.current) {
+          hasInitializedStatusesRef.current = true;
+          return;
+        }
+
+        if (shouldNotify.length > 0) {
+          shouldNotify.forEach((message) => {
+            addNotification(message, 'success', 5000, 'Ride Confirmed');
+          });
+          playNotificationSound();
+        }
+      } catch (error) {
+        // Ignore transient polling errors to keep UI stable.
+      }
+    };
+
+    checkForRideUpdates();
+    const timer = setInterval(checkForRideUpdates, 10000);
+    return () => clearInterval(timer);
+  }, [addNotification]);
+
   const value = {
     notifications,
     addNotification,
@@ -82,7 +143,7 @@ function NotificationToast({ notifications, removeNotification }) {
     <div
       style={{
         position: 'fixed',
-        top: '20px',
+        top: '84px',
         right: '20px',
         zIndex: 9999,
         maxWidth: '400px',
@@ -222,8 +283,8 @@ export function NotificationCenter() {
       exit={{ opacity: 0, scale: 0.9 }}
       style={{
         position: 'fixed',
-        right: '20px',
-        bottom: '20px',
+        left: '20px',
+        bottom: '84px',
         width: '380px',
         maxHeight: '600px',
         backgroundColor: '#0b0f19',
@@ -343,12 +404,14 @@ export function NotificationBell({ position = 'fixed' }) {
     <>
       <motion.button
         onClick={() => setShowCenter(!showCenter)}
+        animate={unreadCount > 0 ? { rotate: [0, -10, 10, -8, 8, 0] } : { rotate: 0 }}
+        transition={{ duration: 0.6 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         style={{
           position,
-          top: '20px',
-          right: '80px',
+          bottom: '24px',
+          left: '24px',
           width: '48px',
           height: '48px',
           borderRadius: '50%',
