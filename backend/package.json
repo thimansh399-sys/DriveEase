@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "lint": "node scripts/lint.js",
+    "test": "node scripts/preflight.js",
+    "preflight": "node scripts/preflight.js",
     "seed:drivers": "node seeds/seedDrivers.js",
     "seed:kanpur-demo": "node scripts/seedKanpurDemoDrivers.js"
   },

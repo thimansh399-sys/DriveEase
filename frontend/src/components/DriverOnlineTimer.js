@@ -78,7 +78,7 @@ export default function DriverOnlineTimer({ driverId = null }) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ isOnline: !isOnline })
+        body: JSON.stringify({ isOnline: goOnline })
       });
 
       if (response.ok) {
