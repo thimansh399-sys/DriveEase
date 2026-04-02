@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../utils/api';
 import '../styles/DriverDashboard.css';
 import { playNotificationSound } from '../utils/notificationService';
@@ -44,7 +44,7 @@ export default function DriverDashboard() {
     setIsOnline(String(localStorage.getItem('driverOnline') || '').toLowerCase() === 'true');
   }, []);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const response = await api.getDriverBookings();
       const list = response?.bookings || [];
@@ -81,13 +81,13 @@ export default function DriverDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
 
   useEffect(() => {
     fetchBookings();
     const timer = setInterval(fetchBookings, 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [fetchBookings]);
 
   const stats = useMemo(() => {
     const completed = bookings.filter((b) => b.status === 'completed');
