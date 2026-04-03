@@ -161,33 +161,6 @@ function Login({ onLogin }) {
             </button>
           </div>
 
-          {canRegister && (
-            <div className="login-role-toggle" role="tablist" aria-label="Auth mode">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setError('');
-                  setSuccess('');
-                }}
-                className={`login-role-btn ${mode === 'login' ? 'active' : ''}`}
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('register');
-                  setError('');
-                  setSuccess('');
-                }}
-                className={`login-role-btn ${mode === 'register' ? 'active' : ''}`}
-              >
-                Register
-              </button>
-            </div>
-          )}
-
           <form onSubmit={mode === 'register' ? handleRegister : handleLogin} className="login-modern-form">
             <input
               type="tel"
@@ -221,6 +194,20 @@ function Login({ onLogin }) {
             <button type="submit" className="login-modern-submit" disabled={loading}>
               {loading ? (mode === 'register' ? 'Registering...' : 'Logging in...') : (mode === 'register' ? 'Register' : 'Login')}
             </button>
+
+            {canRegister && (
+              <button
+                type="button"
+                className="login-secondary-action"
+                onClick={() => {
+                  setMode((prevMode) => (prevMode === 'login' ? 'register' : 'login'));
+                  setError('');
+                  setSuccess('');
+                }}
+              >
+                {mode === 'login' ? 'New user? Register first' : 'Already registered? Back to login'}
+              </button>
+            )}
           </form>
 
           <p className="login-modern-footer">
