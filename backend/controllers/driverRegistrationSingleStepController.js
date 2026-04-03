@@ -18,6 +18,17 @@ exports.registerDriverSingleStep = async (req, res) => {
       pincode
     } = req.body;
 
+    console.log('📝 Driver Registration Request:', {
+      name,
+      phone,
+      email,
+      aadhaarNumber,
+      licenseNumber,
+      city,
+      state,
+      hasFile: !!req.file
+    });
+
     // Validate required fields
     if (!name || !phone || !aadhaarNumber || !licenseNumber) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -30,6 +41,7 @@ exports.registerDriverSingleStep = async (req, res) => {
     // Check if driver already exists
     const existingDriver = await Driver.findOne({ phone });
     if (existingDriver) {
+        console.warn('⚠️ Driver already exists:', phone);
       return res.status(400).json({ error: 'Driver with this phone number already registered' });
     }
 
@@ -63,14 +75,22 @@ exports.registerDriverSingleStep = async (req, res) => {
       status: 'pending'
     });
 
-    await driver.save();
+    console.log('💾 Saving driver to MongoDB...');
+    const savedDriver = await driver.save();
+    console.log('✅ Driver saved successfully:', savedDriver._id);
     res.json({
       success: true,
       message: 'Driver registered successfully. Awaiting admin verification.',
-      registrationId: String(driver._id),
-      waitingTimeMinutes: 30
+      registrationId: String(savedDriver._id),
+      waitingTimeMinutes: 30,
+      driverId: savedDriver._id
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Driver registration error:', error);
+    console.error('Error Stack:', error.stack);
+    res.status(500).json({
+      error: error.message || 'Error registering driver',
+      details: error.toString()
+    });
   }
 };

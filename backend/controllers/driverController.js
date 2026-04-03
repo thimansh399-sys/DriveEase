@@ -190,6 +190,16 @@ exports.registerDriver = async (req, res) => {
       address,
       area
     } = req.body;
+    console.log('📝 [driverController] Driver Registration Request:', {
+      name,
+      phone,
+      email,
+      aadhaarNumber,
+      licenseNumber,
+      city,
+      state
+    });
+
 
     const existingDriver = await Driver.findOne({ phone });
     if (existingDriver) {
@@ -223,16 +233,23 @@ exports.registerDriver = async (req, res) => {
       }
     });
 
-    await driver.save();
+    console.log('💾 [driverController] Saving driver to MongoDB...');
+    const savedDriver = await driver.save();
+    console.log('✅ [driverController] Driver saved successfully:', savedDriver._id);
 
     res.status(201).json({
       message: 'Driver registration complete',
-      driverId: driver._id,
-      registrationId: String(driver._id),
+      driverId: savedDriver._id,
+      registrationId: String(savedDriver._id),
       waitingTimeMinutes: 30
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ [driverController] Driver registration error:', error);
+    console.error('Error Stack:', error.stack);
+    res.status(500).json({
+      error: error.message || 'Error registering driver',
+      details: error.toString()
+    });
   }
 };
 

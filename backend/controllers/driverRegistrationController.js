@@ -124,6 +124,15 @@ exports.registerDriver = async (req, res) => {
         insuranceExpiry
       }
     } = req.body;
+    console.log('📝 [driverRegistrationController] Driver Registration Step 1:', {
+      name,
+      phone,
+      email,
+      city,
+      state,
+      pincode
+    });
+
 
     // Validate required fields
     if (!name || !phone || !city || !state || !pincode) {
@@ -135,6 +144,7 @@ exports.registerDriver = async (req, res) => {
     // Check if driver already exists
     const existingDriver = await Driver.findOne({ phone });
     if (existingDriver) {
+        console.warn('⚠️ Driver already exists:', phone);
       return res.status(400).json({
         error: 'Driver with this phone number already registered'
       });
@@ -169,6 +179,7 @@ exports.registerDriver = async (req, res) => {
 
     const savedDriver = await driver.save();
 
+    console.log('✅ [driverRegistrationController] Driver saved successfully:', savedDriver._id);
     res.status(201).json({
       success: true,
       message: 'Driver registration initiated. Please proceed with payment verification.',
@@ -178,8 +189,12 @@ exports.registerDriver = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Driver registration error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ [driverRegistrationController] Driver registration error:', error);
+    console.error('Error Stack:', error.stack);
+    res.status(500).json({
+      error: error.message || 'Error registering driver',
+      details: error.toString()
+    });
   }
 };
 
