@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 
 function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password === '126312') {
+    setLoading(true);
+
+    try {
+      const response = await api.adminLogin(password);
+
+      if (response?.error || !response?.token) {
+        throw new Error(response?.error || 'Incorrect password');
+      }
+
       localStorage.setItem('adminAuth', 'true');
-      navigate('/admin-dashboard');
-    } else {
-      setError('Incorrect password');
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('userRole', 'admin');
+      navigate('/admin');
+    } catch (loginError) {
+      setError(loginError.message || 'Incorrect password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,7 +41,7 @@ function AdminLogin() {
           value={password}
           onChange={e => setPassword(e.target.value)}
         />
-        <button type="submit">Login</button>
+        <button type="submit" disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
         {error && <div className="error">{error}</div>}
       </form>
     </div>
