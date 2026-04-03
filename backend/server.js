@@ -27,15 +27,33 @@ const mongoUri = process.env.MONGODB_URI || (!isProductionRuntime ? 'mongodb://l
 let isConnectingDb = false;
 let reconnectTimer = null;
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const defaultAllowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://www.mydriveease.in',
+  'https://mydriveease.in',
+  'https://www.driveease.com',
+  'https://driveease.com'
+];
+
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
+
 // CORS Middleware
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('CORS origin not allowed'));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

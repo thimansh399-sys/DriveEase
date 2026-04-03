@@ -651,6 +651,16 @@
   align-self: stretch;
 }
 
+@media (min-width: 981px) {
+  .home-v2-copy {
+    order: 2;
+  }
+
+  .home-v2-media {
+    order: 1;
+  }
+}
+
 .home-v2-media img {
   width: 100%;
   height: 100%;
