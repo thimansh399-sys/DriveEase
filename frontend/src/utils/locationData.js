@@ -343,17 +343,23 @@ export const DEFAULT_LOCATION = {
   area: 'Swaroop Nagar'
 };
 
-export const STATE_OPTIONS = LOCATION_DIRECTORY.map((entry) => entry.state);
+const sortAlpha = (items = []) => {
+  return [...items].sort((a, b) =>
+    String(a).localeCompare(String(b), 'en-IN', { sensitivity: 'base', numeric: true })
+  );
+};
+
+export const STATE_OPTIONS = sortAlpha(LOCATION_DIRECTORY.map((entry) => entry.state));
 
 export const getCitiesByState = (state) => {
   const match = LOCATION_DIRECTORY.find((entry) => entry.state === state);
-  return match ? match.cities.map((city) => city.name) : [];
+  return match ? sortAlpha(match.cities.map((city) => city.name)) : [];
 };
 
 export const getAreasByCity = (state, city) => {
   const stateMatch = LOCATION_DIRECTORY.find((entry) => entry.state === state);
   const cityMatch = stateMatch?.cities.find((entry) => entry.name === city);
-  return cityMatch?.areas || [];
+  return sortAlpha(cityMatch?.areas || []);
 };
 
 export const INDIA_LOCATION_SUGGESTIONS = LOCATION_DIRECTORY.flatMap(({ state, cities }) =>
