@@ -51,6 +51,30 @@ const formatDateForFilter = (value) => {
   return `${day}-${month}-${year}`;
 };
 
+const clearAdminSession = () => {
+  localStorage.removeItem('adminAuth');
+  localStorage.removeItem('adminToken');
+  if (String(localStorage.getItem('userRole') || '').toLowerCase() === 'admin') {
+    localStorage.removeItem('userRole');
+  }
+};
+
+const getAdminToken = () => {
+  const adminToken = localStorage.getItem('adminToken');
+  if (adminToken) return adminToken;
+
+  const legacyToken = localStorage.getItem('token');
+  const isAdminSession = localStorage.getItem('adminAuth') === 'true'
+    && String(localStorage.getItem('userRole') || '').toLowerCase() === 'admin';
+
+  if (legacyToken && isAdminSession) {
+    localStorage.setItem('adminToken', legacyToken);
+    return legacyToken;
+  }
+
+  return '';
+};
+
 export default function AdminDashboardWorkspace() {
   const [activeModule, setActiveModule] = useState('bookings');
   const [loading, setLoading] = useState(true);
@@ -73,19 +97,30 @@ export default function AdminDashboardWorkspace() {
     date: '',
   });
 
-  const authHeaders = useMemo(() => ({
-    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
-    'Content-Type': 'application/json',
-  }), []);
-
   const fetchJson = useCallback(async (path) => {
-    const response = await fetch(buildApiUrl(path), { headers: authHeaders });
+    const token = getAdminToken();
+    if (!token) {
+      clearAdminSession();
+      throw new Error('Session expired. Please login again.');
+    }
+
+    const response = await fetch(buildApiUrl(path), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload?.error || `Request failed for ${path}`);
+      const message = payload?.error || `Request failed for ${path}`;
+      if (/invalid token|jwt malformed|jwt expired|no token provided|admin access required/i.test(String(message))) {
+        clearAdminSession();
+        throw new Error('Session expired. Please login again.');
+      }
+      throw new Error(message);
     }
     return payload;
-  }, [authHeaders]);
+  }, []);
 
   const fetchAllData = useCallback(async (manual = false) => {
     try {
@@ -122,7 +157,11 @@ export default function AdminDashboardWorkspace() {
       setRevenueAnalytics(financeRes?.analytics || null);
       setDashboardData(dashboardRes?.stats || null);
     } catch (fetchError) {
-      setError(fetchError.message || 'Unable to load admin data');
+      const message = fetchError.message || 'Unable to load admin data';
+      setError(message);
+      if (/login again/i.test(String(message))) {
+        window.location.href = '/admin-login';
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -556,8 +595,7 @@ export default function AdminDashboardWorkspace() {
           type="button"
           className="adminw-logout"
           onClick={() => {
-            localStorage.removeItem('adminAuth');
-            localStorage.removeItem('adminToken');
+            clearAdminSession();
             window.location.href = '/admin-login';
           }}
         >

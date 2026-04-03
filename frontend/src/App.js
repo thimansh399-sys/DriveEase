@@ -34,6 +34,15 @@ import SplashScreen from './components/SplashScreen';
 
 function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
   const location = useLocation();
+  const hasAdminToken = Boolean(
+    localStorage.getItem('adminToken')
+    || (
+      localStorage.getItem('adminAuth') === 'true'
+      && String(localStorage.getItem('userRole') || '').toLowerCase() === 'admin'
+      && localStorage.getItem('token')
+    )
+  );
+  const canAccessAdmin = localStorage.getItem('adminAuth') === 'true' && hasAdminToken;
 
   return (
     <AnimatePresence mode="wait">
@@ -72,10 +81,10 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
           <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardWorkspace /> : <Navigate to="/admin-login" />} />
-          <Route path="/admin-dashboard" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
-          <Route path="/admin-analytics" element={localStorage.getItem('adminAuth') === 'true' ? <AdminAnalytics /> : <Navigate to="/admin-login" />} />
-          <Route path="/admin-support" element={localStorage.getItem('adminAuth') === 'true' ? <AdminSupport /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin" element={canAccessAdmin ? <AdminDashboardWorkspace /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-dashboard" element={canAccessAdmin ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-analytics" element={canAccessAdmin ? <AdminAnalytics /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin-support" element={canAccessAdmin ? <AdminSupport /> : <Navigate to="/admin-login" />} />
           <Route path="/drivers" element={<Drivers />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/track-booking" element={<TrackBooking />} />

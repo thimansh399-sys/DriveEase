@@ -23,6 +23,30 @@ const statusColorClass = (status = '') => {
 
 const safeArray = (value) => (Array.isArray(value) ? value : []);
 
+const clearAdminSession = () => {
+  localStorage.removeItem('adminAuth');
+  localStorage.removeItem('adminToken');
+  if (String(localStorage.getItem('userRole') || '').toLowerCase() === 'admin') {
+    localStorage.removeItem('userRole');
+  }
+};
+
+const getAdminToken = () => {
+  const adminToken = localStorage.getItem('adminToken');
+  if (adminToken) return adminToken;
+
+  const legacyToken = localStorage.getItem('token');
+  const isAdminSession = localStorage.getItem('adminAuth') === 'true'
+    && String(localStorage.getItem('userRole') || '').toLowerCase() === 'admin';
+
+  if (legacyToken && isAdminSession) {
+    localStorage.setItem('adminToken', legacyToken);
+    return legacyToken;
+  }
+
+  return '';
+};
+
 export default function AdminDashboardEnhanced() {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -39,19 +63,30 @@ export default function AdminDashboardEnhanced() {
   const [supportStats, setSupportStats] = useState(null);
   const [revenueAnalytics, setRevenueAnalytics] = useState(null);
 
-  const authHeaders = useMemo(() => ({
-    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
-    'Content-Type': 'application/json',
-  }), []);
-
   const fetchJson = useCallback(async (path) => {
-    const response = await fetch(buildApiUrl(path), { headers: authHeaders });
+    const token = getAdminToken();
+    if (!token) {
+      clearAdminSession();
+      throw new Error('Session expired. Please login again.');
+    }
+
+    const response = await fetch(buildApiUrl(path), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload?.error || `Request failed for ${path}`);
+      const message = payload?.error || `Request failed for ${path}`;
+      if (/invalid token|jwt malformed|jwt expired|no token provided|admin access required/i.test(String(message))) {
+        clearAdminSession();
+        throw new Error('Session expired. Please login again.');
+      }
+      throw new Error(message);
     }
     return payload;
-  }, [authHeaders]);
+  }, []);
 
   const fetchAllData = useCallback(async (isManual = false) => {
     try {
@@ -91,7 +126,11 @@ export default function AdminDashboardEnhanced() {
       setSupportTickets(safeArray(supportTicketsRes?.tickets));
       setRevenueAnalytics(financeRes?.analytics || null);
     } catch (fetchError) {
-      setError(fetchError.message || 'Unable to load CRM data');
+      const message = fetchError.message || 'Unable to load CRM data';
+      setError(message);
+      if (/login again/i.test(String(message))) {
+        window.location.href = '/admin-login';
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -464,8 +503,7 @@ export default function AdminDashboardEnhanced() {
         <button
           type="button"
           onClick={() => {
-            localStorage.removeItem('adminAuth');
-            localStorage.removeItem('adminToken');
+            clearAdminSession();
             window.location.href = '/admin-login';
           }}
           style={{margin:'16px',padding:'10px',background:'#dc2626',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'600',fontSize:'13px'}}
