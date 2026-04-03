@@ -208,6 +208,16 @@ function Login({ onLogin }) {
                 {mode === 'login' ? 'New user? Register first' : 'Already registered? Back to login'}
               </button>
             )}
+
+            {role === 'driver' && (
+              <button
+                type="button"
+                className="login-secondary-action"
+                onClick={() => navigate('/register-driver')}
+              >
+                New driver? Register as Driver
+              </button>
+            )}
           </form>
 
           <p className="login-modern-footer">
@@ -215,7 +225,7 @@ function Login({ onLogin }) {
               ? (mode === 'register'
                   ? 'Create your customer account first, then login.'
                   : 'First time user? Please register first.')
-              : 'New driver? Please use Register as Driver before login.'}
+              : 'Driver account required before login.'}
           </p>
         </div>
       </div>
