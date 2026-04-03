@@ -14,6 +14,7 @@ const parseJsonSafe = async (response) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const AUTH_RETRY_DELAYS_MS = [1200, 2500, 4500];
+const WAKE_RETRY_DELAYS_MS = [0, 1200, 2500, 4500, 6500];
 
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, options);
@@ -81,6 +82,32 @@ const postAuthWithFallback = async (path, payload) => {
   );
 };
 
+const warmBackend = async () => {
+  const bases = getAuthBaseUrls();
+
+  for (const base of bases) {
+    for (let attempt = 0; attempt < WAKE_RETRY_DELAYS_MS.length; attempt += 1) {
+      if (WAKE_RETRY_DELAYS_MS[attempt] > 0) {
+        await wait(WAKE_RETRY_DELAYS_MS[attempt]);
+      }
+
+      try {
+        const response = await fetch(`${base}/health`, {
+          method: 'GET'
+        });
+
+        if (response.ok) {
+          return true;
+        }
+      } catch (_) {
+        // Ignore transient wake-up failures; auth call will handle final error state.
+      }
+    }
+  }
+
+  return false;
+};
+
 export const api = {
   // Auth
   // sendOTP and verifyOTP removed for customer login (direct login now)
@@ -100,11 +127,15 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
-  adminLogin: (password) =>
-    postAuthWithFallback('/auth/admin-login', { password }),
+  adminLogin: async (password) => {
+    await warmBackend();
+    return postAuthWithFallback('/auth/admin-login', { password });
+  },
 
-  directLogin: (payload) =>
-    postAuthWithFallback('/auth/direct-login', payload),
+  directLogin: async (payload) => {
+    await warmBackend();
+    return postAuthWithFallback('/auth/direct-login', payload);
+  },
 
   // Drivers
   getAllDrivers: (query = '') =>
