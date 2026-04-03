@@ -265,6 +265,8 @@ export const api = {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()),
 
+    registerCustomer: (payload) =>
+      postAuthWithFallback('/auth/register-customer', payload),
   getBookingById: (id) =>
     fetch(`${API_BASE_URL}/bookings/${id}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }

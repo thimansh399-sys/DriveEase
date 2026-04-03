@@ -7,9 +7,51 @@ function Login({ onLogin }) {
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState('customer');
+  const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const isCustomer = role === 'customer' || role === 'user';
+  const canRegister = isCustomer;
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.registerCustomer({
+        phone,
+        name: name.trim(),
+        email: email.trim()
+      });
+
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+
+      setMode('login');
+      setError('');
+      setSuccess('Registration successful. Please login now.');
+    } catch (registerError) {
+      setError(registerError.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,6 +66,7 @@ function Login({ onLogin }) {
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       // Enforce single-role login: clear other role's session/token
@@ -93,7 +136,12 @@ function Login({ onLogin }) {
           <div className="login-role-toggle" role="tablist" aria-label="Login role">
             <button
               type="button"
-              onClick={() => setRole('customer')}
+              onClick={() => {
+                setRole('customer');
+                setMode('login');
+                setError('');
+                setSuccess('');
+              }}
               className={`login-role-btn ${role === 'customer' ? 'active' : ''}`}
             >
               Customer
@@ -101,14 +149,46 @@ function Login({ onLogin }) {
 
             <button
               type="button"
-              onClick={() => setRole('driver')}
+              onClick={() => {
+                setRole('driver');
+                setMode('login');
+                setError('');
+                setSuccess('');
+              }}
               className={`login-role-btn ${role === 'driver' ? 'active' : ''}`}
             >
               Driver
             </button>
           </div>
 
-          <form onSubmit={handleLogin} className="login-modern-form">
+          {canRegister && (
+            <div className="login-role-toggle" role="tablist" aria-label="Auth mode">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setError('');
+                  setSuccess('');
+                }}
+                className={`login-role-btn ${mode === 'login' ? 'active' : ''}`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('register');
+                  setError('');
+                  setSuccess('');
+                }}
+                className={`login-role-btn ${mode === 'register' ? 'active' : ''}`}
+              >
+                Register
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={mode === 'register' ? handleRegister : handleLogin} className="login-modern-form">
             <input
               type="tel"
               value={phone}
@@ -125,17 +205,30 @@ function Login({ onLogin }) {
               className="login-modern-input"
             />
 
+            {mode === 'register' && (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email (optional)"
+                className="login-modern-input"
+              />
+            )}
+
             {error && <div className="login-modern-error">{error}</div>}
+            {success && <div className="login-modern-error" style={{ color: '#86efac', borderColor: 'rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.12)' }}>{success}</div>}
 
             <button type="submit" className="login-modern-submit" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? (mode === 'register' ? 'Registering...' : 'Logging in...') : (mode === 'register' ? 'Register' : 'Login')}
             </button>
           </form>
 
           <p className="login-modern-footer">
             {role === 'customer'
-              ? 'New user? Account will be created automatically'
-              : 'New driver? Account will be created and onboarding starts after login'}
+              ? (mode === 'register'
+                  ? 'Create your customer account first, then login.'
+                  : 'First time user? Please register first.')
+              : 'New driver? Please use Register as Driver before login.'}
           </p>
         </div>
       </div>

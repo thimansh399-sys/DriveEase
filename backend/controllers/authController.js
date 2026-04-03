@@ -49,6 +49,62 @@ async function findOrCreateUserByRole({ phone, name, role }) {
   };
 }
 
+async function findUserByRole({ phone, role }) {
+  if (role === 'driver') {
+    const driver = await Driver.findOne({ phone });
+    return {
+      entity: driver,
+      role: 'driver'
+    };
+  }
+
+  const customer = await User.findOne({ phone });
+  return {
+    entity: customer,
+    role: 'customer'
+  };
+}
+
+exports.registerCustomer = async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database unavailable. Please try again in a moment.' });
+    }
+
+    const phone = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim();
+
+    if (phone.length < 10) {
+      return res.status(400).json({ error: 'Valid phone number required' });
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const existing = await User.findOne({ phone });
+    if (existing) {
+      return res.status(400).json({ error: 'Customer already registered. Please login.' });
+    }
+
+    const customer = new User({
+      phone,
+      name,
+      email: email || undefined,
+      role: 'customer'
+    });
+
+    await customer.save();
+
+    return res.status(201).json({
+      message: 'Customer registered successfully. Please login to continue.'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.directLogin = async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -67,7 +123,18 @@ exports.directLogin = async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const { entity, role: finalRole } = await findOrCreateUserByRole({ phone, name, role });
+    const { entity, role: finalRole } = await findUserByRole({ phone, role });
+    if (!entity) {
+      const missingMessage = finalRole === 'driver'
+        ? 'Driver account not found. Please register as driver first.'
+        : 'Customer account not found. Please register first.';
+      return res.status(404).json({ error: missingMessage });
+    }
+
+    if (name && String(name).trim() && finalRole === 'customer' && entity.name !== String(name).trim()) {
+      entity.name = String(name).trim();
+      await entity.save();
+    }
 
     const token = jwt.sign(
       {
@@ -130,28 +197,23 @@ exports.verifyOTPAndLogin = async (req, res) => {
     }
 
     let user = null;
-    
+
     if (role === 'driver') {
       user = await Driver.findOne({ phone });
       if (!user) {
-        user = new Driver({
-          phone,
-          name: name || 'Driver',
-          status: 'pending'
-        });
+        return res.status(404).json({ error: 'Driver account not found. Please register as driver first.' });
       }
     } else {
       user = await User.findOne({ phone });
       if (!user) {
-        user = new User({
-          phone,
-          name: name || 'Customer',
-          role: 'customer'
-        });
+        return res.status(404).json({ error: 'Customer account not found. Please register first.' });
+      }
+
+      if (name && String(name).trim() && user.name !== String(name).trim()) {
+        user.name = String(name).trim();
+        await user.save();
       }
     }
-
-    await user.save();
 
     const token = jwt.sign(
       { 
