@@ -1,0 +1,361 @@
+/* Driver Profile Container & Layout */
+.driver-profile-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1f3a 0%, #16213e 100%);
+  color: #e0e0e0;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.driver-profile-shell {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header Section */
+.profile-header {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 32px;
+  backdrop-filter: blur(10px);
+}
+
+.profile-photo-wrapper {
+  flex-shrink: 0;
+}
+
+.profile-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-photo-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(100, 255, 200, 0.3));
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+}
+
+.profile-header-info {
+  flex: 1;
+}
+
+.profile-header-info h1 {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.profile-subtext {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  opacity: 0.8;
+  color: #b0b0b0;
+}
+
+.profile-contact {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #d0d0d0;
+}
+
+/* Stats Grid */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.profile-stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.profile-stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(100, 200, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #64c8ff;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tabs Navigation */
+.profile-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: #a0a0a0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: #e0e0e0;
+}
+
+.tab-btn.active {
+  color: #64c8ff;
+  border-bottom-color: #64c8ff;
+}
+
+/* Tab Content */
+.profile-content {
+  margin-bottom: 32px;
+}
+
+.profile-tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.profile-tab-content h2 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.info-item label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #888888;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.info-item p {
+  margin: 0;
+  font-size: 14px;
+  color: #e0e0e0;
+  word-break: break-word;
+}
+
+.info-item p.highlight {
+  font-weight: 600;
+  color: #64c8ff;
+}
+
+/* Documents Grid */
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.doc-card {
+  background: rgba(100, 200, 255, 0.08);
+  border: 1px solid rgba(100, 200, 255, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.doc-card:hover {
+  background: rgba(100, 200, 255, 0.12);
+  border-color: rgba(100, 200, 255, 0.5);
+}
+
+.doc-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.doc-card p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #d0d0d0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge.verified {
+  background: rgba(100, 255, 100, 0.2);
+  color: #64ff64;
+  border: 1px solid rgba(100, 255, 100, 0.4);
+}
+
+.badge.pending {
+  background: rgba(255, 200, 100, 0.2);
+  color: #ffc864;
+  border: 1px solid rgba(255, 200, 100, 0.4);
+}
+
+.doc-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: rgba(100, 200, 255, 0.2);
+  color: #64c8ff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(100, 200, 255, 0.4);
+}
+
+.doc-link:hover {
+  background: rgba(100, 200, 255, 0.3);
+  border-color: rgba(100, 200, 255, 0.6);
+}
+
+/* Account Section */
+.account-section {
+  margin-bottom: 32px;
+}
+
+.account-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #64c8ff;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+}
+
+/* Back to Dashboard Button */
+.profile-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.btn-back-to-dashboard {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(100, 255, 200, 0.1));
+  border: 1px solid rgba(100, 200, 255, 0.5);
+  color: #64c8ff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-back-to-dashboard:hover {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.4), rgba(100, 255, 200, 0.2));
+  border-color: rgba(100, 200, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .driver-profile-container {
+    padding: 12px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .profile-header-info h1 {
+    font-size: 24px;
+  }
+
+  .profile-photo,
+  .profile-photo-placeholder {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-tabs {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .documents-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

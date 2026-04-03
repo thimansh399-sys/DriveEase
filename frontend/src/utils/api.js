@@ -196,6 +196,11 @@ export const api = {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()),
 
+  getDriverProfile: () =>
+    fetch(`${API_BASE_URL}/drivers/me`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.json()),
+
   registerDriver: (data) =>
     fetch(`${API_BASE_URL}/drivers/register`, {
       method: 'POST',

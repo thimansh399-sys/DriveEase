@@ -14,6 +14,7 @@ import AdminLogin from './pages/AdminLogin';
 import MyBookings from './pages/MyBookings';
 import Services from './pages/Services';
 import DriverDashboard from './pages/DriverDashboard';
+import DriverProfile from './pages/DriverProfile';
 import Payment from './pages/Payment';
 import Insurance from './pages/Insurance';
 import Pay from './pages/Pay';
@@ -60,7 +61,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
             path="/profile"
             element={
               isLoggedIn
-                ? (userRole === 'driver' ? <DriverDashboard /> : <CustomerProfile />)
+                ? (userRole === 'driver' ? <DriverProfile /> : <CustomerProfile />)
                 : <Navigate to="/login" />
             }
           />
