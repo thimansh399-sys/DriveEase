@@ -12,6 +12,8 @@ const parseJsonSafe = async (response) => {
   }
 };
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type') || '';
@@ -34,23 +36,35 @@ const postAuthWithFallback = async (path, payload) => {
   let lastNetworkError = null;
 
   for (const base of bases) {
-    try {
-      const response = await fetch(`${base}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await fetch(`${base}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      const data = await parseJsonSafe(response);
-      if (!response.ok) {
-        return {
-          error: data.error || `Request failed (${response.status})`
-        };
+        const data = await parseJsonSafe(response);
+        if (!response.ok) {
+          // Render free/hibernate wake can briefly return transient 5xx.
+          if ([502, 503, 504].includes(response.status) && attempt === 0) {
+            await wait(1200);
+            continue;
+          }
+
+          return {
+            error: data.error || `Request failed (${response.status})`
+          };
+        }
+
+        return data;
+      } catch (error) {
+        lastNetworkError = error;
+        if (attempt === 0) {
+          await wait(800);
+          continue;
+        }
       }
-
-      return data;
-    } catch (error) {
-      lastNetworkError = error;
     }
   }
 
