@@ -21,7 +21,7 @@ function AdminLogin() {
       }
 
       localStorage.setItem('adminAuth', 'true');
-      localStorage.setItem('token', response.token);
+      localStorage.setItem('adminToken', response.token);
       localStorage.setItem('userRole', 'admin');
       navigate('/admin');
     } catch (loginError) {

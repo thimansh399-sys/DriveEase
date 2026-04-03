@@ -74,7 +74,7 @@ export default function AdminDashboardWorkspace() {
   });
 
   const authHeaders = useMemo(() => ({
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
     'Content-Type': 'application/json',
   }), []);
 
@@ -107,7 +107,7 @@ export default function AdminDashboardWorkspace() {
         fetchJson('/admin/drivers/registrations?status=all'),
         fetchJson('/admin/customers'),
         fetchJson('/support-tickets/admin/stats'),
-        fetchJson('/support-tickets/all?status=open'),
+        fetchJson('/support-tickets/all'),
         fetchJson('/admin-dashboard/drivers/live-status'),
         fetchJson('/admin-dashboard/revenue/analytics'),
         fetchJson('/admin-dashboard/stats'),
@@ -215,6 +215,16 @@ export default function AdminDashboardWorkspace() {
       await fetchAllData(true);
     } catch (rejectError) {
       setError(rejectError?.message || 'Unable to reject driver');
+    }
+  };
+
+  const handleResolveTicket = async (ticketId) => {
+    try {
+      setError('');
+      await api.resolveTicket(ticketId);
+      await fetchAllData(true);
+    } catch (resolveError) {
+      setError(resolveError?.message || 'Unable to resolve ticket');
     }
   };
 
@@ -382,14 +392,24 @@ export default function AdminDashboardWorkspace() {
           <span>Subject</span>
           <span>Status</span>
           <span>Updated</span>
+          <span>Action</span>
         </div>
         {supportTickets.map((ticket) => (
           <div className="adminw-table-row enquiries-grid" key={String(ticket?._id)}>
             <span>{ticket?.ticketId || String(ticket?._id || '').slice(-6)}</span>
-            <span>{ticket?.userId?.name || 'NA'}</span>
+            <span>{ticket?.customerId?.name || ticket?.userId?.name || 'NA'}</span>
             <span>{ticket?.subject || 'General enquiry'}</span>
             <span className={`adminw-pill ${statusClass(ticket?.status || 'open')}`}>{ticket?.status || 'open'}</span>
             <span>{formatDateTime(ticket?.updatedAt)}</span>
+            <span>
+              {String(ticket?.status || '').toLowerCase() !== 'resolved' && (
+                <button
+                  type="button"
+                  className="adminw-primary-btn small"
+                  onClick={() => handleResolveTicket(ticket._id)}
+                >Resolve</button>
+              )}
+            </span>
           </div>
         ))}
       </div>
@@ -537,7 +557,7 @@ export default function AdminDashboardWorkspace() {
           className="adminw-logout"
           onClick={() => {
             localStorage.removeItem('adminAuth');
-            localStorage.removeItem('token');
+            localStorage.removeItem('adminToken');
             window.location.href = '/admin-login';
           }}
         >

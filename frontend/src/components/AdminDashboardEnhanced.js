@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import api from '../utils/api';
 import '../styles/AdminDashboardEnhanced.css';
 import { buildApiUrl } from '../utils/network';
 
@@ -39,7 +40,7 @@ export default function AdminDashboardEnhanced() {
   const [revenueAnalytics, setRevenueAnalytics] = useState(null);
 
   const authHeaders = useMemo(() => ({
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
     'Content-Type': 'application/json',
   }), []);
 
@@ -76,7 +77,7 @@ export default function AdminDashboardEnhanced() {
         fetchJson('/admin/drivers/registrations?status=all'),
         fetchJson('/admin/customers'),
         fetchJson('/support-tickets/admin/stats'),
-        fetchJson('/support-tickets/all?status=open'),
+        fetchJson('/support-tickets/all'),
         fetchJson('/admin-dashboard/revenue/analytics'),
       ]);
 
@@ -100,6 +101,36 @@ export default function AdminDashboardEnhanced() {
   useEffect(() => {
     fetchAllData(false);
   }, [fetchAllData]);
+
+  const handleApproveDriver = async (driverId) => {
+    try {
+      setError('');
+      await api.approveDriver(driverId);
+      await fetchAllData(true);
+    } catch (err) {
+      setError(err?.message || 'Failed to approve driver');
+    }
+  };
+
+  const handleRejectDriver = async (driverId) => {
+    try {
+      setError('');
+      await api.rejectDriver(driverId, 'Rejected by admin');
+      await fetchAllData(true);
+    } catch (err) {
+      setError(err?.message || 'Failed to reject driver');
+    }
+  };
+
+  const handleResolveTicket = async (ticketId) => {
+    try {
+      setError('');
+      await api.resolveTicket(ticketId);
+      await fetchAllData(true);
+    } catch (err) {
+      setError(err?.message || 'Failed to resolve ticket');
+    }
+  };
 
   const computed = useMemo(() => {
     const pendingBookings = allBookings.filter((b) => String(b?.status || '').toLowerCase() === 'pending').length;
@@ -197,10 +228,25 @@ export default function AdminDashboardEnhanced() {
           <article className="mini-card" key={String(driver?._id)}>
             <h4>{driver?.name || 'Driver'}</h4>
             <p>{driver?.phone || 'NA'}</p>
+            <p style={{fontSize:'12px',color:'#aaa'}}>{driver?.personalDetails?.city || ''}</p>
             <div className="mini-row">
               <span className={`status-tag ${statusColorClass(driver?.status)}`}>{driver?.status || 'unknown'}</span>
               <span className={`status-tag ${driver?.isOnline ? 'good' : 'neutral'}`}>{driver?.isOnline ? 'online' : 'offline'}</span>
             </div>
+            {String(driver?.status || '').toLowerCase() === 'pending' && (
+              <div className="mini-row" style={{marginTop:'8px',gap:'8px'}}>
+                <button
+                  type="button"
+                  style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:'6px',padding:'4px 12px',cursor:'pointer',fontSize:'12px'}}
+                  onClick={() => handleApproveDriver(driver._id)}
+                >Approve</button>
+                <button
+                  type="button"
+                  style={{background:'#dc2626',color:'#fff',border:'none',borderRadius:'6px',padding:'4px 12px',cursor:'pointer',fontSize:'12px'}}
+                  onClick={() => handleRejectDriver(driver._id)}
+                >Reject</button>
+              </div>
+            )}
           </article>
         ))}
       </div>
@@ -254,14 +300,24 @@ export default function AdminDashboardEnhanced() {
               <span>Issue</span>
               <span>Status</span>
               <span>Updated</span>
+              <span>Action</span>
             </div>
             {supportTickets.slice(0, 80).map((ticket) => (
               <div className="crm-trow" key={String(ticket?._id)}>
                 <span>{ticket?.ticketId || String(ticket?._id || '').slice(-6)}</span>
-                <span>{ticket?.userId?.name || 'NA'}</span>
+                <span>{ticket?.customerId?.name || ticket?.userId?.name || 'NA'}</span>
                 <span>{ticket?.subject || 'General issue'}</span>
                 <span className={`status-tag ${statusColorClass(ticket?.status)}`}>{ticket?.status || 'open'}</span>
                 <span>{ticket?.updatedAt ? new Date(ticket.updatedAt).toLocaleString('en-IN') : 'NA'}</span>
+                <span>
+                  {String(ticket?.status || '').toLowerCase() !== 'resolved' && (
+                    <button
+                      type="button"
+                      style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:'6px',padding:'3px 10px',cursor:'pointer',fontSize:'11px'}}
+                      onClick={() => handleResolveTicket(ticket._id)}
+                    >Resolve</button>
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -405,6 +461,17 @@ export default function AdminDashboardEnhanced() {
             </button>
           ))}
         </nav>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('adminAuth');
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin-login';
+          }}
+          style={{margin:'16px',padding:'10px',background:'#dc2626',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'600',fontSize:'13px'}}
+        >
+          Logout
+        </button>
       </aside>
 
       <main className="crm-main">

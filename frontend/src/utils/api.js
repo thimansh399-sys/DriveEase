@@ -384,21 +384,21 @@ export const api = {
       body: JSON.stringify(payload)
     }).then(r => r.json()),
 
-  // Admin
+  // Admin — use separate adminToken to avoid conflicts with customer session
   getAdminStats: () =>
     fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.json()),
 
   getAllBookings: () =>
     fetch(`${API_BASE_URL}/admin/bookings`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.json()),
 
   approveDriver: (id) =>
     fetch(`${API_BASE_URL}/admin/drivers/${id}/approve`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.json()),
 
   rejectDriver: (id, reason) =>
@@ -406,7 +406,7 @@ export const api = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
       },
       body: JSON.stringify({ reason })
     }).then(r => r.json()),
@@ -414,18 +414,34 @@ export const api = {
   removeDriver: (id) =>
     fetch(`${API_BASE_URL}/admin/drivers/${id}/remove`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.json()),
 
   getDriverRegistrations: (status) =>
     fetch(`${API_BASE_URL}/admin/drivers/registrations?status=${status}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.json()),
 
   exportBookingsToExcel: () =>
     fetch(`${API_BASE_URL}/admin/export/bookings`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
     }).then(r => r.blob()),
+
+  resolveTicket: (ticketId) =>
+    fetch(`${API_BASE_URL}/support-tickets/${ticketId}/resolve`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+    }).then(r => r.json()),
+
+  updateTicketStatus: (ticketId, status) =>
+    fetch(`${API_BASE_URL}/support-tickets/${ticketId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ status })
+    }).then(r => r.json()),
 
   // Insurance
   addInsurance: (bookingId) =>
