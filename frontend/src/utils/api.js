@@ -92,7 +92,7 @@ const warmBackend = async () => {
       }
 
       try {
-        const response = await fetch(`${base}/health`, {
+        const response = await fetch(`${base}/ready`, {
           method: 'GET'
         });
 
