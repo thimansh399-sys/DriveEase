@@ -8,6 +8,8 @@ const Driver = require('../models/Driver');
 const User = require('../models/User');
 const rideEngine = require('../utils/rideAllocationEngine');
 const { generateBookingId } = require('../utils/helpers');
+const { getIO } = require('../utils/socketManager');
+const { haversineDistanceKm, roundTo2 } = require('../utils/rideMath');
 
 // In-memory live location store (use Redis in production)
 const liveLocations = {};
@@ -67,7 +69,7 @@ exports.bookRide = async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
     // Create booking
     const booking = new Booking({
@@ -80,6 +82,12 @@ exports.bookRide = async (req, res) => {
       startDate: new Date(),
       estimatedPrice: fareInfo.finalFare,
       status: 'driver_assigned',
+      otp,
+      otpExpiresAt: otpExpiry,
+      otpAttempts: 0,
+      fareRatePerKm: Number(req.body.ratePerKm) > 0 ? Number(req.body.ratePerKm) : 15,
+      distance: 0,
+      fare: 0,
       verification: {
         otp,
         otpGenerated: new Date(),
@@ -147,16 +155,75 @@ exports.updateDriverLocation = async (req, res) => {
     const driverId = req.user.id;
     const { latitude, longitude } = req.body;
 
-    if (!latitude || !longitude) {
+    if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
       return res.status(400).json({ error: 'Coordinates required' });
     }
 
+    const { bookingId } = req.body;
     // Store in memory for real-time tracking
     liveLocations[driverId] = {
       latitude,
       longitude,
       updatedAt: new Date(),
     };
+
+    if (bookingId) {
+      const booking = await Booking.findById(bookingId);
+
+      if (booking && booking.driverId && String(booking.driverId) === String(driverId)) {
+        const now = new Date();
+        const prev = booking.lastDriverLocation;
+        let nextDistance = Number(booking.distance || 0);
+
+        if (
+          prev
+          && Number.isFinite(Number(prev.latitude))
+          && Number.isFinite(Number(prev.longitude))
+          && ['in_progress', 'ON_TRIP'].includes(booking.status)
+        ) {
+          const hopKm = haversineDistanceKm(
+            Number(prev.latitude),
+            Number(prev.longitude),
+            Number(latitude),
+            Number(longitude)
+          );
+          nextDistance += hopKm;
+        }
+
+        const rate = Number(booking.fareRatePerKm || 15);
+        const nextFare = roundTo2(nextDistance * rate);
+
+        booking.lastDriverLocation = {
+          latitude,
+          longitude,
+          updatedAt: now,
+        };
+        booking.currentDriverLocation = {
+          latitude,
+          longitude,
+          updatedAt: now,
+        };
+        booking.distance = roundTo2(nextDistance);
+        booking.fare = nextFare;
+        booking.updatedAt = now;
+        await booking.save();
+
+        const io = getIO();
+        if (io) {
+          const payload = {
+            bookingId: String(booking._id),
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            distance: booking.distance,
+            fare: booking.fare,
+            status: booking.status,
+            updatedAt: now.toISOString(),
+          };
+          io.to(String(booking._id)).emit('driver_location_update', payload);
+          io.to(String(booking._id)).emit('location_update', payload);
+        }
+      }
+    }
 
     // Also persist to DB
     await Driver.findByIdAndUpdate(driverId, {
@@ -213,54 +280,105 @@ exports.verifyOTPAndStart = async (req, res) => {
     const driverId = req.user.id;
     const { bookingId } = req.params;
     const { otp } = req.body;
-
-    if (!otp) return res.status(400).json({ error: 'OTP is required' });
-
-    const booking = await Booking.findById(bookingId);
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
-
-    if (booking.driverId.toString() !== driverId) {
-      return res.status(403).json({ error: 'Not your booking' });
-    }
-
-    if (booking.status !== 'driver_arrived') {
-      return res.status(400).json({ error: `Cannot start ride. Current status: ${booking.status}` });
-    }
-
-    // Check OTP expiry
-    if (new Date() > new Date(booking.verification.otpExpiry)) {
-      return res.status(400).json({ error: 'OTP expired. Ask customer for new OTP.' });
-    }
-
-    // Verify OTP
-    if (booking.verification.otp !== otp) {
-      return res.status(400).json({ error: 'Invalid OTP' });
-    }
-
-    // OTP verified — start ride
-    booking.verification.otpVerified = true;
-    booking.verification.otpVerificationTime = new Date();
-    booking.status = 'in_progress';
-    booking.rideCompletion = booking.rideCompletion || {};
-    booking.rideCompletion.actualStartTime = new Date();
-    booking.timestamps.rideStartIST = toIST(new Date());
-    booking.updatedAt = new Date();
-    await booking.save();
-
-    res.json({
-      success: true,
-      message: 'OTP verified! Ride started.',
-      booking: {
-        id: booking._id,
-        bookingId: booking.bookingId,
-        status: booking.status,
-        startTime: booking.rideCompletion.actualStartTime,
-      },
-    });
+    return verifyRideOtpStart({ bookingId, otp, driverId, res });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.verifyOTPAndStartByBody = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+    const { bookingId, otp } = req.body;
+    return verifyRideOtpStart({ bookingId, otp, driverId, res });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+async function verifyRideOtpStart({ bookingId, otp, driverId, res }) {
+  const safeBookingId = String(bookingId || '').trim();
+  const safeOtp = String(otp || '').trim();
+
+  if (!safeBookingId) {
+    return res.status(400).json({ error: 'bookingId is required' });
+  }
+
+  if (!/^\d{4}$/.test(safeOtp)) {
+    return res.status(400).json({ error: 'OTP must be a 4-digit code' });
+  }
+
+  const booking = await Booking.findById(safeBookingId);
+  if (!booking) {
+    return res.status(404).json({ error: 'Booking not found' });
+  }
+
+  if (!booking.driverId || String(booking.driverId) !== String(driverId)) {
+    return res.status(403).json({ error: 'Not your booking' });
+  }
+
+  if (['in_progress', 'ON_TRIP', 'completed'].includes(booking.status)) {
+    return res.status(409).json({ error: 'Ride already started' });
+  }
+
+  const now = new Date();
+  const expiresAt = booking.otpExpiresAt || booking.verification?.otpExpiry;
+  if (expiresAt && now > new Date(expiresAt)) {
+    return res.status(400).json({ error: 'OTP expired' });
+  }
+
+  const attempts = Number(booking.otpAttempts || 0);
+  if (attempts >= 3) {
+    return res.status(429).json({ error: 'Too many attempts, try later' });
+  }
+
+  const savedOtp = String(booking.otp || booking.verification?.otp || '').trim();
+  if (savedOtp !== safeOtp) {
+    booking.otpAttempts = attempts + 1;
+    booking.updatedAt = now;
+    await booking.save();
+    return res.status(400).json({ error: 'Invalid OTP', otpAttempts: booking.otpAttempts });
+  }
+
+  booking.status = 'in_progress';
+  booking.rideStartTime = now;
+  booking.otp = null;
+  booking.otpAttempts = 0;
+  booking.otpExpiresAt = null;
+  booking.verification = booking.verification || {};
+  booking.verification.otp = null;
+  booking.verification.otpVerified = true;
+  booking.verification.otpVerificationTime = now;
+  booking.rideCompletion = booking.rideCompletion || {};
+  booking.rideCompletion.actualStartTime = now;
+  booking.updatedAt = now;
+  booking.timestamps = booking.timestamps || {};
+  booking.timestamps.rideStartIST = toIST(now);
+  await booking.save();
+
+  const io = getIO();
+  if (io) {
+    io.to(String(booking._id)).emit('ride_started', {
+      bookingId: String(booking._id),
+      status: booking.status,
+      startedAt: now.toISOString(),
+    });
+  }
+
+  return res.json({
+    success: true,
+    message: 'Ride started',
+    booking: {
+      id: booking._id,
+      bookingId: booking.bookingId,
+      status: booking.status,
+      rideStartTime: booking.rideStartTime,
+      fareRatePerKm: booking.fareRatePerKm,
+      distance: booking.distance || 0,
+      fare: booking.fare || 0,
+    },
+  });
+}
 
 // ================== 5. REGENERATE OTP ==================
 exports.regenerateOTP = async (req, res) => {
@@ -280,9 +398,12 @@ exports.regenerateOTP = async (req, res) => {
     }
 
     const otp = generateOTP();
+    booking.otp = otp;
+    booking.otpAttempts = 0;
+    booking.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     booking.verification.otp = otp;
     booking.verification.otpGenerated = new Date();
-    booking.verification.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    booking.verification.otpExpiry = booking.otpExpiresAt;
     booking.updatedAt = new Date();
     await booking.save();
 
@@ -326,6 +447,10 @@ exports.trackRide = async (req, res) => {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
+        rideStartTime: booking.rideStartTime || booking.rideCompletion?.actualStartTime || null,
+        fareRatePerKm: booking.fareRatePerKm || 15,
+        distance: booking.distance || 0,
+        fare: booking.fare || booking.finalPrice || booking.estimatedPrice || 0,
         driver: {
           id: booking.driverId._id,
           name: booking.driverId.name,
@@ -354,7 +479,7 @@ exports.endRide = async (req, res) => {
       return res.status(403).json({ error: 'Not your booking' });
     }
 
-    if (booking.status !== 'in_progress') {
+    if (!['in_progress', 'ON_TRIP'].includes(booking.status)) {
       return res.status(400).json({ error: `Cannot end ride. Current status: ${booking.status}` });
     }
 
@@ -376,11 +501,12 @@ exports.endRide = async (req, res) => {
 
     // Update booking
     booking.status = 'completed';
+    booking.rideEndTime = now;
     booking.rideCompletion = {
       ...booking.rideCompletion,
       actualEndTime: now,
-      actualDistance: actualDistance || booking.estimatedDistance || 0,
-      finalCalculatedPrice: fare,
+      actualDistance: actualDistance || booking.distance || booking.estimatedDistance || 0,
+      finalCalculatedPrice: booking.fare > 0 ? booking.fare : fare,
     };
     booking.rideFlow = {
       ...booking.rideFlow,
@@ -388,7 +514,7 @@ exports.endRide = async (req, res) => {
       commissionAmount: commissionInfo.commission,
       driverEarning: commissionInfo.driverEarning,
     };
-    booking.finalPrice = fare;
+    booking.finalPrice = booking.fare > 0 ? booking.fare : fare;
     booking.timestamps.rideEndIST = toIST(now);
     booking.updatedAt = now;
     await booking.save();
@@ -415,12 +541,23 @@ exports.endRide = async (req, res) => {
     // Check weekly bonus
     const weeklyBonus = rideEngine.checkWeeklyBonus(driverPlan, driver?.ridesThisWeek || 0);
 
+    const io = getIO();
+    if (io) {
+      io.to(String(booking._id)).emit('ride_ended', {
+        bookingId: String(booking._id),
+        status: booking.status,
+        rideEndTime: booking.rideEndTime,
+        distance: booking.rideCompletion.actualDistance,
+        fare: booking.finalPrice,
+      });
+    }
+
     res.json({
       success: true,
       message: 'Ride completed! ✅',
       rideResult: {
         bookingId: booking.bookingId,
-        fare,
+        fare: booking.finalPrice,
         baseFare: fare - insuranceCost,
         insuranceCost,
         insuranceOpted: booking.insuranceOpted,
@@ -450,9 +587,9 @@ exports.getActiveRide = async (req, res) => {
 
     let query;
     if (role === 'driver') {
-      query = { driverId: userId, status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] } };
+      query = { driverId: userId, status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress', 'ON_TRIP'] } };
     } else {
-      query = { customerId: userId, status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] } };
+      query = { customerId: userId, status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress', 'ON_TRIP'] } };
     }
 
     const booking = await Booking.findOne(query)

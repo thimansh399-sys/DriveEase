@@ -5,6 +5,7 @@ import api from '../utils/api';
 import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
 import { buildAssetUrl } from '../utils/network';
+import { connectRideSocket } from '../utils/rideSocket';
 
 /**
  * Track Booking Page
@@ -18,6 +19,8 @@ export default function TrackBooking() {
   const [bookingData, setBookingData] = useState(null);
   const [error, setError] = useState('');
   const [driverLocation, setDriverLocation] = useState({ lat: 26.9124, lng: 75.7873 });
+  const [socketConnected, setSocketConnected] = useState(false);
+  const socketRef = useRef(null);
 
   const statusText = {
     pending: 'Booking pending. Waiting for driver response.',
@@ -26,6 +29,7 @@ export default function TrackBooking() {
     driver_arrived: 'Driver arrived near pickup. Share OTP to start the ride.',
     otp_verified: 'OTP verified. Ride is being started.',
     in_progress: 'Ride in progress. Enjoy your trip safely.',
+    ON_TRIP: 'Ride in progress. Enjoy your trip safely.',
     completed: 'Ride completed successfully.',
     cancelled: 'Booking was cancelled.',
   };
@@ -53,7 +57,7 @@ export default function TrackBooking() {
       };
     };
 
-    const mapBooking = (booking) => {
+    const mapBooking = (booking, trackPayload) => {
       const pickup = booking?.pickupLocation || {};
       const dropoff = booking?.dropLocation || {};
       const driver = booking?.driverId || null;
@@ -99,8 +103,10 @@ export default function TrackBooking() {
             }
           : null,
         estimatedTime: Math.max(3, Math.round(estimatedDistance * 2) || 8),
-        distance: estimatedDistance,
-        fare: Number(booking?.finalPrice || booking?.estimatedPrice || 0),
+        distance: Number(trackPayload?.booking?.distance || booking?.distance || estimatedDistance || 0),
+        fare: Number(trackPayload?.booking?.fare || booking?.fare || booking?.finalPrice || booking?.estimatedPrice || 0),
+        fareRatePerKm: Number(trackPayload?.booking?.fareRatePerKm || booking?.fareRatePerKm || 15),
+        rideStartTime: trackPayload?.booking?.rideStartTime || booking?.rideStartTime || booking?.rideCompletion?.actualStartTime || null,
         paymentStatus: booking?.paymentStatus || 'completed',
         verification: {
           otp: booking?.verification?.otp || null,
@@ -122,14 +128,21 @@ export default function TrackBooking() {
         }
 
         const response = await api.getBookingById(bookingId);
+        const trackResponse = await api.trackRideByBooking(bookingId).catch(() => null);
+
         if (!response || response.error) {
           throw new Error(response?.error || 'Booking not found');
         }
 
         if (isMounted) {
-          const mapped = mapBooking(response);
+          const mapped = mapBooking(response, trackResponse);
           setBookingData(mapped);
-          if (Number.isFinite(mapped.driver?.location?.lat) && Number.isFinite(mapped.driver?.location?.lng)) {
+          const trackedLat = Number(trackResponse?.driverLocation?.latitude);
+          const trackedLng = Number(trackResponse?.driverLocation?.longitude);
+
+          if (Number.isFinite(trackedLat) && Number.isFinite(trackedLng)) {
+            setDriverLocation({ lat: trackedLat, lng: trackedLng });
+          } else if (Number.isFinite(mapped.driver?.location?.lat) && Number.isFinite(mapped.driver?.location?.lng)) {
             setDriverLocation({ lat: mapped.driver.location.lat, lng: mapped.driver.location.lng });
           } else {
             setDriverLocation({ lat: mapped.pickup.lat, lng: mapped.pickup.lng });
@@ -149,7 +162,7 @@ export default function TrackBooking() {
     };
 
     loadBooking();
-    const interval = setInterval(loadBooking, 5000);
+    const interval = setInterval(loadBooking, 10000);
 
     return () => {
       isMounted = false;
@@ -158,17 +171,53 @@ export default function TrackBooking() {
   }, [bookingId, searchParams]);
 
   useEffect(() => {
-    if (!bookingData?.driver) return undefined;
+    if (!bookingId) {
+      return undefined;
+    }
 
-    const interval = setInterval(() => {
-      setDriverLocation((prev) => ({
-        lat: prev.lat + (Math.random() - 0.5) * 0.0015,
-        lng: prev.lng + (Math.random() - 0.5) * 0.0015,
-      }));
-    }, 3000);
+    const socket = connectRideSocket(bookingId);
+    socketRef.current = socket;
 
-    return () => clearInterval(interval);
-  }, [bookingData]);
+    socket.on('connect', () => setSocketConnected(true));
+    socket.on('disconnect', () => setSocketConnected(false));
+
+    const handleLocation = (payload = {}) => {
+      const lat = Number(payload.latitude);
+      const lng = Number(payload.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setDriverLocation({ lat, lng });
+      }
+
+      setBookingData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          distance: Number.isFinite(Number(payload.distance)) ? Number(payload.distance) : prev.distance,
+          fare: Number.isFinite(Number(payload.fare)) ? Number(payload.fare) : prev.fare,
+          status: payload.status || prev.status,
+        };
+      });
+    };
+
+    socket.on('driver_location_update', handleLocation);
+    socket.on('location_update', handleLocation);
+    socket.on('ride_started', (payload = {}) => {
+      if (String(payload.bookingId || '') === String(bookingId)) {
+        setBookingData((prev) => (prev ? { ...prev, status: 'in_progress', rideStartTime: payload.startedAt || prev.rideStartTime } : prev));
+      }
+    });
+    socket.on('ride_ended', (payload = {}) => {
+      if (String(payload.bookingId || '') === String(bookingId)) {
+        setBookingData((prev) => (prev ? { ...prev, status: 'completed', distance: payload.distance || prev.distance, fare: payload.fare || prev.fare } : prev));
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+      setSocketConnected(false);
+    };
+  }, [bookingId]);
 
   useEffect(() => {
     if (!mapContainer.current || !bookingData) return;
@@ -497,6 +546,37 @@ export default function TrackBooking() {
               <p style={{ margin: '12px 0 0 0', color: '#aaa', fontSize: '12px' }}>
                 ETA {bookingData?.estimatedTime || '--'} mins • Distance {bookingData?.distance || 0} km • Payment {bookingData?.paymentStatus || 'completed'}
               </p>
+              <p style={{ margin: '8px 0 0 0', color: '#93c5fd', fontSize: '12px' }}>
+                {socketConnected ? 'Live socket connected' : 'Live socket reconnecting, polling every 10s'}
+              </p>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ y: -4 }}
+              style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '12px',
+                padding: '16px',
+              }}
+            >
+              <p style={{ margin: '0 0 8px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
+                Ride Progress
+              </p>
+              <p style={{ margin: '4px 0', color: '#dbeafe', fontSize: '13px' }}>
+                1. Assigned {['driver_assigned', 'confirmed', 'driver_arrived', 'in_progress', 'ON_TRIP', 'completed'].includes(bookingData?.status) ? '✓' : '•'}
+              </p>
+              <p style={{ margin: '4px 0', color: '#dbeafe', fontSize: '13px' }}>
+                2. On Trip {['in_progress', 'ON_TRIP', 'completed'].includes(bookingData?.status) ? '✓' : '•'}
+              </p>
+              <p style={{ margin: '4px 0', color: '#dbeafe', fontSize: '13px' }}>
+                3. Completed {bookingData?.status === 'completed' ? '✓' : '•'}
+              </p>
+              {bookingData?.rideStartTime ? (
+                <p style={{ margin: '10px 0 0 0', color: '#93c5fd', fontSize: '12px' }}>
+                  Ride started at {new Date(bookingData.rideStartTime).toLocaleString('en-IN')}
+                </p>
+              ) : null}
             </motion.div>
 
             {bookingData?.verification?.otp && !bookingData?.verification?.otpVerified && (

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import '../styles/DriverDashboard.css';
 import { playNotificationSound } from '../utils/notificationService';
 import { useNotification } from '../context/NotificationContext';
+import { connectRideSocket } from '../utils/rideSocket';
 
-const ACTIVE_STATUSES = ['pending', 'driver_assigned', 'confirmed', 'driver_arrived', 'in_progress'];
+const ACTIVE_STATUSES = ['pending', 'driver_assigned', 'confirmed', 'driver_arrived', 'in_progress', 'ON_TRIP'];
 
 const statusLabel = (status) => {
   const map = {
@@ -13,6 +15,7 @@ const statusLabel = (status) => {
     confirmed: 'Confirmed',
     driver_arrived: 'Arrived',
     in_progress: 'In Progress',
+    ON_TRIP: 'On Trip',
     completed: 'Completed',
     cancelled: 'Cancelled',
     rejected: 'Rejected',
@@ -21,15 +24,21 @@ const statusLabel = (status) => {
 };
 
 export default function DriverDashboard() {
+  const navigate = useNavigate();
   const { addNotification } = useNotification();
   const [driver, setDriver] = useState({ name: 'Driver', city: '-' });
   const [bookings, setBookings] = useState([]);
   const [isOnline, setIsOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionBusyId, setActionBusyId] = useState('');
-  const [otpByBooking, setOtpByBooking] = useState({});
+  const [otpModalBooking, setOtpModalBooking] = useState(null);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpError, setOtpError] = useState('');
   const [error, setError] = useState('');
   const seenPendingRef = useRef(new Set());
+  const socketRef = useRef(null);
+  const locationTimerRef = useRef(null);
 
   useEffect(() => {
     const storedDriver = JSON.parse(localStorage.getItem('driver') || 'null');
@@ -89,6 +98,85 @@ export default function DriverDashboard() {
     return () => clearInterval(timer);
   }, [fetchBookings]);
 
+  const liveBooking = useMemo(
+    () => bookings.find((item) => ['driver_arrived', 'in_progress', 'ON_TRIP'].includes(item.status)),
+    [bookings]
+  );
+
+  useEffect(() => {
+    if (!liveBooking?._id) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return undefined;
+    }
+
+    const bookingId = String(liveBooking._id);
+    const socket = connectRideSocket(bookingId);
+    socketRef.current = socket;
+
+    socket.on('ride_started', (payload = {}) => {
+      if (String(payload.bookingId || '') === bookingId) {
+        navigate(`/track-booking/${bookingId}`);
+      }
+    });
+
+    socket.on('ride_ended', (payload = {}) => {
+      if (String(payload.bookingId || '') === bookingId) {
+        fetchBookings();
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [liveBooking?._id, navigate, fetchBookings]);
+
+  useEffect(() => {
+    const bookingId = liveBooking?._id;
+    const isTripLive = liveBooking && ['in_progress', 'ON_TRIP'].includes(liveBooking.status);
+
+    if (!bookingId || !isTripLive || !navigator.geolocation) {
+      if (locationTimerRef.current) {
+        clearInterval(locationTimerRef.current);
+        locationTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    const publishLocation = () => {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const payload = {
+          bookingId,
+          latitude: Number(position.coords.latitude),
+          longitude: Number(position.coords.longitude),
+        };
+
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('driver_location_update', payload);
+        }
+
+        try {
+          await api.updateRideLocation(payload);
+        } catch (_) {
+          // Fallback retry will happen in the next interval tick.
+        }
+      });
+    };
+
+    publishLocation();
+    locationTimerRef.current = setInterval(publishLocation, 5000);
+
+    return () => {
+      if (locationTimerRef.current) {
+        clearInterval(locationTimerRef.current);
+        locationTimerRef.current = null;
+      }
+    };
+  }, [liveBooking]);
+
   const stats = useMemo(() => {
     const completed = bookings.filter((b) => b.status === 'completed');
     const earnings = completed.reduce((sum, b) => sum + Number(b.invoice?.total || b.finalPrice || b.estimatedPrice || 0), 0);
@@ -118,13 +206,6 @@ export default function DriverDashboard() {
         await api.respondToBooking(bookingId, action);
       } else if (action === 'arrived') {
         await api.markDriverArrived(bookingId);
-      } else if (action === 'start') {
-        const enteredOtp = String(otpByBooking[bookingId] || '').trim();
-        if (!enteredOtp) {
-          alert('Please enter OTP shared by customer.');
-          return;
-        }
-        await api.startRideWithOTP(bookingId, enteredOtp);
       } else if (action === 'complete') {
         await api.completeRide(bookingId);
       }
@@ -138,6 +219,30 @@ export default function DriverDashboard() {
 
   const activeBookings = bookings.filter((b) => ACTIVE_STATUSES.includes(b.status));
   const completedBookings = bookings.filter((b) => b.status === 'completed');
+
+  const submitOtp = async () => {
+    if (!otpModalBooking?._id) return;
+    const value = String(otpInput || '').trim();
+
+    if (!/^\d{4}$/.test(value)) {
+      setOtpError('Please enter valid 4-digit OTP.');
+      return;
+    }
+
+    try {
+      setOtpSubmitting(true);
+      setOtpError('');
+      await api.verifyRideOtp({ bookingId: otpModalBooking._id, otp: value });
+      setOtpModalBooking(null);
+      setOtpInput('');
+      await fetchBookings();
+      navigate(`/track-booking/${otpModalBooking._id}`);
+    } catch (err) {
+      setOtpError(err?.message || 'OTP verification failed. Please retry.');
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
 
   return (
     <div className="driver-dashboard-modern">
@@ -229,21 +334,20 @@ export default function DriverDashboard() {
                       )}
 
                       {(booking.status === 'confirmed' || booking.status === 'driver_arrived') && otpShared && !otpVerified && (
-                        <>
-                          <input
-                            className="driver-input"
-                            style={{ marginBottom: 0, maxWidth: 180 }}
-                            placeholder="Enter OTP"
-                            value={otpByBooking[booking._id] || ''}
-                            onChange={(e) => setOtpByBooking((prev) => ({ ...prev, [booking._id]: e.target.value.slice(0, 6) }))}
-                          />
-                          <button disabled={busy} onClick={() => runBookingAction(booking._id, 'start')} className="driver-primary-btn">
-                            Start Ride
-                          </button>
-                        </>
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            setOtpModalBooking(booking);
+                            setOtpInput('');
+                            setOtpError('');
+                          }}
+                          className="driver-primary-btn"
+                        >
+                          Start Ride
+                        </button>
                       )}
 
-                      {booking.status === 'in_progress' && (
+                      {(booking.status === 'in_progress' || booking.status === 'ON_TRIP') && (
                         <button disabled={busy} onClick={() => runBookingAction(booking._id, 'complete')} className="driver-primary-btn">
                           Complete Ride
                         </button>
@@ -273,6 +377,43 @@ export default function DriverDashboard() {
           )}
         </div>
       </div>
+
+      {otpModalBooking && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.68)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 420, background: '#0b1220', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 14, padding: 16 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 10 }}>Start Ride with OTP</h3>
+            <p style={{ marginTop: 0, opacity: 0.85 }}>Enter the OTP shared by customer for booking #{otpModalBooking.bookingId || String(otpModalBooking._id).slice(-6)}</p>
+            <input
+              className="driver-input"
+              autoFocus
+              maxLength={4}
+              inputMode="numeric"
+              value={otpInput}
+              placeholder="4-digit OTP"
+              onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+            {otpError ? <p style={{ color: '#fda4af' }}>{otpError}</p> : null}
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button
+                type="button"
+                className="driver-secondary-btn"
+                onClick={() => {
+                  if (!otpSubmitting) {
+                    setOtpModalBooking(null);
+                    setOtpError('');
+                  }
+                }}
+                disabled={otpSubmitting}
+              >
+                Cancel
+              </button>
+              <button type="button" className="driver-primary-btn" onClick={submitOtp} disabled={otpSubmitting}>
+                {otpSubmitting ? 'Verifying...' : 'Verify & Start'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

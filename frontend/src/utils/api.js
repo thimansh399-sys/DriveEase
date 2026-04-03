@@ -316,6 +316,24 @@ export const api = {
       body: JSON.stringify({ otp })
     }).then(r => r.json()),
 
+  verifyRideOtp: async ({ bookingId, otp }) => {
+    const response = await fetch(`${API_BASE_URL}/ride/verify-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ bookingId, otp })
+    });
+
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      throw new Error(result?.error || `Request failed (${response.status})`);
+    }
+
+    return result;
+  },
+
   shareBookingOtp: (id) =>
     fetch(`${API_BASE_URL}/bookings/${id}/share-otp`, {
       method: 'PUT',
@@ -325,11 +343,28 @@ export const api = {
     }).then(r => r.json()),
 
   completeRide: (id) =>
-    fetch(`${API_BASE_URL}/bookings/${id}/complete-ride`, {
+    fetch(`${API_BASE_URL}/ride/${id}/end`, {
       method: 'PUT',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      body: JSON.stringify({})
+    }).then(r => r.json()),
+
+  updateRideLocation: (payload) =>
+    fetch(`${API_BASE_URL}/ride/location/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(payload)
+    }).then(r => r.json()),
+
+  trackRideByBooking: (bookingId) =>
+    fetch(`${API_BASE_URL}/ride/${bookingId}/track`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()),
 
   addFeedback: (id, payload) =>

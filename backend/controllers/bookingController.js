@@ -3,6 +3,7 @@ const Driver = require('../models/Driver');
 const User = require('../models/User');
 const { generateBookingId, calculateDistance, calculatePrice } = require('../utils/helpers');
 const axios = require('axios');
+const { getIO } = require('../utils/socketManager');
 
 const playNotificationSound = (soundUrl) => {
   const audio = new Audio(soundUrl);
@@ -176,7 +177,7 @@ async function findAssignableDrivers(excludeDriverId = null, pickupAddress = '')
   if (!candidates.length) return [];
 
   const candidateIds = candidates.map((d) => d._id);
-  const blockingStatuses = ['confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress'];
+  const blockingStatuses = ['confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress', 'ON_TRIP'];
   const recentPendingCutoff = new Date(Date.now() - 5 * 60 * 1000);
   const activeBookings = await Booking.find(
     {
@@ -424,6 +425,7 @@ exports.bookRide = async (req, res) => {
       }
     }
     const otp = generateRideOTP();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const booking = new Booking({
       bookingId: generateBookingId(),
@@ -445,12 +447,18 @@ exports.bookRide = async (req, res) => {
       verification: {
         otp,
         otpGenerated: new Date(),
-        otpExpiry: new Date(Date.now() + 30 * 60 * 1000),
+        otpExpiry: otpExpiresAt,
         otpSharedWithDriver: false,
         otpSharedAt: null,
         otpSharedByCustomer: false,
         otpVerified: false,
       },
+      otp,
+      otpExpiresAt,
+      otpAttempts: 0,
+      fareRatePerKm: 15,
+      distance: 0,
+      fare: 0,
     });
 
     await booking.save();
@@ -538,7 +546,8 @@ exports.getCustomerBookings = async (req, res) => {
         otpSharedWithDriver: b.verification?.otpSharedWithDriver || false,
         otpSharedAt: b.verification?.otpSharedAt || null,
         otpVerified: b.verification?.otpVerified || false,
-        otpExpiry: b.verification?.otpExpiry || null,
+        otpExpiry: b.verification?.otpExpiry || b.otpExpiresAt || null,
+        otpAttempts: b.otpAttempts || 0,
       },
       invoice: buildInvoiceSummary(b),
       rideFlow: b.rideFlow ? {
@@ -1286,21 +1295,43 @@ exports.startRideWithOTP = async (req, res) => {
       return res.status(400).json({ error: 'Customer has not shared the OTP yet' });
     }
 
-    if (booking.verification?.otp !== enteredOTP) {
+    if (Number(booking.otpAttempts || 0) >= 3) {
+      return res.status(429).json({ error: 'Too many attempts, try later' });
+    }
+
+    const bookingOtp = String(booking.otp || booking.verification?.otp || '').trim();
+    if (bookingOtp !== enteredOTP) {
+      booking.otpAttempts = Number(booking.otpAttempts || 0) + 1;
+      booking.updatedAt = new Date();
+      await booking.save();
       return res.status(400).json({ error: 'Invalid OTP' });
     }
 
-    if (booking.verification?.otpExpiry && new Date() > new Date(booking.verification.otpExpiry)) {
+    const expiresAt = booking.otpExpiresAt || booking.verification?.otpExpiry;
+    if (expiresAt && new Date() > new Date(expiresAt)) {
       return res.status(400).json({ error: 'OTP expired' });
     }
 
     booking.verification.otpVerified = true;
     booking.verification.otpVerificationTime = new Date();
+    booking.verification.otp = null;
     booking.status = 'in_progress';
+    booking.otp = null;
+    booking.otpAttempts = 0;
+    booking.otpExpiresAt = null;
+    booking.rideStartTime = new Date();
     booking.rideCompletion = booking.rideCompletion || {};
     booking.rideCompletion.actualStartTime = new Date();
     booking.updatedAt = new Date();
     await booking.save();
+
+    const io = getIO();
+    if (io) {
+      io.to(String(booking._id)).emit('ride_started', {
+        bookingId: String(booking._id),
+        status: booking.status,
+      });
+    }
 
     const driver = await Driver.findById(driverId);
     const invoice = buildInvoiceSummary(booking);
@@ -1346,7 +1377,7 @@ exports.shareRideOTP = async (req, res) => {
       return res.status(400).json({ error: 'No OTP found for this booking' });
     }
 
-    if (booking.verification?.otpExpiry && new Date() > new Date(booking.verification.otpExpiry)) {
+    if ((booking.otpExpiresAt || booking.verification?.otpExpiry) && new Date() > new Date(booking.otpExpiresAt || booking.verification?.otpExpiry)) {
       return res.status(400).json({ error: 'OTP expired. Please contact support to regenerate OTP.' });
     }
 
@@ -1487,9 +1518,15 @@ exports.bookNow = async (req, res) => {
       paymentMethod: 'upi',
       verification: {
         otp,
-        otpExpiry: new Date(Date.now() + 30 * 60 * 1000),
+        otpExpiry: new Date(Date.now() + 5 * 60 * 1000),
         otpVerified: false,
       },
+      otp,
+      otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      otpAttempts: 0,
+      fareRatePerKm: 15,
+      distance: 0,
+      fare: 0,
     });
 
     await booking.save();

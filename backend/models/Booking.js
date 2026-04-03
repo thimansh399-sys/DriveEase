@@ -48,8 +48,50 @@ const bookingSchema = new mongoose.Schema({
   finalPrice: Number,
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress', 'ON_TRIP', 'completed', 'cancelled'],
     default: 'pending'
+  },
+  otp: {
+    type: String,
+    default: null
+  },
+  otpExpiresAt: {
+    type: Date,
+    default: null
+  },
+  otpAttempts: {
+    type: Number,
+    default: 0
+  },
+  fareRatePerKm: {
+    type: Number,
+    default: 15
+  },
+  distance: {
+    type: Number,
+    default: 0
+  },
+  fare: {
+    type: Number,
+    default: 0
+  },
+  rideStartTime: {
+    type: Date,
+    default: null
+  },
+  rideEndTime: {
+    type: Date,
+    default: null
+  },
+  currentDriverLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date
+  },
+  lastDriverLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date
   },
   paymentStatus: {
     type: String,

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import api from '../utils/api';
+import { connectRideSocket } from '../utils/rideSocket';
 
 function Sidebar({ onBookRide }) {
   return (
@@ -103,6 +104,7 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -119,6 +121,36 @@ export default function CustomerDashboard() {
         .catch(() => setBookings([]));
     }
   }, []);
+
+  const activeBooking = useMemo(
+    () => bookings.find((booking) => ['driver_arrived', 'confirmed', 'in_progress', 'ON_TRIP'].includes(booking?.status)),
+    [bookings]
+  );
+
+  useEffect(() => {
+    if (!activeBooking?._id) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return undefined;
+    }
+
+    const bookingId = String(activeBooking._id);
+    const socket = connectRideSocket(bookingId);
+    socketRef.current = socket;
+
+    socket.on('ride_started', (payload = {}) => {
+      if (String(payload.bookingId || '') === bookingId) {
+        navigate(`/track-booking/${bookingId}`);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [activeBooking?._id, navigate]);
 
   return (
     <div className="dashboard">

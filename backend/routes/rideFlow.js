@@ -39,6 +39,7 @@ router.put('/:bookingId/arrived', authMiddleware, driverMiddleware, rideFlowCont
 
 // Verify OTP and start ride
 router.post('/:bookingId/verify-otp', authMiddleware, driverMiddleware, rideFlowController.verifyOTPAndStart);
+router.post('/verify-otp', authMiddleware, driverMiddleware, rideFlowController.verifyOTPAndStartByBody);
 
 // End ride
 router.put('/:bookingId/end', authMiddleware, driverMiddleware, rideFlowController.endRide);
