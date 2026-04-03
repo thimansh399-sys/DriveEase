@@ -9,7 +9,6 @@ import Navigation from './components/Navigation';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import MyBookings from './pages/MyBookings';
 import Services from './pages/Services';
@@ -21,6 +20,7 @@ import Pay from './pages/Pay';
 import DriverRegistrationFlow from './components/DriverRegistrationFlow';
 import AvailableDrivers from './pages/AvailableDrivers';
 import AdminDashboardEnhanced from './components/AdminDashboardEnhanced';
+import AdminDashboardWorkspace from './components/AdminDashboardWorkspace';
 import Drivers from './pages/Drivers';
 import Subscriptions from './pages/Plans';
 import TrackBooking from './pages/TrackBooking';
@@ -72,7 +72,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
           <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboard /> : <Navigate to="/admin-login" />} />
+          <Route path="/admin" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardWorkspace /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-dashboard" element={localStorage.getItem('adminAuth') === 'true' ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-analytics" element={localStorage.getItem('adminAuth') === 'true' ? <AdminAnalytics /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-support" element={localStorage.getItem('adminAuth') === 'true' ? <AdminSupport /> : <Navigate to="/admin-login" />} />
