@@ -27,6 +27,39 @@ export default function DriverRegistrationFlow() {
   const cityOptions = getCitiesByState(formData.state);
   const areaOptions = getAreasByCity(formData.state, formData.city);
 
+  const handleStateChange = (e) => {
+    const selectedState = e.target.value;
+    const nextCities = getCitiesByState(selectedState);
+    const nextCity = nextCities[0] || '';
+    const nextAreas = getAreasByCity(selectedState, nextCity);
+    const nextArea = nextAreas[0] || '';
+
+    setFormData((prev) => ({
+      ...prev,
+      state: selectedState,
+      city: nextCity,
+      area: nextArea
+    }));
+    setError('');
+    setSuccess('');
+    setRegistrationMeta(null);
+  };
+
+  const handleCityChange = (e) => {
+    const selectedCity = e.target.value;
+    const nextAreas = getAreasByCity(formData.state, selectedCity);
+    const nextArea = nextAreas[0] || '';
+
+    setFormData((prev) => ({
+      ...prev,
+      city: selectedCity,
+      area: nextArea
+    }));
+    setError('');
+    setSuccess('');
+    setRegistrationMeta(null);
+  };
+
 
   // Unified input handler
   const handleInputChange = (e) => {
@@ -216,14 +249,14 @@ export default function DriverRegistrationFlow() {
           <div className="form-row">
             <div className="form-group">
               <label>State *</label>
-              <select name="state" value={formData.state} onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value, city: '', area: '' }))} required>
+              <select name="state" value={formData.state} onChange={handleStateChange} required>
                 <option value="">Select State</option>
                 {STATE_OPTIONS.map((state) => <option key={state} value={state}>{state}</option>)}
               </select>
             </div>
             <div className="form-group">
               <label>City *</label>
-              <select name="city" value={formData.city} onChange={handleInputChange} required disabled={!formData.state}>
+              <select name="city" value={formData.city} onChange={handleCityChange} required disabled={!formData.state}>
                 <option value="">Select City</option>
                 {cityOptions.map((city) => <option key={city} value={city}>{city}</option>)}
               </select>
