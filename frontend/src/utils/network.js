@@ -63,6 +63,14 @@ export const buildAssetUrl = (assetPath = '') => {
 };
 
 export const getApiCandidates = () => {
+  if (isBrowser) {
+    const host = (window.location.hostname || '').toLowerCase();
+
+    if (!isLocalHostname(host)) {
+      return ['/api'];
+    }
+  }
+
   const candidates = [API_BASE_URL];
 
   if (API_BASE_URL !== '/api') {
