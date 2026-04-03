@@ -243,9 +243,18 @@ exports.verifyOTPAndLogin = async (req, res) => {
 
 exports.adminLogin = async (req, res) => {
   try {
-    const { password } = req.body;
+    const password = String(req.body?.password || '').trim();
+    const configuredPassword = String(process.env.ADMIN_PASSWORD || '').trim();
 
-    if (password !== process.env.ADMIN_PASSWORD) {
+    if (!configuredPassword) {
+      return res.status(500).json({ error: 'Admin login is not configured on server' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: 'Admin password is required' });
+    }
+
+    if (password !== configuredPassword) {
       return res.status(401).json({ error: 'Invalid admin password' });
     }
 
