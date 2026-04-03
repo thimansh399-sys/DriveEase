@@ -56,7 +56,14 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
           <Route path="/register-driver" element={<DriverRegistrationFlow />} />
           <Route path="/driver-registration" element={<DriverRegistrationFlow />} />
           <Route path="/my-bookings" element={isLoggedIn ? <MyBookings /> : <Navigate to="/login" />} />
-          <Route path="/profile" element={isLoggedIn ? <CustomerProfile /> : <Navigate to="/login" />} />
+          <Route
+            path="/profile"
+            element={
+              isLoggedIn
+                ? (userRole === 'driver' ? <DriverDashboard /> : <CustomerProfile />)
+                : <Navigate to="/login" />
+            }
+          />
           <Route path="/services" element={isLoggedIn ? <Services /> : <Navigate to="/login" />} />
           <Route path="/insurance" element={<Insurance />} />
           <Route path="/pay" element={<Pay />} />
