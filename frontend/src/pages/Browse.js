@@ -280,16 +280,17 @@ function Browse() {
           {drivers.map((driver) => (
             <div key={driver._id} className="browse-card">
               <div className="browse-card-top">
-                <img
-                  src={driver.profilePicture
-                    ? buildAssetUrl(driver.profilePicture)
-                    : driver.documents?.selfie?.file
-                      ? buildAssetUrl(driver.documents.selfie.file)
-                      : 'https://randomuser.me/api/portraits/men/31.jpg'}
-                  alt={driver.name}
-                  className="browse-card-img"
-                  onError={e => e.target.src = 'https://randomuser.me/api/portraits/men/31.jpg'}
-                />
+                {driver.profilePicture ? (
+                  <img
+                    src={buildAssetUrl(driver.profilePicture)}
+                    alt={driver.name}
+                    className="browse-card-img"
+                  />
+                ) : (
+                  <div className="browse-card-img-placeholder">
+                    <span>{driver.name?.charAt(0)}</span>
+                  </div>
+                )}
                 <div className="browse-card-header">
                   <h3 className="browse-card-name">{driver.name}</h3>
                   <span className={`browse-badge ${driver.isOnline ? 'browse-online' : 'browse-offline'}`}>
@@ -357,15 +358,17 @@ function Browse() {
             <button className="browse-modal-close" onClick={() => !bookingLoading && setBookingDriver(null)}>✕</button>
 
             <div className="browse-modal-header">
-              <img
-                src={bookingDriver.profilePicture
-                  ? buildAssetUrl(bookingDriver.profilePicture)
-                  : bookingDriver.documents?.selfie?.file
-                    ? buildAssetUrl(bookingDriver.documents.selfie.file)
-                    : 'https://randomuser.me/api/portraits/men/31.jpg'}
-                alt={bookingDriver.name}
-                className="browse-modal-img"
-              />
+              {bookingDriver.profilePicture ? (
+                <img
+                  src={buildAssetUrl(bookingDriver.profilePicture)}
+                  alt={bookingDriver.name}
+                  className="browse-modal-img"
+                />
+              ) : (
+                <div className="browse-modal-img-placeholder">
+                  <span>{bookingDriver.name?.charAt(0)}</span>
+                </div>
+              )}
               <div>
                 <h2 style={{ margin: '0 0 4px', color: '#f8fafc' }}>Book {bookingDriver.name}</h2>
                 <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>

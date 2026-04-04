@@ -409,11 +409,17 @@ export default function AvailableDriversPage() {
             
             <div className="modal-content">
               <div className="modal-header">
-                <img 
-                  src={buildAssetUrl(selectedDriver.profilePicture) || 'https://via.placeholder.com/120'} 
-                  alt={selectedDriver.name}
-                  className="modal-profile-image"
-                />
+                {selectedDriver.profilePicture ? (
+                  <img 
+                    src={buildAssetUrl(selectedDriver.profilePicture)}
+                    alt={selectedDriver.name}
+                    className="modal-profile-image"
+                  />
+                ) : (
+                  <div className="profile-placeholder-large">
+                    <span>{selectedDriver.name?.charAt(0)}</span>
+                  </div>
+                )}
                 <div className="modal-header-info">
                   <h2>{selectedDriver.name}</h2>
                   <div className="rating">

@@ -36,11 +36,7 @@ const mapDriverCard = (driver, index) => ({
   location: buildDriverLocation(driver),
   price: driver.price || 80,
   available: driver.isOnline ?? false,
-  profileImg: (() => {
-    const pic = driver.profilePicture || driver.documents?.selfie?.file;
-    if (!pic) return `https://randomuser.me/api/portraits/men/${index + 30}.jpg`;
-    return buildAssetUrl(pic);
-  })(),
+  profileImg: driver.profilePicture ? buildAssetUrl(driver.profilePicture) : null,
   phone: driver.phone || '-',
   vehicle: driver.vehicle?.model || driver.vehicle?.registrationNumber || '-',
   languages: driver.languages?.length > 0 ? driver.languages : ['Hindi'],
@@ -360,16 +356,19 @@ export default function Drivers() {
                 >
                   <motion.div className="ux-driver-top" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.08 + 0.1 }}>
                     <motion.div style={{ position: 'relative' }}>
-                      <motion.img
-                        src={driver.profileImg}
-                        alt={driver.name}
-                        className="ux-avatar"
-                        onError={(event) => {
-                          event.target.src = 'https://randomuser.me/api/portraits/men/31.jpg';
-                        }}
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ duration: 0.2 }}
-                      />
+                      {driver.profileImg ? (
+                        <motion.img
+                          src={driver.profileImg}
+                          alt={driver.name}
+                          className="ux-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      ) : (
+                        <div className="ux-avatar ux-avatar-placeholder" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold' }}>
+                          {driver.name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <motion.div
                         className="driver-status-indicator"
                         style={{

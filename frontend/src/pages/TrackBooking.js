@@ -93,9 +93,7 @@ export default function TrackBooking() {
                 name: driver.vehicle?.model || 'Vehicle not set',
                 plate: driver.vehicle?.registrationNumber || 'N/A',
               },
-              avatar: driver.profilePicture
-                ? buildAssetUrl(driver.profilePicture)
-                : 'https://randomuser.me/api/portraits/men/32.jpg',
+              avatar: driver.profilePicture ? buildAssetUrl(driver.profilePicture) : null,
               location: {
                 lat: Number(driver.currentLocation?.latitude),
                 lng: Number(driver.currentLocation?.longitude),
@@ -444,18 +442,38 @@ export default function TrackBooking() {
             }}
           >
             <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-              <motion.img
-                src={bookingData?.driver?.avatar || 'https://randomuser.me/api/portraits/lego/5.jpg'}
-                alt={bookingData?.driver?.name || 'Driver'}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '12px',
-                  objectFit: 'cover',
-                  border: '2px solid #22c55e',
-                }}
-                whileHover={{ scale: 1.05 }}
-              />
+              {bookingData?.driver?.avatar ? (
+                <motion.img
+                  src={bookingData.driver.avatar}
+                  alt={bookingData.driver.name || 'Driver'}
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '12px',
+                    objectFit: 'cover',
+                    border: '2px solid #22c55e',
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '12px',
+                    background: '#20293a',
+                    border: '2px solid #22c55e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '32px',
+                    fontWeight: 'bold',
+                    color: '#22c55e',
+                  }}
+                >
+                  {bookingData?.driver?.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '18px' }}>
                   {bookingData?.driver?.name || 'Driver will be assigned soon'}
