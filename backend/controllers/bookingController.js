@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const Driver = require('../models/Driver');
 const User = require('../models/User');
-const { generateBookingId, calculateDistance, calculatePrice } = require('../utils/helpers');
+const { generateBookingId, calculateDistance, calculateRideBill } = require('../utils/helpers');
 const axios = require('axios');
 const { getIO } = require('../utils/socketManager');
 const {
@@ -116,7 +116,9 @@ function roundAmount(value) {
 }
 
 function buildInvoiceSummary(booking) {
-  const subtotal = roundAmount(booking?.estimatedPrice || 0);
+  const fallbackBreakdown = booking?.fareBreakdown || {};
+  const lineItems = booking?.invoice?.lineItems || fallbackBreakdown;
+  const subtotal = roundAmount(booking?.estimatedPrice || lineItems?.estimatedPrice || 0);
   const insurance = roundAmount(booking?.insuranceAmount || 0);
   const total = roundAmount(booking?.finalPrice || subtotal + insurance);
   const invoiceSuffix = booking?.bookingId || String(booking?._id || '').slice(-6) || 'DRAFT';
@@ -130,6 +132,7 @@ function buildInvoiceSummary(booking) {
     paymentStatus: booking?.paymentStatus || 'pending',
     paymentMethod: booking?.paymentMethod || 'upi',
     issuedAt: booking?.updatedAt || booking?.createdAt || new Date(),
+    lineItems,
   };
 }
 
@@ -495,7 +498,9 @@ exports.createBooking = async (req, res) => {
       numberOfDays,
       driverId,
       insuranceOpted,
-      insuranceType
+      insuranceType,
+      waitingMinutes = 0,
+      overtimeHours = 0,
     } = req.body;
 
     const distance = calculateDistance(
@@ -506,7 +511,17 @@ exports.createBooking = async (req, res) => {
     );
 
     const estimatedHours = numberOfDays * 8; // Assuming 8 hours per day
-    const estimatedPrice = calculatePrice(distance, estimatedHours, bookingType);
+    const insuranceAmount = insuranceOpted ? (insuranceType === 'per_ride' ? 50 : 200) : 0;
+    const bill = calculateRideBill({
+      bookingType,
+      distance,
+      hours: estimatedHours,
+      days: numberOfDays,
+      bookingTime: startDate,
+      waitingMinutes,
+      overtimeHours,
+      insuranceAmount,
+    });
 
     const booking = new Booking({
       bookingId: generateBookingId(),
@@ -519,14 +534,13 @@ exports.createBooking = async (req, res) => {
       endDate: new Date(endDate),
       numberOfDays,
       estimatedDistance: distance,
-      estimatedPrice,
-      finalPrice: insuranceOpted 
-        ? estimatedPrice + (insuranceType === 'per_ride' ? 50 : 200)
-        : estimatedPrice,
+      estimatedPrice: bill.estimatedPrice,
+      finalPrice: bill.finalPrice,
       status: 'pending',
       insuranceOpted,
-      insuranceAmount: insuranceOpted ? (insuranceType === 'per_ride' ? 50 : 200) : 0,
-      insuranceType: insuranceOpted ? insuranceType : 'none'
+      insuranceAmount,
+      insuranceType: insuranceOpted ? insuranceType : 'none',
+      fareBreakdown: bill.breakdown,
     });
 
     await booking.save();
@@ -606,7 +620,11 @@ exports.bookRide = async (req, res) => {
       preferredDriverId,
       insuranceOpted = false,
       insuranceAmount = 0,
-      paymentMethod = 'upi'
+      paymentMethod = 'upi',
+      waitingMinutes = 0,
+      overtimeHours = 0,
+      numberOfDays = 1,
+      totalHours,
     } = req.body;
 
     if (!hasValidLocation(pickupLocation) || !hasValidLocation(dropLocation)) {
@@ -624,10 +642,20 @@ exports.bookRide = async (req, res) => {
     const estimatedDistance = hasPickupCoords && hasDropCoords
       ? calculateDistance(pickupLat, pickupLng, dropLat, dropLng)
       : 0;
-    const estimatedHours = rideType === 'hourly' ? 4 : rideType === 'outstation' ? 10 : 8;
-    const estimatedPrice = roundAmount(calculatePrice(estimatedDistance, estimatedHours, rideType));
+    const estimatedHours = Number(totalHours) || (rideType === 'hourly' ? 4 : rideType === 'outstation' ? 10 : 8);
     const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
-    const finalPrice = roundAmount(estimatedPrice + normalizedInsuranceAmount);
+    const bill = calculateRideBill({
+      bookingType: rideType,
+      distance: estimatedDistance,
+      hours: estimatedHours,
+      days: Number(numberOfDays) || 1,
+      bookingTime: buildStartDate(date, time),
+      waitingMinutes,
+      overtimeHours,
+      insuranceAmount: normalizedInsuranceAmount,
+    });
+    const estimatedPrice = bill.estimatedPrice;
+    const finalPrice = bill.finalPrice;
     const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
     const assignmentNow = new Date();
     const assignmentExpiry = new Date(assignmentNow.getTime() + assignmentTimeoutMs);
@@ -688,6 +716,7 @@ exports.bookRide = async (req, res) => {
       insuranceOpted,
       insuranceAmount: normalizedInsuranceAmount,
       insuranceType: insuranceOpted ? 'per_ride' : 'none',
+      fareBreakdown: bill.breakdown,
       verification: {
         otp,
         otpGenerated: new Date(),
@@ -1105,7 +1134,16 @@ exports.quickBook = async (req, res) => {
 
     const bookingId = generateBookingId();
     const days = parseInt(numberOfDays) || 1;
-    const estimatedPrice = calculatePrice(0, days * 8, bookingType || 'daily');
+    const quickBookType = bookingType || 'daily';
+    const quickBill = calculateRideBill({
+      bookingType: quickBookType,
+      distance: 0,
+      hours: days * 8,
+      days,
+      bookingTime: bookingDate,
+      insuranceAmount: 0,
+    });
+    const estimatedPrice = quickBill.estimatedPrice;
 
     const booking = new Booking({
       bookingId,
@@ -1117,10 +1155,11 @@ exports.quickBook = async (req, res) => {
       startDate: new Date(bookingDate),
       numberOfDays: days,
       estimatedPrice,
-      finalPrice: estimatedPrice,
+      finalPrice: quickBill.finalPrice,
       status: 'pending',
       paymentStatus: 'completed',
       paymentMethod: 'upi',
+      fareBreakdown: quickBill.breakdown,
       notes: notes || ''
     });
 
@@ -1792,6 +1831,14 @@ exports.bookNow = async (req, res) => {
       rideType = 'daily',
       pickupLatitude,
       pickupLongitude,
+      dropLatitude,
+      dropLongitude,
+      waitingMinutes = 0,
+      overtimeHours = 0,
+      numberOfDays = 1,
+      totalHours,
+      insuranceOpted = false,
+      insuranceAmount = 0,
     } = req.body;
 
     if (!pickup || !drop) {
@@ -1800,7 +1847,10 @@ exports.bookNow = async (req, res) => {
 
     const pickupLat = Number(pickupLatitude);
     const pickupLng = Number(pickupLongitude);
+    const dropLat = Number(dropLatitude);
+    const dropLng = Number(dropLongitude);
     const hasPickupCoords = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+    const hasDropCoords = Number.isFinite(dropLat) && Number.isFinite(dropLng);
 
     if (!hasPickupCoords) {
       return res.status(400).json({
@@ -1820,6 +1870,21 @@ exports.bookNow = async (req, res) => {
     const bookingId = generateBookingId();
     const pickupCity = extractCityFromAddress(pickup);
     const dropCity = extractCityFromAddress(drop);
+    const estimatedDistance = hasPickupCoords && hasDropCoords
+      ? Number(calculateDistance(pickupLat, pickupLng, dropLat, dropLng))
+      : 0;
+    const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
+    const estimatedHours = Number(totalHours) || (normalizedRideType === 'hourly' ? 4 : normalizedRideType === 'outstation' ? 10 : 8);
+    const bill = calculateRideBill({
+      bookingType: normalizedRideType,
+      distance: estimatedDistance,
+      hours: estimatedHours,
+      days: Number(numberOfDays) || 1,
+      bookingTime: new Date(),
+      waitingMinutes,
+      overtimeHours,
+      insuranceAmount: normalizedInsuranceAmount,
+    });
 
     const availableDrivers = await findAssignableDrivers(null, pickup);
     const driversByDistance = availableDrivers
@@ -1848,12 +1913,23 @@ exports.bookNow = async (req, res) => {
       customerId,
       driverId: assignedDriver?._id || null,
       pickupLocation: { address: pickup, city: pickupCity, latitude: pickupLat, longitude: pickupLng },
-      dropLocation: { address: drop, city: dropCity },
+      dropLocation: {
+        address: drop,
+        city: dropCity,
+        ...(hasDropCoords ? { latitude: dropLat, longitude: dropLng } : {}),
+      },
       bookingType: normalizedRideType,
       startDate: new Date(),
+      estimatedDistance,
+      estimatedPrice: bill.estimatedPrice,
+      finalPrice: bill.finalPrice,
       status: assignedDriver ? 'driver_assigned' : 'pending',
       paymentStatus: 'pending',
       paymentMethod: 'upi',
+      insuranceOpted,
+      insuranceAmount: normalizedInsuranceAmount,
+      insuranceType: insuranceOpted ? 'per_ride' : 'none',
+      fareBreakdown: bill.breakdown,
       verification: {
         otp,
         otpExpiry: new Date(Date.now() + 5 * 60 * 1000),
@@ -1909,6 +1985,10 @@ exports.bookNow = async (req, res) => {
         rideType: normalizedRideType,
         status: booking.status,
         otp,
+        estimatedDistance,
+        estimatedPrice: bill.estimatedPrice,
+        finalPrice: bill.finalPrice,
+        invoice: buildInvoiceSummary(booking),
         driver: assignedDriver ? buildDriverSummary(assignedDriver) : null,
         nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
       },

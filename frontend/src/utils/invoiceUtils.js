@@ -13,6 +13,12 @@ export const getInvoiceHtml = (booking, role = 'customer') => {
   const dateStr = new Date(booking.updatedAt || booking.startDate || booking.createdAt || Date.now()).toLocaleString('en-IN');
   const support = '+91-7836887228';
   const roleLine = role === 'driver' ? 'Driver earnings statement' : 'Customer trip invoice';
+  const breakdown = booking.invoice?.lineItems || booking.fareBreakdown || {};
+  const baseFare = Number(breakdown?.baseFare || subtotal).toFixed(2);
+  const nightCharge = Number(breakdown?.addOns?.nightCharge || 0).toFixed(2);
+  const waitingCharge = Number(breakdown?.addOns?.waitingCharge || 0).toFixed(2);
+  const overtimeCharge = Number(breakdown?.addOns?.overtimeCharge || 0).toFixed(2);
+  const tariffRule = breakdown?.pricingRule || 'Ride charge';
 
   return `<!doctype html>
 <html>
@@ -67,7 +73,11 @@ export const getInvoiceHtml = (booking, role = 'customer') => {
     </div>
 
     <div class="section">
-      <div class="row"><span>Ride Charge</span><span>INR ${subtotal}</span></div>
+      <div class="row"><span>${tariffRule}</span><span>INR ${baseFare}</span></div>
+      <div class="row"><span>Night Charge (10PM-6AM)</span><span>INR ${nightCharge}</span></div>
+      <div class="row"><span>Waiting Charge</span><span>INR ${waitingCharge}</span></div>
+      <div class="row"><span>Overtime Charge</span><span>INR ${overtimeCharge}</span></div>
+      <div class="row"><span>Ride Subtotal</span><span>INR ${subtotal}</span></div>
       <div class="row"><span>Insurance Add-on</span><span>INR ${insurance}</span></div>
       <div class="row" style="border-top:2px solid #0f172a;padding-top:10px;margin-top:10px">
         <span class="value">Total Amount</span>

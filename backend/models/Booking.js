@@ -75,6 +75,10 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  fareBreakdown: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   rideStartTime: {
     type: Date,
     default: null
