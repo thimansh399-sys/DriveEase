@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AvailableDrivers.css';
-import { buildApiUrl } from '../utils/network';
+import { buildApiUrl, buildAssetUrl } from '../utils/network';
 
 export default function AvailableDriversPage() {
   const navigate = useNavigate();
@@ -313,7 +313,7 @@ export default function AvailableDriversPage() {
                 <div className="driver-profile">
                   <div className="profile-image">
                     {driver.profilePicture ? (
-                      <img src={driver.profilePicture} alt={driver.name} />
+                      <img src={buildAssetUrl(driver.profilePicture)} alt={driver.name} />
                     ) : (
                       <div className="profile-placeholder">
                         <span>{driver.name?.charAt(0)}</span>
@@ -410,7 +410,7 @@ export default function AvailableDriversPage() {
             <div className="modal-content">
               <div className="modal-header">
                 <img 
-                  src={selectedDriver.profilePicture || 'https://via.placeholder.com/120'} 
+                  src={buildAssetUrl(selectedDriver.profilePicture) || 'https://via.placeholder.com/120'} 
                   alt={selectedDriver.name}
                   className="modal-profile-image"
                 />

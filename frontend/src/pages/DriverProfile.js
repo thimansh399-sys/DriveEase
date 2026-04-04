@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { buildAssetUrl } from '../utils/network';
 import '../styles/DriverProfile.css';
 
 export default function DriverProfile() {
@@ -118,7 +119,7 @@ export default function DriverProfile() {
           <div className="profile-header">
             <div className="profile-photo-wrapper">
               {currentData.profilePicture ? (
-                <img src={currentData.profilePicture} alt={currentData.name} className="profile-photo" />
+                <img src={buildAssetUrl(currentData.profilePicture)} alt={currentData.name} className="profile-photo" />
               ) : (
                 <div className="profile-photo-placeholder">
                   <span>📷</span>
