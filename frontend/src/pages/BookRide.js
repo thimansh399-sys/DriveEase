@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/BookRide.css';
 import api from '../utils/api';
@@ -31,6 +31,7 @@ export default function BookRide() {
   const [trackedBooking, setTrackedBooking] = useState(null);
   const [trackerMessage, setTrackerMessage] = useState('');
   const [shareOtpLoading, setShareOtpLoading] = useState(false);
+  const shouldAutoDetectPickupRef = useRef(true);
 
   const mapQuery = form.pickup && form.drop
     ? `${form.pickup} to ${form.drop}`
@@ -51,6 +52,8 @@ export default function BookRide() {
     const search = new URLSearchParams(location.search || '');
     const draftPickup = search.get('pickup') || '';
     const draftDrop = search.get('drop') || '';
+    const pickupLatFromQuery = Number(search.get('pickupLat'));
+    const pickupLngFromQuery = Number(search.get('pickupLng'));
     const pendingDraftRaw = localStorage.getItem('pendingRideDraft');
     let pendingDraft = null;
 
@@ -65,6 +68,19 @@ export default function BookRide() {
 
     const seedPickup = draftPickup || pendingDraft?.pickup || '';
     const seedDrop = draftDrop || pendingDraft?.drop || '';
+    const pendingPickupLat = Number(pendingDraft?.pickupPlace?.lat);
+    const pendingPickupLng = Number(pendingDraft?.pickupPlace?.lng);
+
+    const finalPickupLat = Number.isFinite(pickupLatFromQuery) ? pickupLatFromQuery : pendingPickupLat;
+    const finalPickupLng = Number.isFinite(pickupLngFromQuery) ? pickupLngFromQuery : pendingPickupLng;
+
+    if (Number.isFinite(finalPickupLat) && Number.isFinite(finalPickupLng)) {
+      shouldAutoDetectPickupRef.current = false;
+      setPickupCoords({
+        latitude: finalPickupLat,
+        longitude: finalPickupLng,
+      });
+    }
 
     if (!stored) {
       if (seedPickup || seedDrop) {
@@ -114,7 +130,9 @@ export default function BookRide() {
   };
 
   useEffect(() => {
-    requestPickupGeolocation();
+    if (shouldAutoDetectPickupRef.current) {
+      requestPickupGeolocation();
+    }
   }, []);
 
   const handleChange = (e) => {

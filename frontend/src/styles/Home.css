@@ -1409,6 +1409,13 @@
   transition: background 0.15s;
 }
 
+.home-suggestions .home-suggestion-loading {
+  cursor: default;
+  color: #86efac;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
 .home-suggestions li:hover {
   background: rgba(34, 197, 94, 0.1);
   color: #fff;

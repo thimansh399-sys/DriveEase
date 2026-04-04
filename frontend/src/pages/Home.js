@@ -5,17 +5,91 @@ import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
 import '../styles/Home.css';
 
-function LocationInput({ value, onChange, placeholder, icon }) {
+function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const wrapRef = useRef(null);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
-    const filtered = filterIndiaLocations(query, 8);
-    setSuggestions(filtered);
-    setOpen(filtered.length > 0);
+    setQuery(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    const normalized = String(query || '').trim();
+    if (normalized.length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
+          label: location,
+          lat: null,
+          lng: null,
+          source: 'fallback'
+        }));
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&addressdetails=1&limit=8&q=${encodeURIComponent(normalized)}`,
+          {
+            signal: controller.signal,
+            headers: {
+              Accept: 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Unable to fetch live locations');
+        }
+
+        const data = await response.json();
+        const live = (Array.isArray(data) ? data : []).map((item) => ({
+          label: item.display_name,
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+          source: 'live'
+        }));
+
+        const merged = [...live];
+        fallback.forEach((entry) => {
+          if (!merged.some((existing) => existing.label === entry.label)) {
+            merged.push(entry);
+          }
+        });
+
+        if (!mounted) return;
+        setSuggestions(merged.slice(0, 8));
+        setOpen(merged.length > 0);
+      } catch (_) {
+        if (!mounted || controller.signal.aborted) return;
+        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
+          label: location,
+          lat: null,
+          lng: null,
+          source: 'fallback'
+        }));
+        setSuggestions(fallback);
+        setOpen(fallback.length > 0);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }, 240);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query]);
 
   useEffect(() => {
@@ -25,8 +99,11 @@ function LocationInput({ value, onChange, placeholder, icon }) {
   }, []);
 
   const handleSelect = (loc) => {
-    setQuery(loc);
-    onChange(loc);
+    setQuery(loc.label);
+    onChange(loc.label);
+    if (onSelect) {
+      onSelect({ address: loc.label, lat: loc.lat, lng: loc.lng, source: loc.source });
+    }
     setOpen(false);
   };
 
@@ -38,13 +115,25 @@ function LocationInput({ value, onChange, placeholder, icon }) {
           type="text"
           placeholder={placeholder}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); }}
+          onChange={(e) => {
+            const next = e.target.value;
+            setQuery(next);
+            onChange(next);
+            if (onSelect) onSelect(null);
+          }}
           className="home-location-input"
           onFocus={() => query.length >= 2 && setOpen(suggestions.length > 0)}
           autoComplete="off"
         />
         {query && (
-          <button className="home-input-clear" onClick={() => { setQuery(''); onChange(''); setOpen(false); }}>✕</button>
+          <button className="home-input-clear" onClick={() => {
+            setQuery('');
+            onChange('');
+            if (onSelect) onSelect(null);
+            setOpen(false);
+          }}>
+            ✕
+          </button>
         )}
       </div>
       <AnimatePresence>
@@ -57,10 +146,11 @@ function LocationInput({ value, onChange, placeholder, icon }) {
             transition={{ duration: 0.15 }}
           >
             {suggestions.map((loc) => (
-              <li key={loc} onMouseDown={() => handleSelect(loc)}>
-                <span className="home-suggestion-icon">📍</span> {loc}
+              <li key={`${loc.label}-${loc.lat || 'na'}-${loc.lng || 'na'}`} onMouseDown={() => handleSelect(loc)}>
+                <span className="home-suggestion-icon">📍</span> {loc.label}
               </li>
             ))}
+            {loading && <li className="home-suggestion-loading">Searching exact locations...</li>}
           </motion.ul>
         )}
       </AnimatePresence>
@@ -72,6 +162,8 @@ function Home() {
   const navigate = useNavigate();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
+  const [pickupPlace, setPickupPlace] = useState(null);
+  const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
 
   const features = [
@@ -105,7 +197,22 @@ function Home() {
       return;
     }
     setInputError('');
-    const target = `/book-ride?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}`;
+    const search = new URLSearchParams({
+      pickup,
+      drop
+    });
+
+    if (Number.isFinite(Number(pickupPlace?.lat)) && Number.isFinite(Number(pickupPlace?.lng))) {
+      search.set('pickupLat', String(pickupPlace.lat));
+      search.set('pickupLng', String(pickupPlace.lng));
+    }
+
+    if (Number.isFinite(Number(dropPlace?.lat)) && Number.isFinite(Number(dropPlace?.lng))) {
+      search.set('dropLat', String(dropPlace.lat));
+      search.set('dropLng', String(dropPlace.lng));
+    }
+
+    const target = `/book-ride?${search.toString()}`;
     const hasToken = Boolean(localStorage.getItem('token'));
 
     if (hasToken) {
@@ -113,7 +220,7 @@ function Home() {
       return;
     }
 
-    localStorage.setItem('pendingRideDraft', JSON.stringify({ pickup, drop }));
+    localStorage.setItem('pendingRideDraft', JSON.stringify({ pickup, drop, pickupPlace, dropPlace }));
     navigate('/login');
   };
 
@@ -160,6 +267,7 @@ function Home() {
             <LocationInput
               value={pickup}
               onChange={(v) => { setPickup(v); setInputError(''); }}
+              onSelect={setPickupPlace}
               placeholder="Pickup Location"
               icon="🟢"
             />
@@ -167,6 +275,7 @@ function Home() {
             <LocationInput
               value={drop}
               onChange={(v) => { setDrop(v); setInputError(''); }}
+              onSelect={setDropPlace}
               placeholder="Drop Location"
               icon="🔴"
             />
