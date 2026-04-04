@@ -1,11 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
+import '../styles/CustomerProfile.css';
 
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'driver_assigned', 'driver_arrived', 'otp_verified', 'in_progress'];
 
+const formatStatus = (status = '') => status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
+const formatAmount = (value) => {
+  const amount = Number(value || 0);
+  return `INR ${amount.toLocaleString('en-IN')}`;
+};
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
 function CustomerProfile() {
   const [profile, setProfile] = useState(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -74,78 +94,246 @@ function CustomerProfile() {
     .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
     .slice(0, 10);
 
+  const totalSpent = bookings.reduce((sum, booking) => {
+    const value = Number(booking.finalPrice || booking.estimatedPrice || 0);
+    return Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+
+  const userRating = Number(profile?.rating || profile?.averageRating || 0);
+  const normalizedRating = userRating > 0 ? userRating.toFixed(1) : 'N/A';
+  const userInitial = (form.name || profile?.name || 'U').charAt(0).toUpperCase();
+
   return (
-    <div className="customer-profile-page" style={{ maxWidth: 900, margin: '40px auto' }}>
-      <h2>My Profile, Active Ride & Booking History</h2>
-      {loading ? <div>Loading...</div> : (
-        <>
-          {message && (
-            <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: '#ecfeff', color: '#155e75' }}>
-              {message}
+    <div className="customer-profile-page">
+      <div className="customer-profile-shell">
+        <header className="customer-profile-header customer-profile-card customer-fade-in customer-fade-delay-1">
+          <div className="customer-profile-hero-main">
+            <div className="customer-avatar">{userInitial}</div>
+            <div>
+              <p className="customer-profile-kicker">Account Hub</p>
+              <h1>{form.name || profile?.name || 'Customer'}</h1>
+              <p className="customer-profile-subtitle">{profile?.phone || '-'} • {form.email || 'No email added yet'}</p>
+              <button
+                type="button"
+                className="customer-edit-toggle"
+                onClick={() => setIsEditingProfile((prev) => !prev)}
+              >
+                {isEditingProfile ? 'Close Edit' : 'Edit Profile'}
+              </button>
             </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 10, marginBottom: 20, background: '#fff', padding: 16, borderRadius: 10 }}>
-            <h3 style={{ margin: 0 }}>Personal Details</h3>
-            <input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Name" required />
-            <input value={profile?.phone || ''} placeholder="Phone" disabled />
-            <input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Email" />
-            <input value={form.address} onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))} placeholder="Address" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              <input value={form.city} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" />
-              <input value={form.state} onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))} placeholder="State" />
-              <input value={form.pincode} onChange={(e) => setForm((prev) => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))} placeholder="Pincode" />
-            </div>
-            <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Profile'}</button>
-          </form>
-
-          <div style={{ marginBottom: 20, background: '#fff', padding: 16, borderRadius: 10 }}>
-            <h3 style={{ marginTop: 0 }}>Active Ride</h3>
-            {activeBooking ? (
-              <>
-                <p style={{ margin: '0 0 6px' }}><strong>ID:</strong> {activeBooking.bookingId || activeBooking._id}</p>
-                <p style={{ margin: '0 0 6px' }}><strong>Status:</strong> {activeBooking.status}</p>
-                <p style={{ margin: '0 0 6px' }}><strong>Pickup:</strong> {activeBooking.pickupLocation?.address || 'N/A'}</p>
-                <p style={{ margin: 0 }}><strong>Drop:</strong> {activeBooking.dropLocation?.address || 'N/A'}</p>
-                <div style={{ marginTop: 10 }}>
-                  <Link to={`/track-booking/${activeBooking._id}`}>Track Active Ride</Link>
-                </div>
-              </>
-            ) : (
-              <p style={{ margin: 0 }}>No active ride at the moment.</p>
-            )}
           </div>
+          <div className="customer-profile-stats">
+            <div className="customer-profile-stat-card">
+              <span className="customer-profile-stat-label">Total Rides</span>
+              <strong>{bookings.length}</strong>
+            </div>
+            <div className="customer-profile-stat-card">
+              <span className="customer-profile-stat-label">Total Spent</span>
+              <strong>{formatAmount(totalSpent)}</strong>
+            </div>
+            <div className="customer-profile-stat-card">
+              <span className="customer-profile-stat-label">Rating</span>
+              <strong>{normalizedRating}</strong>
+            </div>
+          </div>
+        </header>
 
-          {recentBookings.length === 0 ? <div>No bookings found.</div> : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
-              <thead>
-                <tr style={{ background: '#f3f4f6' }}>
-                  <th style={{ padding: 12 }}>Booking ID</th>
-                  <th style={{ padding: 12 }}>Pickup</th>
-                  <th style={{ padding: 12 }}>Drop</th>
-                  <th style={{ padding: 12 }}>Driver</th>
-                  <th style={{ padding: 12 }}>Status</th>
-                  <th style={{ padding: 12 }}>Amount</th>
-                  <th style={{ padding: 12 }}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBookings.map((b) => (
-                  <tr key={b._id}>
-                    <td style={{ padding: 12 }}>{b.bookingId || b._id}</td>
-                    <td style={{ padding: 12 }}>{b.pickupLocation?.address}</td>
-                    <td style={{ padding: 12 }}>{b.dropLocation?.address}</td>
-                    <td style={{ padding: 12 }}>{b.driver?.name || b.driverId?.name || 'Unassigned'}</td>
-                    <td style={{ padding: 12 }}>{b.status}</td>
-                    <td style={{ padding: 12 }}>₹{b.finalPrice || b.estimatedPrice || 0}</td>
-                    <td style={{ padding: 12 }}>{b.startDate ? new Date(b.startDate).toLocaleDateString() : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </>
-      )}
+        {loading ? <div className="customer-profile-loading">Loading your profile...</div> : (
+          <>
+            {message && <div className="customer-profile-banner">{message}</div>}
+
+            <div className="customer-profile-grid">
+              {isEditingProfile && (
+                <section className="customer-profile-card customer-fade-in customer-fade-delay-2">
+                <div className="customer-card-header">
+                  <h2>Personal Details</h2>
+                  <span>Keep contact information up to date</span>
+                </div>
+
+                <form onSubmit={handleSubmit} className="customer-profile-form">
+                  <div className="customer-form-group customer-form-group-full">
+                    <label htmlFor="customerName">Name</label>
+                    <input
+                      id="customerName"
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter full name"
+                      required
+                    />
+                  </div>
+
+                  <div className="customer-form-group">
+                    <label htmlFor="customerPhone">Phone</label>
+                    <input id="customerPhone" value={profile?.phone || ''} placeholder="Phone" disabled />
+                  </div>
+
+                  <div className="customer-form-group">
+                    <label htmlFor="customerEmail">Email</label>
+                    <input
+                      id="customerEmail"
+                      value={form.email}
+                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder="Email"
+                    />
+                  </div>
+
+                  <div className="customer-form-group customer-form-group-full">
+                    <label htmlFor="customerAddress">Address</label>
+                    <input
+                      id="customerAddress"
+                      value={form.address}
+                      onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+                      placeholder="Address"
+                    />
+                  </div>
+
+                  <div className="customer-form-group">
+                    <label htmlFor="customerCity">City</label>
+                    <input
+                      id="customerCity"
+                      value={form.city}
+                      onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
+                      placeholder="City"
+                    />
+                  </div>
+
+                  <div className="customer-form-group">
+                    <label htmlFor="customerState">State</label>
+                    <input
+                      id="customerState"
+                      value={form.state}
+                      onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))}
+                      placeholder="State"
+                    />
+                  </div>
+
+                  <div className="customer-form-group">
+                    <label htmlFor="customerPincode">Pincode</label>
+                    <input
+                      id="customerPincode"
+                      value={form.pincode}
+                      onChange={(e) => setForm((prev) => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                      placeholder="Pincode"
+                    />
+                  </div>
+
+                  <button className="customer-profile-save-btn" type="submit" disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Profile'}
+                  </button>
+                </form>
+                </section>
+              )}
+
+              <aside className="customer-profile-card customer-fade-in customer-fade-delay-3">
+                <div className="customer-card-header">
+                  <h2>Active Ride</h2>
+                  <span>Real-time snapshot of your latest booking</span>
+                </div>
+
+                {activeBooking ? (
+                  <div className="customer-active-ride">
+                    <div className="customer-active-row">
+                      <span>Booking ID</span>
+                      <strong>{activeBooking.bookingId || activeBooking._id}</strong>
+                    </div>
+                    <div className="customer-active-row">
+                      <span>Status</span>
+                      <strong className="status-pill">{formatStatus(activeBooking.status)}</strong>
+                    </div>
+                    <div className="customer-active-block">
+                      <span>Pickup</span>
+                      <p>{activeBooking.pickupLocation?.address || 'N/A'}</p>
+                    </div>
+                    <div className="customer-active-block">
+                      <span>Drop</span>
+                      <p>{activeBooking.dropLocation?.address || 'N/A'}</p>
+                    </div>
+                    <Link className="customer-track-link" to={`/track-booking/${activeBooking._id}`}>
+                      Track Active Ride
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="customer-empty-state">
+                    <h3>No active ride right now</h3>
+                    <p>Your next booking will show up here with tracking details.</p>
+                  </div>
+                )}
+              </aside>
+            </div>
+
+            <section className="customer-profile-card customer-bookings-card customer-fade-in customer-fade-delay-4">
+              <div className="customer-card-header">
+                <h2>Recent Bookings</h2>
+                <span>Showing latest {recentBookings.length} rides</span>
+              </div>
+
+              {recentBookings.length === 0 ? (
+                <div className="customer-empty-state customer-empty-table">
+                  <h3>No bookings found</h3>
+                  <p>Book your first ride to start building history.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="customer-bookings-table-wrap">
+                    <table className="customer-bookings-table">
+                      <thead>
+                        <tr>
+                          <th>Booking ID</th>
+                          <th>Pickup</th>
+                          <th>Drop</th>
+                          <th>Driver</th>
+                          <th>Status</th>
+                          <th>Amount</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentBookings.map((booking) => (
+                          <tr key={booking._id}>
+                            <td>{booking.bookingId || booking._id}</td>
+                            <td>{booking.pickupLocation?.address || '-'}</td>
+                            <td>{booking.dropLocation?.address || '-'}</td>
+                            <td>{booking.driver?.name || booking.driverId?.name || 'Unassigned'}</td>
+                            <td>
+                              <span className="status-pill status-pill-muted">{formatStatus(booking.status)}</span>
+                            </td>
+                            <td>{formatAmount(booking.finalPrice || booking.estimatedPrice)}</td>
+                            <td>{formatDate(booking.startDate || booking.createdAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="customer-bookings-mobile-list">
+                    {recentBookings.map((booking) => (
+                      <article className="customer-booking-mobile-card" key={`mobile-${booking._id}`}>
+                        <div className="customer-booking-mobile-head">
+                          <strong>{booking.bookingId || booking._id}</strong>
+                          <span className="status-pill status-pill-muted">{formatStatus(booking.status)}</span>
+                        </div>
+                        <div className="customer-booking-mobile-row">
+                          <span>Pickup</span>
+                          <p>{booking.pickupLocation?.address || '-'}</p>
+                        </div>
+                        <div className="customer-booking-mobile-row">
+                          <span>Drop</span>
+                          <p>{booking.dropLocation?.address || '-'}</p>
+                        </div>
+                        <div className="customer-booking-mobile-meta">
+                          <span>{booking.driver?.name || booking.driverId?.name || 'Unassigned'}</span>
+                          <span>{formatAmount(booking.finalPrice || booking.estimatedPrice)}</span>
+                          <span>{formatDate(booking.startDate || booking.createdAt)}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          </>
+        )}
+      </div>
     </div>
   );
 }
