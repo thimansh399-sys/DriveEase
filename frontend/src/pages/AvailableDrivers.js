@@ -313,7 +313,13 @@ export default function AvailableDriversPage() {
                 <div className="driver-profile">
                   <div className="profile-image">
                     {driver.profilePicture ? (
-                      <img src={buildAssetUrl(driver.profilePicture)} alt={driver.name} />
+                      <img
+                        src={buildAssetUrl(driver.profilePicture)}
+                        alt={driver.name}
+                        onError={(event) => {
+                          event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                        }}
+                      />
                     ) : (
                       <div className="profile-placeholder">
                         <span>{driver.name?.charAt(0)}</span>
@@ -414,6 +420,9 @@ export default function AvailableDriversPage() {
                     src={buildAssetUrl(selectedDriver.profilePicture)}
                     alt={selectedDriver.name}
                     className="modal-profile-image"
+                    onError={(event) => {
+                      event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                    }}
                   />
                 ) : (
                   <div className="profile-placeholder-large">

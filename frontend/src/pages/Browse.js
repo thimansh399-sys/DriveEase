@@ -285,6 +285,9 @@ function Browse() {
                     src={buildAssetUrl(driver.profilePicture)}
                     alt={driver.name}
                     className="browse-card-img"
+                    onError={(event) => {
+                      event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                    }}
                   />
                 ) : (
                   <div className="browse-card-img-placeholder">
@@ -363,6 +366,9 @@ function Browse() {
                   src={buildAssetUrl(bookingDriver.profilePicture)}
                   alt={bookingDriver.name}
                   className="browse-modal-img"
+                  onError={(event) => {
+                    event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                  }}
                 />
               ) : (
                 <div className="browse-modal-img-placeholder">

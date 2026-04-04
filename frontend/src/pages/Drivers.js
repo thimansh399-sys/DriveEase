@@ -361,6 +361,9 @@ export default function Drivers() {
                           src={driver.profileImg}
                           alt={driver.name}
                           className="ux-avatar"
+                          onError={(event) => {
+                            event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                          }}
                           whileHover={{ scale: 1.1 }}
                           transition={{ duration: 0.2 }}
                         />

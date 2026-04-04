@@ -453,6 +453,9 @@ export default function TrackBooking() {
                     objectFit: 'cover',
                     border: '2px solid #22c55e',
                   }}
+                  onError={(event) => {
+                    event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                  }}
                   whileHover={{ scale: 1.05 }}
                 />
               ) : (
