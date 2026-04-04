@@ -3,22 +3,23 @@ export const playNotificationSound = async () => {
   try {
     // Try to use Web Audio API for notification sound
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    // Create pleasant notification beep (two tones)
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    // Create pleasant notification beep (two tones) with separate oscillators.
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1);
+    const toneOne = audioContext.createOscillator();
+    toneOne.connect(gainNode);
+    toneOne.frequency.setValueAtTime(800, audioContext.currentTime);
+    toneOne.start(audioContext.currentTime);
+    toneOne.stop(audioContext.currentTime + 0.1);
 
     // Second tone
-    oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.15);
-    oscillator.start(audioContext.currentTime + 0.15);
-    oscillator.stop(audioContext.currentTime + 0.25);
+    const toneTwo = audioContext.createOscillator();
+    toneTwo.connect(gainNode);
+    toneTwo.frequency.setValueAtTime(1000, audioContext.currentTime + 0.15);
+    toneTwo.start(audioContext.currentTime + 0.15);
+    toneTwo.stop(audioContext.currentTime + 0.25);
   } catch (error) {
     console.warn('Could not play notification sound:', error);
   }
