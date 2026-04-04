@@ -443,6 +443,21 @@ export const api = {
       body: JSON.stringify({ status })
     }).then(r => r.json()),
 
+  getAssignmentSettings: () =>
+    fetch(`${API_BASE_URL}/admin/settings/assignment`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+    }).then(r => r.json()),
+
+  updateAssignmentSettings: (payload) =>
+    fetch(`${API_BASE_URL}/admin/settings/assignment`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify(payload)
+    }).then(r => r.json()),
+
   // Insurance
   addInsurance: (bookingId) =>
     fetch(`${API_BASE_URL}/ride/${bookingId}/add-insurance`, {

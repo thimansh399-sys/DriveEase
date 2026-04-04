@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { generateBookingId, calculateDistance, calculatePrice } = require('../utils/helpers');
 const axios = require('axios');
 const { getIO } = require('../utils/socketManager');
-const MAX_AUTO_ASSIGN_DISTANCE_KM = Number(process.env.MAX_AUTO_ASSIGN_DISTANCE_KM || 20);
+const { getAutoAssignRadiusKm } = require('../utils/assignmentConfig');
 
 const playNotificationSound = (soundUrl) => {
   const audio = new Audio(soundUrl);
@@ -402,6 +402,7 @@ exports.bookRide = async (req, res) => {
       }
 
       if (!assignedDriver) {
+        const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
         const driversByDistance = hasPickupCoords
           ? availableDrivers
             .filter((driver) =>
@@ -421,7 +422,7 @@ exports.bookRide = async (req, res) => {
           : [];
 
         const nearbyDrivers = driversByDistance
-          .filter((entry) => Number(entry.distanceKm) <= MAX_AUTO_ASSIGN_DISTANCE_KM);
+          .filter((entry) => Number(entry.distanceKm) <= maxAutoAssignDistanceKm);
 
         assignedDriver = nearbyDrivers.length
           ? nearbyDrivers[0].driver
@@ -1520,6 +1521,7 @@ exports.bookNow = async (req, res) => {
 
     const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
     const normalizedRideType = validRideTypes.includes(rideType) ? rideType : 'daily';
+    const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
 
     const otp = generateRideOTP();
     const bookingId = generateBookingId();
@@ -1544,7 +1546,7 @@ exports.bookNow = async (req, res) => {
       .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm));
 
     const nearbyDrivers = driversByDistance
-      .filter((entry) => Number(entry.distanceKm) <= MAX_AUTO_ASSIGN_DISTANCE_KM);
+      .filter((entry) => Number(entry.distanceKm) <= maxAutoAssignDistanceKm);
     const nearestDriverMatch = nearbyDrivers.length ? nearbyDrivers[0] : null;
     const assignedDriver = nearestDriverMatch?.driver || null;
 
@@ -1586,7 +1588,7 @@ exports.bookNow = async (req, res) => {
     return res.status(201).json({
       message: assignedDriver
         ? 'Ride request created and nearest driver assigned.'
-        : `Ride request created, but no nearby driver found within ${MAX_AUTO_ASSIGN_DISTANCE_KM} km.`,
+        : `Ride request created, but no nearby driver found within ${maxAutoAssignDistanceKm} km.`,
       booking: {
         _id: booking._id,
         bookingId: booking.bookingId,

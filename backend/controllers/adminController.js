@@ -2,6 +2,7 @@ const Driver = require('../models/Driver');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Enquiry = require('../models/Enquiry');
+const { getAutoAssignRadiusKm, setAutoAssignRadiusKm } = require('../utils/assignmentConfig');
 
 exports.getAllDriverRegistrations = async (req, res) => {
   try {
@@ -95,6 +96,36 @@ exports.getAllBookings = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getAssignmentSettings = async (req, res) => {
+  try {
+    res.json({
+      autoAssignRadiusKm: getAutoAssignRadiusKm(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateAssignmentSettings = async (req, res) => {
+  try {
+    const { autoAssignRadiusKm } = req.body || {};
+    const updatedRadius = setAutoAssignRadiusKm(autoAssignRadiusKm);
+
+    if (updatedRadius === null) {
+      return res.status(400).json({
+        error: 'Invalid autoAssignRadiusKm. Use a number between 1 and 200.',
+      });
+    }
+
+    res.json({
+      message: 'Assignment settings updated',
+      autoAssignRadiusKm: updatedRadius,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

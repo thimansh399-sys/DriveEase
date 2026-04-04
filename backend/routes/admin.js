@@ -20,5 +20,7 @@ router.put('/enquiries/:id/respond', adminController.sendEnquiryResponse);
 
 router.get('/dashboard/stats', adminController.getDashboardStats);
 router.get('/export/bookings', adminController.exportBookingsToExcel);
+router.get('/settings/assignment', adminController.getAssignmentSettings);
+router.put('/settings/assignment', adminController.updateAssignmentSettings);
 
 module.exports = router;

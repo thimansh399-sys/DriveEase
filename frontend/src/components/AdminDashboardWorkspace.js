@@ -95,6 +95,8 @@ export default function AdminDashboardWorkspace() {
   const [liveDrivers, setLiveDrivers] = useState([]);
   const [revenueAnalytics, setRevenueAnalytics] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [assignmentRadiusKm, setAssignmentRadiusKm] = useState(20);
+  const [savingRadius, setSavingRadius] = useState(false);
   const [photoFilter, setPhotoFilter] = useState('all');
   const [bookingFilters, setBookingFilters] = useState({
     customer: '',
@@ -296,6 +298,38 @@ export default function AdminDashboardWorkspace() {
       window.URL.revokeObjectURL(url);
     } catch (exportError) {
       setError(exportError?.message || 'Unable to export bookings');
+    }
+  };
+
+  const loadAssignmentSettings = useCallback(async () => {
+    try {
+      const data = await api.getAssignmentSettings();
+      if (data?.autoAssignRadiusKm) {
+        setAssignmentRadiusKm(Number(data.autoAssignRadiusKm));
+      }
+    } catch (_) {
+      // Keep default value when settings endpoint is temporarily unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAssignmentSettings();
+  }, [loadAssignmentSettings]);
+
+  const handleSaveAssignmentRadius = async () => {
+    try {
+      setSavingRadius(true);
+      setError('');
+      const response = await api.updateAssignmentSettings({ autoAssignRadiusKm: Number(assignmentRadiusKm) });
+      if (response?.error) {
+        setError(response.error);
+        return;
+      }
+      setAssignmentRadiusKm(Number(response?.autoAssignRadiusKm || assignmentRadiusKm));
+    } catch (saveError) {
+      setError(saveError?.message || 'Unable to update assignment radius');
+    } finally {
+      setSavingRadius(false);
     }
   };
 
@@ -572,6 +606,32 @@ export default function AdminDashboardWorkspace() {
         </div>
         <p>Auto-sync every 30 seconds: {autoSync ? 'Enabled' : 'Disabled'}</p>
         <p>Backend status: Live from backend</p>
+      </article>
+      <article className="adminw-card">
+        <div className="adminw-card-head">
+          <h3>Driver Assignment Radius</h3>
+          <span className="adminw-pill warn">Live</span>
+        </div>
+        <p>Nearest driver auto-assignment limit in kilometers.</p>
+        <div className="adminw-toolbar-row adminw-toolbar-compact">
+          <input
+            type="number"
+            min="1"
+            max="200"
+            className="adminw-input"
+            value={assignmentRadiusKm}
+            onChange={(e) => setAssignmentRadiusKm(e.target.value)}
+          />
+          <button
+            type="button"
+            className="adminw-primary-btn"
+            onClick={handleSaveAssignmentRadius}
+            disabled={savingRadius}
+          >
+            {savingRadius ? 'Saving...' : 'Save Radius'}
+          </button>
+        </div>
+        <p>Current rule: assign only within {Number(assignmentRadiusKm) || 0} km.</p>
       </article>
       <article className="adminw-card">
         <div className="adminw-card-head">
