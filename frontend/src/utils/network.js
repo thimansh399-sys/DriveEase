@@ -1,9 +1,9 @@
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const PRODUCTION_API_BASE_URL = 'https://driveease-pshj.onrender.com/api';
 const PRODUCTION_API_ORIGIN = 'https://driveease-pshj.onrender.com';
-const MEDIA_BASE_URL = trimTrailingSlash(process.env.REACT_APP_MEDIA_BASE_URL || '');
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
+const MEDIA_BASE_URL = trimTrailingSlash(process.env.REACT_APP_MEDIA_BASE_URL || '');
 
 const isBrowser = typeof window !== 'undefined';
 
