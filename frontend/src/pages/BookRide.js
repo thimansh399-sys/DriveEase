@@ -24,6 +24,9 @@ export default function BookRide() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pickupCoords, setPickupCoords] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState('');
   const [success, setSuccess] = useState(null);
   const [trackedBooking, setTrackedBooking] = useState(null);
   const [trackerMessage, setTrackerMessage] = useState('');
@@ -81,6 +84,39 @@ export default function BookRide() {
     }));
   }, [location.search]);
 
+  const requestPickupGeolocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation not supported in this browser.');
+      return;
+    }
+
+    setGeoLoading(true);
+    setGeoError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPickupCoords({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+        setGeoLoading(false);
+      },
+      () => {
+        setGeoLoading(false);
+        setGeoError('Location permission denied. Please allow location to assign nearest driver.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  useEffect(() => {
+    requestPickupGeolocation();
+  }, []);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -90,6 +126,12 @@ export default function BookRide() {
       setError('Please fill all fields');
       return;
     }
+
+    if (!pickupCoords) {
+      setError('Please allow location access. Pickup geolocation is mandatory for nearest driver assignment.');
+      return;
+    }
+
     setError('');
     setLoading(true);
     try {
@@ -97,6 +139,8 @@ export default function BookRide() {
         pickup: form.pickup,
         drop: form.drop,
         rideType: form.rideType,
+        pickupLatitude: pickupCoords.latitude,
+        pickupLongitude: pickupCoords.longitude,
       });
 
       if (data?.booking?._id || data?.booking?.bookingId) {
@@ -300,6 +344,28 @@ export default function BookRide() {
               </button>
             ))}
           </div>
+
+          <div className="book-ride-map-summary" style={{ marginTop: 14 }}>
+            <p>
+              <span>Pickup Geolocation</span>
+              <b>
+                {pickupCoords
+                  ? `${pickupCoords.latitude.toFixed(6)}, ${pickupCoords.longitude.toFixed(6)}`
+                  : (geoLoading ? 'Fetching location...' : 'Not captured')}
+              </b>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="book-ride-secondary"
+            onClick={requestPickupGeolocation}
+            disabled={geoLoading}
+          >
+            {geoLoading ? 'Getting Location...' : 'Use My Current Location'}
+          </button>
+
+          {geoError ? <div className="book-ride-error">{geoError}</div> : null}
 
           {error && <div className="book-ride-error book-ride-reveal delay-3">{error}</div>}
 

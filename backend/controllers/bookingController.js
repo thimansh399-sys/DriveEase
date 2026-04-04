@@ -1492,10 +1492,26 @@ exports.completeRide = async (req, res) => {
 exports.bookNow = async (req, res) => {
   try {
     const customerId = req.user.id;
-    const { pickup, drop, rideType = 'daily' } = req.body;
+    const {
+      pickup,
+      drop,
+      rideType = 'daily',
+      pickupLatitude,
+      pickupLongitude,
+    } = req.body;
 
     if (!pickup || !drop) {
       return res.status(400).json({ message: 'Pickup and drop locations are required' });
+    }
+
+    const pickupLat = Number(pickupLatitude);
+    const pickupLng = Number(pickupLongitude);
+    const hasPickupCoords = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+
+    if (!hasPickupCoords) {
+      return res.status(400).json({
+        message: 'Pickup geolocation is required. Please allow location access to assign nearest driver.'
+      });
     }
 
     const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
@@ -1506,14 +1522,35 @@ exports.bookNow = async (req, res) => {
     const pickupCity = extractCityFromAddress(pickup);
     const dropCity = extractCityFromAddress(drop);
 
+    const availableDrivers = await findAssignableDrivers(null, pickup);
+    const driversByDistance = availableDrivers
+      .filter((driver) =>
+        Number.isFinite(Number(driver?.currentLocation?.latitude))
+        && Number.isFinite(Number(driver?.currentLocation?.longitude))
+      )
+      .map((driver) => ({
+        driver,
+        distanceKm: calculateDistance(
+          pickupLat,
+          pickupLng,
+          Number(driver.currentLocation.latitude),
+          Number(driver.currentLocation.longitude)
+        ),
+      }))
+      .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm));
+
+    const nearestDriverMatch = driversByDistance.length ? driversByDistance[0] : null;
+    const assignedDriver = nearestDriverMatch?.driver || null;
+
     const booking = new Booking({
       bookingId,
       customerId,
-      pickupLocation: { address: pickup, city: pickupCity },
+      driverId: assignedDriver?._id || null,
+      pickupLocation: { address: pickup, city: pickupCity, latitude: pickupLat, longitude: pickupLng },
       dropLocation: { address: drop, city: dropCity },
       bookingType: normalizedRideType,
       startDate: new Date(),
-      status: 'pending',
+      status: assignedDriver ? 'driver_assigned' : 'pending',
       paymentStatus: 'pending',
       paymentMethod: 'upi',
       verification: {
@@ -1531,8 +1568,19 @@ exports.bookNow = async (req, res) => {
 
     await booking.save();
 
+    if (assignedDriver?.phone) {
+      const notifyMessage = `DriveEase: New Ride Request. Booking ${booking.bookingId}.`;
+      try {
+        await sendSMSToDriver(assignedDriver.phone, notifyMessage);
+      } catch (notifyError) {
+        console.error('Driver notification failed:', notifyError.message);
+      }
+    }
+
     return res.status(201).json({
-      message: 'Ride request created. Nearby drivers can now accept it.',
+      message: assignedDriver
+        ? 'Ride request created and nearest driver assigned.'
+        : 'Ride request created, but no nearby driver with live location is available right now.',
       booking: {
         _id: booking._id,
         bookingId: booking.bookingId,
@@ -1541,7 +1589,8 @@ exports.bookNow = async (req, res) => {
         rideType: normalizedRideType,
         status: booking.status,
         otp,
-        driver: null,
+        driver: assignedDriver ? buildDriverSummary(assignedDriver) : null,
+        nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
       },
     });
   } catch (error) {
