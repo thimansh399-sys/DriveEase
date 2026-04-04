@@ -264,7 +264,7 @@
 }
 
 .bookings-grid { grid-template-columns: 1fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr; }
-.drivers-grid { grid-template-columns: 1.2fr 1fr 0.9fr 0.8fr 1fr 1.2fr; }
+.drivers-grid { grid-template-columns: 1.1fr 1fr 0.9fr 0.8fr 1fr 1.1fr 1fr; }
 .kyc-grid { grid-template-columns: 1.2fr 0.9fr 0.9fr 0.9fr 1fr 0.8fr; }
 .customers-grid { grid-template-columns: 1.2fr 1fr 1.4fr 0.8fr; }
 .enquiries-grid { grid-template-columns: 1fr 1fr 1.6fr 0.8fr 1.1fr 0.8fr; }
@@ -437,4 +437,9 @@
     margin: 10px;
     border: 1px solid #e7edf5;
   }
+}
+
+.adminw-toolbar-compact {
+  grid-template-columns: minmax(220px, 300px) auto;
+  align-items: center;
 }

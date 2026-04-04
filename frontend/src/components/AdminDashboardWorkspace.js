@@ -51,6 +51,11 @@ const formatDateForFilter = (value) => {
   return `${day}-${month}-${year}`;
 };
 
+const hasDriverPhotoPath = (driver) => Boolean(
+  String(driver?.profilePicture || '').trim()
+  || String(driver?.documents?.selfie?.file || '').trim()
+);
+
 const clearAdminSession = () => {
   localStorage.removeItem('adminAuth');
   localStorage.removeItem('adminToken');
@@ -90,6 +95,7 @@ export default function AdminDashboardWorkspace() {
   const [liveDrivers, setLiveDrivers] = useState([]);
   const [revenueAnalytics, setRevenueAnalytics] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [photoFilter, setPhotoFilter] = useState('all');
   const [bookingFilters, setBookingFilters] = useState({
     customer: '',
     driver: '',
@@ -218,6 +224,16 @@ export default function AdminDashboardWorkspace() {
     [allDrivers]
   );
 
+  const missingPhotoDrivers = useMemo(
+    () => allDrivers.filter((driver) => !hasDriverPhotoPath(driver)),
+    [allDrivers]
+  );
+
+  const visibleDrivers = useMemo(() => {
+    if (photoFilter === 'missing') return missingPhotoDrivers;
+    return allDrivers;
+  }, [allDrivers, missingPhotoDrivers, photoFilter]);
+
   const kycDrivers = useMemo(
     () => allDrivers.filter((driver) => String(driver?.backgroundVerification?.status || '').toLowerCase() !== 'verified'),
     [allDrivers]
@@ -331,6 +347,17 @@ export default function AdminDashboardWorkspace() {
 
   const renderDrivers = () => (
     <div className="adminw-panel">
+      <div className="adminw-toolbar-row adminw-toolbar-compact">
+        <select
+          className="adminw-input"
+          value={photoFilter}
+          onChange={(e) => setPhotoFilter(e.target.value)}
+        >
+          <option value="all">All Drivers</option>
+          <option value="missing">Re-upload Required Only</option>
+        </select>
+        <div className="adminw-note">Re-upload required: {missingPhotoDrivers.length}</div>
+      </div>
       <div className="adminw-table">
         <div className="adminw-table-head drivers-grid">
           <span>Name</span>
@@ -339,8 +366,9 @@ export default function AdminDashboardWorkspace() {
           <span>Online</span>
           <span>City</span>
           <span>Vehicle</span>
+          <span>Photo</span>
         </div>
-        {allDrivers.map((driver) => (
+        {visibleDrivers.map((driver) => (
           <div className="adminw-table-row drivers-grid" key={String(driver?._id)}>
             <span>{driver?.name || 'NA'}</span>
             <span>{driver?.phone || 'NA'}</span>
@@ -348,6 +376,9 @@ export default function AdminDashboardWorkspace() {
             <span className={`adminw-pill ${driver?.isOnline ? 'good' : 'neutral'}`}>{driver?.isOnline ? 'Yes' : 'No'}</span>
             <span>{driver?.personalDetails?.city || 'NA'}</span>
             <span>{driver?.vehicle?.model || driver?.vehicle?.registrationNumber || '-'}</span>
+            <span className={`adminw-pill ${hasDriverPhotoPath(driver) ? 'good' : 'bad'}`}>
+              {hasDriverPhotoPath(driver) ? 'Uploaded' : 'Re-upload required'}
+            </span>
           </div>
         ))}
       </div>
@@ -366,6 +397,7 @@ export default function AdminDashboardWorkspace() {
           <p>City: {driver?.personalDetails?.city || 'NA'}</p>
           <p>Payment: {driver?.paymentVerification?.status || 'pending'}</p>
           <p>Selfie: {driver?.documents?.selfie?.file ? 'Uploaded' : 'Missing'}</p>
+          {!hasDriverPhotoPath(driver) ? <p className="bad-text">Photo: Re-upload required</p> : null}
           <div className="adminw-actions">
             <button type="button" className="adminw-primary-btn" onClick={() => handleApproveDriver(driver._id)}>Approve</button>
             <button type="button" className="adminw-danger-btn" onClick={() => handleRejectDriver(driver._id)}>Reject</button>
