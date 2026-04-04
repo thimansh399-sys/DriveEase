@@ -22,9 +22,28 @@ export function connectRideSocket(bookingId) {
     transports: ['websocket', 'polling'],
     withCredentials: true,
     reconnection: true,
-    reconnectionAttempts: 20,
+    reconnectionAttempts: 30,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 12000,
+    randomizationFactor: 0.5,
+    timeout: 10000,
     query: bookingId ? { bookingId: String(bookingId) } : {},
+  });
+
+  let forcedPolling = false;
+
+  socket.on('connect_error', () => {
+    if (!forcedPolling) {
+      forcedPolling = true;
+      socket.io.opts.transports = ['polling'];
+      socket.connect();
+    }
+  });
+
+  socket.on('reconnect_attempt', (attempt) => {
+    if (attempt >= 5) {
+      socket.io.opts.transports = ['polling'];
+    }
   });
 
   if (bookingId) {

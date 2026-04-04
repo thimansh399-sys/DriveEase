@@ -204,6 +204,9 @@ const driverSchema = new mongoose.Schema({
 driverSchema.index({ 'personalDetails.city': 1 });
 driverSchema.index({ 'personalDetails.state': 1 });
 driverSchema.index({ 'personalDetails.pincode': 1 });
+driverSchema.index({ status: 1, isOnline: 1, 'currentLocation.city': 1, updatedAt: -1 });
+driverSchema.index({ availabilityStatus: 1, lastActiveAt: -1 });
+driverSchema.index({ 'currentLocation.latitude': 1, 'currentLocation.longitude': 1 });
 
 // Driving license normal index (non-text)
 driverSchema.index({ 'documents.drivingLicense.number': 1 });

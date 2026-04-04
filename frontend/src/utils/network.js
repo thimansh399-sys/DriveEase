@@ -1,6 +1,7 @@
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const PRODUCTION_API_BASE_URL = 'https://driveease-pshj.onrender.com/api';
 const PRODUCTION_API_ORIGIN = 'https://driveease-pshj.onrender.com';
+const MEDIA_BASE_URL = trimTrailingSlash(process.env.REACT_APP_MEDIA_BASE_URL || '');
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
@@ -50,6 +51,10 @@ export const buildAssetUrl = (assetPath = '') => {
   const normalizedPath = assetPath
     .replace(/^.*uploads[/\\]/, 'uploads/')
     .replace(/^\/+/, '');
+
+  if (MEDIA_BASE_URL) {
+    return `${MEDIA_BASE_URL}/${normalizedPath}`;
+  }
 
   if (API_BASE_URL.startsWith('/')) {
     const configured = trimTrailingSlash(process.env.REACT_APP_API_URL || '');

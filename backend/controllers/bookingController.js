@@ -4,7 +4,12 @@ const User = require('../models/User');
 const { generateBookingId, calculateDistance, calculatePrice } = require('../utils/helpers');
 const axios = require('axios');
 const { getIO } = require('../utils/socketManager');
-const { getAutoAssignRadiusKm } = require('../utils/assignmentConfig');
+const {
+  getAutoAssignRadiusKm,
+  getAssignmentResponseTimeoutMs,
+  getMaxAssignmentAttempts,
+} = require('../utils/assignmentConfig');
+const { logBookingEvent } = require('../utils/auditLogger');
 
 const playNotificationSound = (soundUrl) => {
   const audio = new Audio(soundUrl);
@@ -153,8 +158,12 @@ function buildVerificationSummary(booking, { includeOtp = true } = {}) {
   };
 }
 
-async function findAssignableDrivers(excludeDriverId = null, pickupAddress = '') {
-  const baseExclude = excludeDriverId ? { _id: { $ne: excludeDriverId } } : {};
+async function findAssignableDrivers(excludeDriverIds = null, pickupAddress = '') {
+  const excluded = Array.isArray(excludeDriverIds)
+    ? excludeDriverIds.filter(Boolean).map((id) => String(id))
+    : (excludeDriverIds ? [String(excludeDriverIds)] : []);
+
+  const baseExclude = excluded.length ? { _id: { $nin: excluded } } : {};
 
   // First: look for actively online drivers
   let candidates = await Driver.find({
@@ -210,6 +219,43 @@ async function findAssignableDrivers(excludeDriverId = null, pickupAddress = '')
   return rankedByLocation.map((item) => item.driver);
 }
 
+function getAttemptedDriverIds(booking) {
+  const attempted = Array.isArray(booking?.assignment?.attemptedDriverIds)
+    ? booking.assignment.attemptedDriverIds
+    : [];
+
+  return attempted.filter(Boolean).map((id) => String(id));
+}
+
+async function markBookingEscalated(booking, reason = 'No assignable drivers found') {
+  const maxAttempts = Number(booking?.assignment?.maxAttempts || getMaxAssignmentAttempts());
+  const attemptCount = Number(booking?.assignment?.attemptCount || 0);
+
+  const updated = await Booking.findByIdAndUpdate(
+    booking._id,
+    {
+      status: 'pending',
+      updatedAt: new Date(),
+      'assignment.strategy': 'nearest_v2',
+      'assignment.maxAttempts': maxAttempts,
+      'assignment.attemptCount': attemptCount,
+      'assignment.escalated': true,
+      'assignment.lastEvent': 'escalated',
+      'assignment.currentAssignedDriverId': null,
+      'assignment.currentAssignedAt': null,
+      'assignment.currentAssignmentExpiresAt': null,
+      notes: `${booking?.notes ? `${booking.notes} | ` : ''}Escalated: ${reason}`,
+    },
+    { new: true }
+  );
+
+  if (updated) {
+    logBookingEvent('booking_escalated', updated, { reason, attemptCount, maxAttempts });
+  }
+
+  return updated;
+}
+
 async function assignNearestDriverForPendingBooking(booking) {
   const pickupAddress = booking?.pickupLocation?.address || booking?.pickupLocation?.city || '';
   const pickupLat = Number(booking?.pickupLocation?.latitude);
@@ -220,12 +266,23 @@ async function assignNearestDriverForPendingBooking(booking) {
     return null;
   }
 
-  const availableDrivers = await findAssignableDrivers(null, pickupAddress);
+  const attemptedDriverIds = getAttemptedDriverIds(booking);
+  const maxAttempts = Number(booking?.assignment?.maxAttempts || getMaxAssignmentAttempts());
+
+  if (attemptedDriverIds.length >= maxAttempts) {
+    await markBookingEscalated(booking, 'Max assignment attempts reached');
+    return null;
+  }
+
+  const availableDrivers = await findAssignableDrivers(attemptedDriverIds, pickupAddress);
   if (!availableDrivers.length) {
+    await markBookingEscalated(booking, 'No assignable drivers available');
     return null;
   }
 
   const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
+  const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
+
   const driversByDistance = availableDrivers
     .filter((driver) =>
       Number.isFinite(Number(driver?.currentLocation?.latitude))
@@ -245,8 +302,13 @@ async function assignNearestDriverForPendingBooking(booking) {
 
   const selected = driversByDistance.length ? driversByDistance[0] : null;
   if (!selected?.driver) {
+    await markBookingEscalated(booking, `No drivers within ${maxAutoAssignDistanceKm} km`);
     return null;
   }
+
+  const assignmentNow = new Date();
+  const assignmentExpiry = new Date(assignmentNow.getTime() + assignmentTimeoutMs);
+  const nextAttemptedIds = [...attemptedDriverIds, String(selected.driver._id)];
 
   const claimed = await Booking.findOneAndUpdate(
     {
@@ -257,7 +319,20 @@ async function assignNearestDriverForPendingBooking(booking) {
     {
       driverId: selected.driver._id,
       status: 'driver_assigned',
-      updatedAt: new Date(),
+      updatedAt: assignmentNow,
+      assignment: {
+        ...(booking.assignment || {}),
+        strategy: 'nearest_v2',
+        maxAttempts,
+        attemptCount: nextAttemptedIds.length,
+        attemptedDriverIds: nextAttemptedIds,
+        currentAssignedDriverId: selected.driver._id,
+        currentAssignedAt: assignmentNow,
+        currentAssignmentExpiresAt: assignmentExpiry,
+        acceptedAt: null,
+        escalated: false,
+        lastEvent: 'assigned',
+      },
     },
     { new: true }
   );
@@ -265,6 +340,13 @@ async function assignNearestDriverForPendingBooking(booking) {
   if (!claimed) {
     return null;
   }
+
+  logBookingEvent('booking_assigned', claimed, {
+    assignmentTimeoutMs,
+    distanceKm: Number(selected.distanceKm.toFixed(2)),
+    attempt: nextAttemptedIds.length,
+    maxAttempts,
+  });
 
   if (selected.driver?.phone) {
     try {
@@ -277,8 +359,70 @@ async function assignNearestDriverForPendingBooking(booking) {
   return claimed;
 }
 
+async function releaseExpiredAssignedBookings() {
+  const now = new Date();
+  const staleAssigned = await Booking.find({
+    status: 'driver_assigned',
+    'assignment.currentAssignmentExpiresAt': { $lte: now },
+    $or: [
+      { 'assignment.acceptedAt': null },
+      { 'assignment.acceptedAt': { $exists: false } },
+    ],
+  }).limit(25);
+
+  if (!staleAssigned.length) {
+    return 0;
+  }
+
+  let released = 0;
+  for (const booking of staleAssigned) {
+    const currentAssignedDriverId = booking?.assignment?.currentAssignedDriverId || booking?.driverId || null;
+
+    const updated = await Booking.findOneAndUpdate(
+      {
+        _id: booking._id,
+        status: 'driver_assigned',
+        'assignment.currentAssignmentExpiresAt': { $lte: now },
+      },
+      {
+        status: 'pending',
+        driverId: null,
+        updatedAt: new Date(),
+        'assignment.currentAssignedDriverId': null,
+        'assignment.currentAssignedAt': null,
+        'assignment.currentAssignmentExpiresAt': null,
+        'assignment.lastEvent': 'timeout',
+        ...(currentAssignedDriverId
+          ? {
+            $push: {
+              rejectedByDrivers: {
+                driverId: currentAssignedDriverId,
+                action: 'decline',
+                reason: 'assignment_timeout',
+                rejectedAt: new Date(),
+              },
+            },
+          }
+          : {}),
+      },
+      { new: true }
+    );
+
+    if (updated) {
+      released += 1;
+      logBookingEvent('booking_assignment_timeout', updated, {
+        timedOutDriverId: currentAssignedDriverId ? String(currentAssignedDriverId) : null,
+      });
+    }
+  }
+
+  return released;
+}
+
 exports.assignDriversToPendingBookings = async () => {
   try {
+    const released = await releaseExpiredAssignedBookings();
+
     const pendingBookings = await Booking.find({
       status: 'pending',
       $or: [{ driverId: null }, { driverId: { $exists: false } }],
@@ -286,7 +430,7 @@ exports.assignDriversToPendingBookings = async () => {
       .sort({ createdAt: 1 })
       .limit(25);
 
-    if (!pendingBookings.length) return { scanned: 0, assigned: 0 };
+    if (!pendingBookings.length) return { scanned: 0, assigned: 0, released };
 
     let assigned = 0;
     for (const booking of pendingBookings) {
@@ -294,10 +438,10 @@ exports.assignDriversToPendingBookings = async () => {
       if (result) assigned += 1;
     }
 
-    return { scanned: pendingBookings.length, assigned };
+    return { scanned: pendingBookings.length, assigned, released };
   } catch (error) {
     console.error('Pending booking assignment worker failed:', error.message);
-    return { scanned: 0, assigned: 0, error: error.message };
+    return { scanned: 0, assigned: 0, released: 0, error: error.message };
   }
 };
 
@@ -484,6 +628,10 @@ exports.bookRide = async (req, res) => {
     const estimatedPrice = roundAmount(calculatePrice(estimatedDistance, estimatedHours, rideType));
     const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
     const finalPrice = roundAmount(estimatedPrice + normalizedInsuranceAmount);
+    const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
+    const assignmentNow = new Date();
+    const assignmentExpiry = new Date(assignmentNow.getTime() + assignmentTimeoutMs);
+    const maxAttempts = getMaxAssignmentAttempts();
 
     let assignedDriver = null;
 
@@ -534,7 +682,7 @@ exports.bookRide = async (req, res) => {
       estimatedDistance,
       estimatedPrice,
       finalPrice,
-      status: 'pending',
+      status: assignedDriver ? 'driver_assigned' : 'pending',
       paymentStatus: 'completed',
       paymentMethod,
       insuranceOpted,
@@ -555,9 +703,28 @@ exports.bookRide = async (req, res) => {
       fareRatePerKm: 15,
       distance: 0,
       fare: 0,
+      assignment: {
+        strategy: 'nearest_v2',
+        maxAttempts,
+        attemptCount: assignedDriver ? 1 : 0,
+        attemptedDriverIds: assignedDriver ? [assignedDriver._id] : [],
+        currentAssignedDriverId: assignedDriver?._id || null,
+        currentAssignedAt: assignedDriver ? assignmentNow : null,
+        currentAssignmentExpiresAt: assignedDriver ? assignmentExpiry : null,
+        acceptedAt: null,
+        escalated: false,
+        lastEvent: assignedDriver ? 'assigned' : 'created',
+      },
     });
 
     await booking.save();
+    logBookingEvent('booking_requested', booking, {
+      source: 'bookRide',
+      rideType,
+      hasPickupCoords,
+      hasDropCoords,
+      assignedImmediately: Boolean(assignedDriver),
+    });
 
     if (assignedDriver?.phone) {
       const notifyMessage = `DriveEase: New Ride Request. Booking ${booking.bookingId}.`;
@@ -1215,6 +1382,10 @@ exports.driverRespondBooking = async (req, res) => {
             driverId,
             status: 'confirmed',
             updatedAt: new Date(),
+            'assignment.acceptedAt': new Date(),
+            'assignment.currentAssignedDriverId': driverId,
+            'assignment.currentAssignmentExpiresAt': null,
+            'assignment.lastEvent': 'accepted',
           },
           { new: true }
         ).populate('customerId', 'name phone');
@@ -1226,11 +1397,20 @@ exports.driverRespondBooking = async (req, res) => {
         booking = claimed;
       } else if (isAssignedToCurrentDriver) {
         booking.status = 'confirmed';
+        booking.assignment = booking.assignment || {};
+        booking.assignment.acceptedAt = new Date();
+        booking.assignment.currentAssignedDriverId = driverId;
+        booking.assignment.currentAssignmentExpiresAt = null;
+        booking.assignment.lastEvent = 'accepted';
         booking.updatedAt = new Date();
         await booking.save();
       } else {
         return res.status(403).json({ error: 'This ride is not available to accept' });
       }
+
+      logBookingEvent('booking_accepted', booking, {
+        actorDriverId: String(driverId),
+      });
 
       await Driver.findByIdAndUpdate(driverId, {
         availabilityStatus: 'BUSY',
@@ -1293,10 +1473,19 @@ exports.driverRespondBooking = async (req, res) => {
     if (isAssignedToCurrentDriver) {
       booking.driverId = null;
       booking.status = 'pending';
+      booking.assignment = booking.assignment || {};
+      booking.assignment.currentAssignedDriverId = null;
+      booking.assignment.currentAssignedAt = null;
+      booking.assignment.currentAssignmentExpiresAt = null;
+      booking.assignment.lastEvent = 'declined';
     }
 
     booking.updatedAt = new Date();
     await booking.save();
+    logBookingEvent('booking_declined', booking, {
+      actorDriverId: String(driverId),
+      action: parsedAction,
+    });
 
     const invoice = buildInvoiceSummary(booking);
 
@@ -1338,6 +1527,9 @@ exports.markDriverArrived = async (req, res) => {
     booking.status = 'driver_arrived';
     booking.updatedAt = new Date();
     await booking.save();
+    logBookingEvent('booking_arrived', booking, {
+      actorDriverId: String(driverId),
+    });
 
     const driver = await Driver.findById(driverId);
     const invoice = buildInvoiceSummary(booking);
@@ -1420,6 +1612,9 @@ exports.startRideWithOTP = async (req, res) => {
     booking.rideCompletion.actualStartTime = new Date();
     booking.updatedAt = new Date();
     await booking.save();
+    logBookingEvent('booking_started', booking, {
+      actorDriverId: String(driverId),
+    });
 
     const io = getIO();
     if (io) {
@@ -1537,6 +1732,9 @@ exports.completeRide = async (req, res) => {
     booking.rideCompletion.actualEndTime = new Date();
     booking.updatedAt = new Date();
     await booking.save();
+    logBookingEvent('booking_completed', booking, {
+      actorDriverId: String(driverId),
+    });
 
     await Driver.findByIdAndUpdate(driverId, {
       availabilityStatus: 'AVAILABLE',
@@ -1613,6 +1811,10 @@ exports.bookNow = async (req, res) => {
     const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
     const normalizedRideType = validRideTypes.includes(rideType) ? rideType : 'daily';
     const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
+    const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
+    const assignmentNow = new Date();
+    const assignmentExpiry = new Date(assignmentNow.getTime() + assignmentTimeoutMs);
+    const maxAttempts = getMaxAssignmentAttempts();
 
     const otp = generateRideOTP();
     const bookingId = generateBookingId();
@@ -1663,9 +1865,28 @@ exports.bookNow = async (req, res) => {
       fareRatePerKm: 15,
       distance: 0,
       fare: 0,
+      assignment: {
+        strategy: 'nearest_v2',
+        maxAttempts,
+        attemptCount: assignedDriver ? 1 : 0,
+        attemptedDriverIds: assignedDriver ? [assignedDriver._id] : [],
+        currentAssignedDriverId: assignedDriver?._id || null,
+        currentAssignedAt: assignedDriver ? assignmentNow : null,
+        currentAssignmentExpiresAt: assignedDriver ? assignmentExpiry : null,
+        acceptedAt: null,
+        escalated: false,
+        lastEvent: assignedDriver ? 'assigned' : 'created',
+      },
     });
 
     await booking.save();
+    logBookingEvent('booking_requested', booking, {
+      source: 'bookNow',
+      rideType: normalizedRideType,
+      assignedImmediately: Boolean(assignedDriver),
+      nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
+      maxAutoAssignDistanceKm,
+    });
 
     if (assignedDriver?.phone) {
       const notifyMessage = `DriveEase: New Ride Request. Booking ${booking.bookingId}.`;

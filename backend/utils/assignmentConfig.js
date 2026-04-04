@@ -1,4 +1,6 @@
 const DEFAULT_RADIUS_KM = 20;
+const DEFAULT_ASSIGNMENT_TIMEOUT_MS = 30000;
+const DEFAULT_MAX_ASSIGNMENT_ATTEMPTS = 5;
 
 const toValidRadius = (value) => {
   const parsed = Number(value);
@@ -8,6 +10,8 @@ const toValidRadius = (value) => {
 };
 
 let autoAssignRadiusKm = toValidRadius(process.env.MAX_AUTO_ASSIGN_DISTANCE_KM) || DEFAULT_RADIUS_KM;
+const assignmentResponseTimeoutMs = Number(process.env.ASSIGNMENT_RESPONSE_TIMEOUT_MS || DEFAULT_ASSIGNMENT_TIMEOUT_MS);
+const maxAssignmentAttempts = Number(process.env.MAX_ASSIGNMENT_ATTEMPTS || DEFAULT_MAX_ASSIGNMENT_ATTEMPTS);
 
 function getAutoAssignRadiusKm() {
   return autoAssignRadiusKm;
@@ -20,8 +24,26 @@ function setAutoAssignRadiusKm(value) {
   return autoAssignRadiusKm;
 }
 
+function getAssignmentResponseTimeoutMs() {
+  if (!Number.isFinite(assignmentResponseTimeoutMs) || assignmentResponseTimeoutMs < 5000) {
+    return DEFAULT_ASSIGNMENT_TIMEOUT_MS;
+  }
+  return assignmentResponseTimeoutMs;
+}
+
+function getMaxAssignmentAttempts() {
+  if (!Number.isFinite(maxAssignmentAttempts) || maxAssignmentAttempts < 1) {
+    return DEFAULT_MAX_ASSIGNMENT_ATTEMPTS;
+  }
+  return Math.floor(maxAssignmentAttempts);
+}
+
 module.exports = {
   DEFAULT_RADIUS_KM,
+  DEFAULT_ASSIGNMENT_TIMEOUT_MS,
+  DEFAULT_MAX_ASSIGNMENT_ATTEMPTS,
   getAutoAssignRadiusKm,
   setAutoAssignRadiusKm,
+  getAssignmentResponseTimeoutMs,
+  getMaxAssignmentAttempts,
 };

@@ -128,6 +128,8 @@ npm install
 3. **Create .env file:**
 ```
 REACT_APP_API_URL=http://localhost:5000/api
+# Optional: when driver images are served from CDN/S3/Cloudinary
+REACT_APP_MEDIA_BASE_URL=https://cdn.yourdomain.com
 ```
 
 4. **Start Frontend:**

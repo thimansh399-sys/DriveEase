@@ -194,6 +194,18 @@ const bookingSchema = new mongoose.Schema({
     allocationScore: Number,
     driverDistance: Number
   },
+  assignment: {
+    strategy: { type: String, default: 'nearest_v2' },
+    maxAttempts: { type: Number, default: 5 },
+    attemptCount: { type: Number, default: 0 },
+    attemptedDriverIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Driver' }],
+    currentAssignedDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver', default: null },
+    currentAssignedAt: { type: Date, default: null },
+    currentAssignmentExpiresAt: { type: Date, default: null },
+    acceptedAt: { type: Date, default: null },
+    escalated: { type: Boolean, default: false },
+    lastEvent: { type: String, default: 'created' }
+  },
   // Timestamps in IST
   timestamps: {
     bookingCreatedIST: String, // Format: DD-MM-YYYY HH:mm:ss IST
@@ -214,5 +226,10 @@ const bookingSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+bookingSchema.index({ status: 1, updatedAt: -1 });
+bookingSchema.index({ driverId: 1, status: 1, updatedAt: -1 });
+bookingSchema.index({ customerId: 1, createdAt: -1 });
+bookingSchema.index({ 'assignment.currentAssignmentExpiresAt': 1, status: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
