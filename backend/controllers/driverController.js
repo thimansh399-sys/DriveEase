@@ -174,6 +174,24 @@ exports.getDriverById = async (req, res) => {
   }
 };
 
+exports.getMyProfile = async (req, res) => {
+  try {
+    const driverId = req.user?.driverId || req.user?.id;
+    if (!driverId) {
+      return res.status(401).json({ error: 'Driver ID not found in token' });
+    }
+
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({ error: 'Driver profile not found' });
+    }
+
+    res.json(driver);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.registerDriver = async (req, res) => {
   try {
     const {

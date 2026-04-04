@@ -36,6 +36,7 @@ router.put('/documents', authMiddleware, driverMiddleware, driverController.upda
 router.put('/status', authMiddleware, driverMiddleware, driverController.updateDriverStatus);
 router.put('/profile-picture', authMiddleware, driverMiddleware, profilePicUpload.single('profilePicture'), driverController.updateProfilePicture);
 router.put('/profile', authMiddleware, driverMiddleware, driverController.updateDriverProfile);
+router.get('/me', authMiddleware, driverMiddleware, driverController.getMyProfile);
 router.get('/earnings/me', authMiddleware, driverMiddleware, driverController.getDriverEarnings);
 router.get('/online-hours/me', authMiddleware, driverMiddleware, driverController.getOnlineHours);
 router.get('/:id', driverController.getDriverById);
