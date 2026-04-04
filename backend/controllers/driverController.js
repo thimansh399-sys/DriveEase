@@ -1,6 +1,18 @@
 const Driver = require('../models/Driver');
 const { calculateDistance } = require('../utils/helpers');
 
+const withLegacyProfilePicture = (driver) => {
+  if (!driver) return driver;
+
+  const plain = typeof driver.toObject === 'function' ? driver.toObject() : { ...driver };
+
+  if (!plain.profilePicture && plain?.documents?.selfie?.file) {
+    plain.profilePicture = plain.documents.selfie.file;
+  }
+
+  return plain;
+};
+
 exports.getAllDrivers = async (req, res) => {
   try {
     const { city, state, pincode, area, status, isOnline } = req.query;
@@ -59,7 +71,7 @@ exports.getAllDrivers = async (req, res) => {
       '-documents.aadhar.file -documents.pancard.file -documents.drivingLicense.file'
     );
 
-    res.json(drivers);
+    res.json(drivers.map(withLegacyProfilePicture));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -125,7 +137,7 @@ exports.getNearbyDrivers = async (req, res) => {
     );
 
     if (!hasCoords) {
-      return res.json(drivers);
+      return res.json(drivers.map(withLegacyProfilePicture));
     }
 
     const maxRadius = Number(radius) > 0 ? Number(radius) : 25;
@@ -152,7 +164,7 @@ exports.getNearbyDrivers = async (req, res) => {
         .filter((driver) => Number.isFinite(Number(driver.distance)))
         .sort((a, b) => Number(a.distance) - Number(b.distance));
 
-    res.json(fallbackDrivers);
+    res.json(fallbackDrivers.map(withLegacyProfilePicture));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -168,7 +180,7 @@ exports.getDriverById = async (req, res) => {
       return res.status(404).json({ error: 'Driver not found' });
     }
 
-    res.json(driver);
+    res.json(withLegacyProfilePicture(driver));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -186,7 +198,7 @@ exports.getMyProfile = async (req, res) => {
       return res.status(404).json({ error: 'Driver profile not found' });
     }
 
-    res.json(driver);
+    res.json(withLegacyProfilePicture(driver));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
