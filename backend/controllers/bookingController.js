@@ -210,6 +210,97 @@ async function findAssignableDrivers(excludeDriverId = null, pickupAddress = '')
   return rankedByLocation.map((item) => item.driver);
 }
 
+async function assignNearestDriverForPendingBooking(booking) {
+  const pickupAddress = booking?.pickupLocation?.address || booking?.pickupLocation?.city || '';
+  const pickupLat = Number(booking?.pickupLocation?.latitude);
+  const pickupLng = Number(booking?.pickupLocation?.longitude);
+  const hasPickupCoords = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+
+  if (!hasPickupCoords) {
+    return null;
+  }
+
+  const availableDrivers = await findAssignableDrivers(null, pickupAddress);
+  if (!availableDrivers.length) {
+    return null;
+  }
+
+  const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
+  const driversByDistance = availableDrivers
+    .filter((driver) =>
+      Number.isFinite(Number(driver?.currentLocation?.latitude))
+      && Number.isFinite(Number(driver?.currentLocation?.longitude))
+    )
+    .map((driver) => ({
+      driver,
+      distanceKm: calculateDistance(
+        pickupLat,
+        pickupLng,
+        Number(driver.currentLocation.latitude),
+        Number(driver.currentLocation.longitude)
+      ),
+    }))
+    .filter((entry) => Number(entry.distanceKm) <= maxAutoAssignDistanceKm)
+    .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm));
+
+  const selected = driversByDistance.length ? driversByDistance[0] : null;
+  if (!selected?.driver) {
+    return null;
+  }
+
+  const claimed = await Booking.findOneAndUpdate(
+    {
+      _id: booking._id,
+      status: 'pending',
+      $or: [{ driverId: null }, { driverId: { $exists: false } }],
+    },
+    {
+      driverId: selected.driver._id,
+      status: 'driver_assigned',
+      updatedAt: new Date(),
+    },
+    { new: true }
+  );
+
+  if (!claimed) {
+    return null;
+  }
+
+  if (selected.driver?.phone) {
+    try {
+      await sendSMSToDriver(selected.driver.phone, `DriveEase: New Ride Request. Booking ${claimed.bookingId}.`);
+    } catch (notifyError) {
+      console.error('Driver notification failed:', notifyError.message);
+    }
+  }
+
+  return claimed;
+}
+
+exports.assignDriversToPendingBookings = async () => {
+  try {
+    const pendingBookings = await Booking.find({
+      status: 'pending',
+      $or: [{ driverId: null }, { driverId: { $exists: false } }],
+    })
+      .sort({ createdAt: 1 })
+      .limit(25);
+
+    if (!pendingBookings.length) return { scanned: 0, assigned: 0 };
+
+    let assigned = 0;
+    for (const booking of pendingBookings) {
+      const result = await assignNearestDriverForPendingBooking(booking);
+      if (result) assigned += 1;
+    }
+
+    return { scanned: pendingBookings.length, assigned };
+  } catch (error) {
+    console.error('Pending booking assignment worker failed:', error.message);
+    return { scanned: 0, assigned: 0, error: error.message };
+  }
+};
+
 /**
  * Generate AI-based route mapping for pickup and dropoff locations
  * @param {Object} pickupLocation - { latitude, longitude }

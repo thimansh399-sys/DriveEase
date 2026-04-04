@@ -30,7 +30,7 @@ DriveEase/
 ## Features
 
 ✅ **Customer Features:**
-- OTP-based login
+- Direct phone login (register-first flow)
 - Browse 50+ verified drivers across India
 - Real-time driver location tracking
 - Book drivers for hourly/daily/outstation rides
@@ -53,7 +53,7 @@ DriveEase/
 - Online hours tracking
 
 ✅ **Admin Dashboard:**
-- Password-protected (126312)
+- Password-protected (configured via ADMIN_PASSWORD env)
 - Driver registration approval/rejection
 - Booking management
 - Customer management
@@ -82,6 +82,10 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/driveease
 JWT_SECRET=your_secret_key_here
 ADMIN_PASSWORD=126312
+MAX_AUTO_ASSIGN_DISTANCE_KM=20
+PENDING_ASSIGNMENT_WORKER_INTERVAL_MS=30000
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=800
 NODE_ENV=development
 LOCATIONIQ_API_KEY=pk.your_api_key
 ```
@@ -176,8 +180,8 @@ npm start
 
 ### Authentication
 ```
-POST /api/auth/send-otp          - Send OTP to phone
-POST /api/auth/verify-otp        - Verify OTP and login
+POST /api/auth/direct-login      - Customer/Driver direct login
+POST /api/auth/register-customer - Register customer account
 POST /api/auth/admin-login       - Admin password login
 GET  /api/auth/profile           - Get user profile
 PUT  /api/auth/profile           - Update profile
@@ -234,7 +238,7 @@ GET  /api/admin/export/bookings  - Export to Excel
 
 🔐 **Admin Dashboard:**
 - URL: http://localhost:3000/admin
-- Password: 126312
+- Password: value of ADMIN_PASSWORD in backend environment
 
 👥 **Test User (Customer):**
 - Phone: 9876543210
