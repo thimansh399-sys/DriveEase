@@ -4,6 +4,7 @@ const User = require('../models/User');
 const { generateBookingId, calculateDistance, calculatePrice } = require('../utils/helpers');
 const axios = require('axios');
 const { getIO } = require('../utils/socketManager');
+const MAX_AUTO_ASSIGN_DISTANCE_KM = Number(process.env.MAX_AUTO_ASSIGN_DISTANCE_KM || 20);
 
 const playNotificationSound = (soundUrl) => {
   const audio = new Audio(soundUrl);
@@ -419,9 +420,12 @@ exports.bookRide = async (req, res) => {
             .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm))
           : [];
 
-        assignedDriver = driversByDistance.length
-          ? driversByDistance[0].driver
-          : availableDrivers[Math.floor(Math.random() * availableDrivers.length)];
+        const nearbyDrivers = driversByDistance
+          .filter((entry) => Number(entry.distanceKm) <= MAX_AUTO_ASSIGN_DISTANCE_KM);
+
+        assignedDriver = nearbyDrivers.length
+          ? nearbyDrivers[0].driver
+          : null;
       }
     }
     const otp = generateRideOTP();
@@ -1539,7 +1543,9 @@ exports.bookNow = async (req, res) => {
       }))
       .sort((a, b) => Number(a.distanceKm) - Number(b.distanceKm));
 
-    const nearestDriverMatch = driversByDistance.length ? driversByDistance[0] : null;
+    const nearbyDrivers = driversByDistance
+      .filter((entry) => Number(entry.distanceKm) <= MAX_AUTO_ASSIGN_DISTANCE_KM);
+    const nearestDriverMatch = nearbyDrivers.length ? nearbyDrivers[0] : null;
     const assignedDriver = nearestDriverMatch?.driver || null;
 
     const booking = new Booking({
@@ -1580,7 +1586,7 @@ exports.bookNow = async (req, res) => {
     return res.status(201).json({
       message: assignedDriver
         ? 'Ride request created and nearest driver assigned.'
-        : 'Ride request created, but no nearby driver with live location is available right now.',
+        : `Ride request created, but no nearby driver found within ${MAX_AUTO_ASSIGN_DISTANCE_KM} km.`,
       booking: {
         _id: booking._id,
         bookingId: booking.bookingId,
