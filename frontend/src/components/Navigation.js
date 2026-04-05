@@ -85,16 +85,6 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
 
           {isLoggedIn && (
             <>
-              {isDriver && (
-                <li className="nav-mobile-only">
-                  <Link to="/driver-dashboard" className="nav-link" onClick={() => setMenuOpen(false)}>Dashboard</Link>
-                </li>
-              )}
-              {isDriver && (
-                <li className="nav-mobile-only">
-                  <Link to="/driver-earnings" className="nav-link" onClick={() => setMenuOpen(false)}>Earnings</Link>
-                </li>
-              )}
               {!isDriver && (
                 <li className="nav-mobile-only">
                   <Link to="/register-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Register as Driver</Link>

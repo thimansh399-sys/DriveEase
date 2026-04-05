@@ -4,11 +4,11 @@ import '../styles/Dashboard.css';
 import api from '../utils/api';
 import { connectRideSocket } from '../utils/rideSocket';
 
-function Sidebar({ onBookRide }) {
+function Sidebar({ onBookRide, onDashboard }) {
   return (
     <div className="sidebar">
       <h2>DriveEase</h2>
-      <a href="/customer-dashboard" className="active">Dashboard</a>
+      <button type="button" className="active sidebar-link-btn" onClick={onDashboard}>Dashboard</button>
       <button
         type="button"
         className="sidebar-book-cta"
@@ -154,7 +154,7 @@ export default function CustomerDashboard() {
 
   return (
     <div className="dashboard">
-      <Sidebar onBookRide={() => navigate('/book-ride')} />
+      <Sidebar onBookRide={() => navigate('/book-ride')} onDashboard={() => navigate('/customer-dashboard')} />
       <div className="main">
         <Header user={user} />
         <div className="content">
