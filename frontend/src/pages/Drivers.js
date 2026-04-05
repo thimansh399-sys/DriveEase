@@ -439,7 +439,12 @@ export default function Drivers() {
 
                   <motion.button
                     className="ux-btn primary full"
-                    onClick={() => navigate(driver._id ? `/booking/${driver._id}` : '/booking')}
+                    onClick={() => {
+                      const search = new URLSearchParams();
+                      if (driver?._id) search.set('preferredDriverId', driver._id);
+                      if (driver?.name) search.set('preferredDriverName', driver.name);
+                      navigate(`/book-ride${search.toString() ? `?${search.toString()}` : ''}`);
+                    }}
                     disabled={!driver.available}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
