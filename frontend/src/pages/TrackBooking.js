@@ -14,7 +14,6 @@ import { connectRideSocket } from '../utils/rideSocket';
 export default function TrackBooking() {
   const { bookingId } = useParams();
   const [searchParams] = useSearchParams();
-  const mapContainer = useRef(null);
   const mapSectionRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [bookingData, setBookingData] = useState(null);
@@ -332,128 +331,23 @@ export default function TrackBooking() {
     };
   }, [bookingId]);
 
-  useEffect(() => {
-    if (!mapContainer.current || !bookingData) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = mapContainer.current.clientWidth;
-    canvas.height = mapContainer.current.clientHeight;
-    const ctx = canvas.getContext('2d');
-
-    // Draw gradient background
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#1a1f2e');
-    gradient.addColorStop(1, '#0b0f19');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw street grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < canvas.width; i += 50) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, canvas.height);
-      ctx.stroke();
+  const getMapPoint = (lat, lng, fallbackAddress) => {
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+      return `${Number(lat)},${Number(lng)}`;
     }
-    for (let i = 0; i < canvas.height; i += 50) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(canvas.width, i);
-      ctx.stroke();
-    }
+    return fallbackAddress || '';
+  };
 
-    // Normalize coordinates
-    const latRange = bookingData.dropoff.lat - bookingData.pickup.lat || 0.01;
-    const lngRange = bookingData.dropoff.lng - bookingData.pickup.lng || 0.01;
-    const padding = 80;
-
-    const getPixel = (lat, lng) => {
-      const x = padding + ((lng - bookingData.pickup.lng) / lngRange) * (canvas.width - 2 * padding);
-      const y = canvas.height - padding - ((lat - bookingData.pickup.lat) / latRange) * (canvas.height - 2 * padding);
-      return { x, y };
-    };
-
-    const pickupPx = getPixel(bookingData.pickup.lat, bookingData.pickup.lng);
-    const dropoffPx = getPixel(bookingData.dropoff.lat, bookingData.dropoff.lng);
-    const driverPx = getPixel(driverLocation.lat, driverLocation.lng);
-
-    // Draw route
-    ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([10, 5]);
-    ctx.beginPath();
-    ctx.moveTo(pickupPx.x, pickupPx.y);
-    ctx.lineTo(dropoffPx.x, dropoffPx.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Draw traveled path
-    ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(pickupPx.x, pickupPx.y);
-    ctx.lineTo(driverPx.x, driverPx.y);
-    ctx.stroke();
-
-    // Pickup marker
-    ctx.fillStyle = '#22c55e';
-    ctx.beginPath();
-    ctx.arc(pickupPx.x, pickupPx.y, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Dropoff marker
-    ctx.fillStyle = '#93c5fd';
-    ctx.beginPath();
-    ctx.arc(dropoffPx.x, dropoffPx.y, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Driver marker with animated glow
-    ctx.shadowColor = 'rgba(255, 107, 53, 0.6)';
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = '#ff6b35';
-    ctx.beginPath();
-    ctx.arc(driverPx.x, driverPx.y, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Direction arrow
-    const angle = Math.atan2(dropoffPx.y - driverPx.y, dropoffPx.x - driverPx.x);
-    ctx.save();
-    ctx.translate(driverPx.x, driverPx.y);
-    ctx.rotate(angle);
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(-5, -5);
-    ctx.lineTo(-3, 0);
-    ctx.lineTo(-5, 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // Labels
-    ctx.fillStyle = '#22c55e';
-    ctx.font = 'bold 13px Arial';
-    ctx.fillText('📍 Pickup', pickupPx.x - 30, pickupPx.y - 25);
-
-    ctx.fillStyle = '#93c5fd';
-    ctx.fillText('📍 Dropoff', dropoffPx.x - 35, dropoffPx.y - 25);
-
-    ctx.fillStyle = '#ff6b35';
-    ctx.fillText('🚗 Driver', driverPx.x - 30, driverPx.y - 25);
-
-    mapContainer.current.innerHTML = '';
-    mapContainer.current.appendChild(canvas);
-  }, [bookingData, driverLocation]);
+  const pickupPoint = getMapPoint(bookingData?.pickup?.lat, bookingData?.pickup?.lng, bookingData?.pickup?.address);
+  const dropPoint = getMapPoint(bookingData?.dropoff?.lat, bookingData?.dropoff?.lng, bookingData?.dropoff?.address);
+  const driverPoint = getMapPoint(driverLocation?.lat, driverLocation?.lng, bookingData?.pickup?.address);
+  const normalizedStatus = String(bookingData?.status || '').toLowerCase();
+  const rideStarted = ['in_progress', 'on_trip', 'completed'].includes(normalizedStatus);
+  const mapQuery = rideStarted
+    ? `${driverPoint} to ${dropPoint}`
+    : `${driverPoint} to ${pickupPoint}`;
+  const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`;
+  const openMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(driverPoint)}&destination=${encodeURIComponent(rideStarted ? dropPoint : pickupPoint)}&travelmode=driving`;
 
   if (loading) {
     return (
@@ -526,15 +420,35 @@ export default function TrackBooking() {
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           }}
         >
-          <div
-            ref={mapContainer}
-            style={{
-              width: '100%',
-              height: '420px',
-              backgroundColor: '#1a1f2e',
-              position: 'relative',
-            }}
-          />
+          <div style={{ position: 'relative', width: '100%', height: '420px', backgroundColor: '#1a1f2e' }}>
+            <a
+              href={openMapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                zIndex: 2,
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                color: '#2563eb',
+                fontWeight: 700,
+                textDecoration: 'none',
+                fontSize: '13px',
+              }}
+            >
+              Open in Maps ↗
+            </a>
+            <iframe
+              title="Live route map"
+              src={mapEmbedUrl}
+              loading="lazy"
+              allowFullScreen
+              style={{ width: '100%', height: '100%', border: 0 }}
+            />
+          </div>
         </motion.div>
 
         {/* Role-Based Info Grid */}
