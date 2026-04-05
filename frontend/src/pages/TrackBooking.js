@@ -202,6 +202,13 @@ export default function TrackBooking() {
     && !bookingData?.verification?.otpVerified;
   const canEndRide = ['in_progress', 'on_trip'].includes(String(bookingData?.status || '').toLowerCase());
 
+  const toWhatsAppNumber = (rawPhone) => {
+    const digits = String(rawPhone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 10) return `91${digits}`;
+    return digits;
+  };
+
   const toRad = (value) => (value * Math.PI) / 180;
   const distanceKm = (aLat, aLng, bLat, bLng) => {
     if (![aLat, aLng, bLat, bLng].every((value) => Number.isFinite(Number(value)))) return null;
@@ -225,6 +232,10 @@ export default function TrackBooking() {
     bookingData?.rideFlow?.driverEarning
     || (bookingData?.invoice?.total ? Number(bookingData.invoice.total) * 0.9 : 0)
   );
+  const liveDistance = Number(bookingData?.distance || 0);
+  const liveRatePerKm = Number(bookingData?.fareRatePerKm || 15);
+  const calculatedLiveFare = Number((liveDistance * liveRatePerKm).toFixed(2));
+  const effectiveLiveFare = Number(bookingData?.fare || 0) > 0 ? Number(bookingData.fare) : calculatedLiveFare;
 
   const handleCancelRide = async () => {
     if (!bookingId || !canCancel) return;
@@ -351,11 +362,22 @@ export default function TrackBooking() {
   const driverPoint = getMapPoint(driverLocation?.lat, driverLocation?.lng, bookingData?.pickup?.address);
   const normalizedStatus = String(bookingData?.status || '').toLowerCase();
   const rideStarted = ['in_progress', 'on_trip', 'completed'].includes(normalizedStatus);
-  const mapQuery = rideStarted
-    ? `${driverPoint} to ${dropPoint}`
-    : `${driverPoint} to ${pickupPoint}`;
-  const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`;
-  const openMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(driverPoint)}&destination=${encodeURIComponent(rideStarted ? dropPoint : pickupPoint)}&travelmode=driving`;
+  const mapOrigin = rideStarted ? driverPoint : driverPoint;
+  const mapDestination = rideStarted ? dropPoint : pickupPoint;
+  const mapEmbedUrl = `https://www.google.com/maps?saddr=${encodeURIComponent(mapOrigin)}&daddr=${encodeURIComponent(mapDestination)}&output=embed`;
+  const openMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(mapOrigin)}&destination=${encodeURIComponent(mapDestination)}&travelmode=driving`;
+
+  const driverPhone = String(bookingData?.driver?.phone || '').trim();
+  const customerPhone = String(bookingData?.customer?.phone || '').trim();
+  const driverWhatsapp = toWhatsAppNumber(driverPhone);
+  const customerWhatsapp = toWhatsAppNumber(customerPhone);
+  const rideContextMsg = `Pickup: ${bookingData?.pickup?.address || '-'} | Drop: ${bookingData?.dropoff?.address || '-'}`;
+  const customerChatHref = driverWhatsapp
+    ? `https://wa.me/${driverWhatsapp}?text=${encodeURIComponent(`Hi, this is your customer for booking ${bookingData?.id || ''}. ${rideContextMsg}`)}`
+    : '#';
+  const driverChatHref = customerWhatsapp
+    ? `https://wa.me/${customerWhatsapp}?text=${encodeURIComponent(`Hi, this is your driver for booking ${bookingData?.id || ''}. ${rideContextMsg}`)}`
+    : '#';
 
   useEffect(() => {
     if (!isCustomerView || !bookingData?.id) return;
@@ -623,6 +645,12 @@ export default function TrackBooking() {
                   <p style={{ margin: '0 0 12px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
                     Customer Actions
                   </p>
+                  <p style={{ margin: '0 0 6px 0', color: '#d1fae5', fontSize: '12px' }}>
+                    <strong>Pickup:</strong> {bookingData?.pickup?.address || '-'}
+                  </p>
+                  <p style={{ margin: '0 0 10px 0', color: '#d1fae5', fontSize: '12px' }}>
+                    <strong>Drop:</strong> {bookingData?.dropoff?.address || '-'}
+                  </p>
                   <a
                     href={bookingData?.driver?.phone ? `tel:${bookingData.driver.phone.replace(/\s/g, '')}` : '#'}
                     style={{
@@ -657,24 +685,27 @@ export default function TrackBooking() {
                   >
                     📍 Track Ride
                   </button>
-                  <button
-                    type="button"
-                    disabled
+                  <a
+                    href={customerChatHref}
+                    target="_blank"
+                    rel="noreferrer"
                     style={{
+                      display: 'inline-block',
                       padding: '10px 16px',
                       backgroundColor: 'rgba(147, 197, 253, 0.1)',
                       border: '1px solid rgba(147, 197, 253, 0.3)',
                       color: '#93c5fd',
                       borderRadius: '8px',
-                      cursor: 'not-allowed',
+                      textDecoration: 'none',
+                      cursor: customerChatHref === '#' ? 'not-allowed' : 'pointer',
                       fontSize: '13px',
                       fontWeight: 600,
-                      opacity: 0.75,
+                      opacity: customerChatHref === '#' ? 0.75 : 1,
                     }}
-                    title="Chat feature coming soon"
+                    title={customerChatHref === '#' ? 'Driver chat unavailable' : 'Chat with driver on WhatsApp'}
                   >
-                    💬 Chat (Soon)
-                  </button>
+                    💬 Chat Driver
+                  </a>
                   <button
                     type="button"
                     onClick={handleCancelRide}
@@ -714,9 +745,37 @@ export default function TrackBooking() {
                   <p style={{ margin: '0 0 12px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
                     Driver Actions
                   </p>
+                  <p style={{ margin: '0 0 6px 0', color: '#d1fae5', fontSize: '12px' }}>
+                    <strong>Pickup:</strong> {bookingData?.pickup?.address || '-'}
+                  </p>
+                  <p style={{ margin: '0 0 10px 0', color: '#d1fae5', fontSize: '12px' }}>
+                    <strong>Drop:</strong> {bookingData?.dropoff?.address || '-'}
+                  </p>
                   <p style={{ margin: '0 0 10px 0', color: '#d1fae5', fontSize: '13px' }}>
                     Distance to Pickup: {pickupDistanceKm !== null ? `${pickupDistanceKm} km` : 'N/A'}
                   </p>
+                  <a
+                    href={driverChatHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-block',
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                      border: '1px solid rgba(147, 197, 253, 0.3)',
+                      color: '#93c5fd',
+                      borderRadius: '8px',
+                      textDecoration: 'none',
+                      cursor: driverChatHref === '#' ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginRight: '8px',
+                      opacity: driverChatHref === '#' ? 0.75 : 1,
+                    }}
+                    title={driverChatHref === '#' ? 'Customer chat unavailable' : 'Chat with customer on WhatsApp'}
+                  >
+                    💬 Chat Customer
+                  </a>
                   <button
                     type="button"
                     onClick={handleMarkArrived}
@@ -815,6 +874,9 @@ export default function TrackBooking() {
               <p style={{ margin: '12px 0 0 0', color: '#aaa', fontSize: '12px' }}>
                 ETA {bookingData?.estimatedTime || '--'} mins • Distance {bookingData?.distance || 0} km
                 {isCustomerView ? ` • Payment ${bookingData?.paymentStatus || 'completed'}` : ''}
+              </p>
+              <p style={{ margin: '8px 0 0 0', color: '#fde68a', fontSize: '12px' }}>
+                Fare: ₹{effectiveLiveFare.toFixed(2)} ({liveDistance.toFixed(2)} km × ₹{liveRatePerKm}/km)
               </p>
               <p style={{ margin: '8px 0 0 0', color: '#93c5fd', fontSize: '12px' }}>
                 {socketConnected ? 'Live socket connected' : 'Live socket reconnecting, polling every 10s'}
