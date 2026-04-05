@@ -222,6 +222,7 @@ export default function DriverDashboard() {
 
   const submitOtp = async () => {
     if (!otpModalBooking?._id) return;
+    const currentBookingId = String(otpModalBooking._id);
     const value = String(otpInput || '').trim();
 
     if (!/^\d{4}$/.test(value)) {
@@ -232,11 +233,22 @@ export default function DriverDashboard() {
     try {
       setOtpSubmitting(true);
       setOtpError('');
-      await api.verifyRideOtp({ bookingId: otpModalBooking._id, otp: value });
+      const response = await api.startRideWithOTP(currentBookingId, value);
+      if (response?.error || response?.success === false) {
+        throw new Error(response?.error || response?.message || 'OTP verification failed. Please retry.');
+      }
+
+      const startedBookingId = String(
+        response?.booking?._id
+        || response?.booking?.id
+        || response?.bookingId
+        || currentBookingId
+      );
+
       setOtpModalBooking(null);
       setOtpInput('');
       await fetchBookings();
-      navigate(`/track-booking/${otpModalBooking._id}`);
+      navigate(`/track-booking/${startedBookingId}`);
     } catch (err) {
       setOtpError(err?.message || 'OTP verification failed. Please retry.');
     } finally {
@@ -293,6 +305,7 @@ export default function DriverDashboard() {
                 const fare = Number(booking.invoice?.total || booking.finalPrice || booking.estimatedPrice || 0);
                 const otpShared = Boolean(booking.verification?.otpSharedWithDriver);
                 const otpVerified = Boolean(booking.verification?.otpVerified);
+                const normalizedStatus = String(booking.status || '').toLowerCase();
                 const busy = actionBusyId.startsWith(String(booking._id));
 
                 return (
@@ -327,13 +340,13 @@ export default function DriverDashboard() {
                         </>
                       )}
 
-                      {booking.status === 'confirmed' && (
+                      {normalizedStatus === 'confirmed' && (
                         <button disabled={busy} onClick={() => runBookingAction(booking._id, 'arrived')} className="driver-primary-btn">
                           Mark Arrived
                         </button>
                       )}
 
-                      {(booking.status === 'confirmed' || booking.status === 'driver_arrived') && otpShared && !otpVerified && (
+                      {['confirmed', 'driver_arrived', 'arrived'].includes(normalizedStatus) && !otpVerified && (
                         <button
                           disabled={busy}
                           onClick={() => {
@@ -342,12 +355,13 @@ export default function DriverDashboard() {
                             setOtpError('');
                           }}
                           className="driver-primary-btn"
+                          title={otpShared ? 'Verify OTP and start ride' : 'Enter OTP shared by customer and start ride'}
                         >
                           Start Ride
                         </button>
                       )}
 
-                      {(booking.status === 'in_progress' || booking.status === 'ON_TRIP') && (
+                      {(normalizedStatus === 'in_progress' || normalizedStatus === 'on_trip') && (
                         <button disabled={busy} onClick={() => runBookingAction(booking._id, 'complete')} className="driver-primary-btn">
                           Complete Ride
                         </button>

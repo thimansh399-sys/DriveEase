@@ -1346,7 +1346,8 @@ exports.getDriverBookings = async (req, res) => {
         otpVerified: b.verification?.otpVerified || false,
         otpExpiry: b.verification?.otpExpiry || null,
       },
-      canStartRide: b.status === 'confirmed' && !!b.verification?.otpSharedWithDriver && !(b.verification?.otpVerified),
+      canStartRide: ['confirmed', 'driver_arrived', 'arrived'].includes(String(b.status || '').toLowerCase())
+        && !(b.verification?.otpVerified),
       canAccept: (isOpenPending && inDriverArea && !isRejectedByCurrentDriver) ||
         ((b.status === 'pending' || b.status === 'driver_assigned') && isCurrentlyAssignedToCandidate),
       canReject: ((b.status === 'pending' && isOpenPending) || b.status === 'driver_assigned' || b.status === 'pending') && !isRejectedByCurrentDriver,
@@ -1616,10 +1617,6 @@ exports.startRideWithOTP = async (req, res) => {
 
     if (!booking.driverId || String(booking.driverId) !== String(driverId)) {
       return res.status(403).json({ error: 'This ride is not assigned to you' });
-    }
-
-    if (!booking.verification?.otpSharedWithDriver) {
-      return res.status(400).json({ error: 'Customer has not shared the OTP yet' });
     }
 
     if (Number(booking.otpAttempts || 0) >= 3) {
