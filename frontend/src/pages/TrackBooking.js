@@ -15,12 +15,19 @@ export default function TrackBooking() {
   const { bookingId } = useParams();
   const [searchParams] = useSearchParams();
   const mapContainer = useRef(null);
+  const mapSectionRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [bookingData, setBookingData] = useState(null);
   const [error, setError] = useState('');
   const [driverLocation, setDriverLocation] = useState({ lat: 26.9124, lng: 75.7873 });
   const [socketConnected, setSocketConnected] = useState(false);
+  const [actionBusy, setActionBusy] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const socketRef = useRef(null);
+  const role = String(localStorage.getItem('userRole') || '').toUpperCase();
+  const isDriverView = role === 'DRIVER';
+  const isCustomerView = !isDriverView;
 
   const statusText = {
     pending: 'Booking pending. Waiting for driver response.',
@@ -48,6 +55,9 @@ export default function TrackBooking() {
         pickup: { address: pickup, lat: 26.9124, lng: 75.7873 },
         dropoff: { address: drop, lat: 26.8389, lng: 75.8753 },
         driver: null,
+        customer: null,
+        rideFlow: null,
+        pickupInstructions: '',
         estimatedTime: 10,
         distance: 0,
         fare: ride === 'Corporate' ? 260 : ride === 'Premium' ? 180 : 120,
@@ -61,6 +71,7 @@ export default function TrackBooking() {
       const pickup = booking?.pickupLocation || {};
       const dropoff = booking?.dropLocation || {};
       const driver = booking?.driverId || null;
+      const customer = booking?.customerId || null;
       const estimatedDistance = Number(booking?.estimatedDistance || 0);
       const invoice = booking?.invoice || {
         invoiceId: `INV-${booking?.bookingId || booking?._id || 'LIVE'}`,
@@ -100,6 +111,14 @@ export default function TrackBooking() {
               },
             }
           : null,
+        customer: customer
+          ? {
+              name: customer.name || 'Customer',
+              phone: customer.phone || 'N/A',
+            }
+          : null,
+        rideFlow: booking?.rideFlow || null,
+        pickupInstructions: String(booking?.notes || '').trim(),
         estimatedTime: Math.max(3, Math.round(estimatedDistance * 2) || 8),
         distance: Number(trackPayload?.booking?.distance || booking?.distance || estimatedDistance || 0),
         fare: Number(trackPayload?.booking?.fare || booking?.fare || booking?.finalPrice || booking?.estimatedPrice || 0),
@@ -166,7 +185,103 @@ export default function TrackBooking() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [bookingId, searchParams]);
+  }, [bookingId, searchParams, refreshKey]);
+
+  const refreshTracking = () => setRefreshKey((prev) => prev + 1);
+
+  const canCancel = ['pending', 'driver_assigned', 'confirmed', 'driver_arrived'].includes(String(bookingData?.status || '').toLowerCase());
+  const canMarkArrived = ['confirmed', 'driver_assigned'].includes(String(bookingData?.status || '').toLowerCase());
+  const canStartRide = ['confirmed', 'driver_arrived', 'arrived'].includes(String(bookingData?.status || '').toLowerCase())
+    && !bookingData?.verification?.otpVerified;
+  const canEndRide = ['in_progress', 'on_trip'].includes(String(bookingData?.status || '').toLowerCase());
+
+  const toRad = (value) => (value * Math.PI) / 180;
+  const distanceKm = (aLat, aLng, bLat, bLng) => {
+    if (![aLat, aLng, bLat, bLng].every((value) => Number.isFinite(Number(value)))) return null;
+    const R = 6371;
+    const dLat = toRad(Number(bLat) - Number(aLat));
+    const dLng = toRad(Number(bLng) - Number(aLng));
+    const aa = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(Number(aLat))) * Math.cos(toRad(Number(bLat))) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+    return Number((R * c).toFixed(2));
+  };
+
+  const pickupDistanceKm = distanceKm(
+    driverLocation?.lat,
+    driverLocation?.lng,
+    bookingData?.pickup?.lat,
+    bookingData?.pickup?.lng
+  );
+
+  const driverEarnings = Number(
+    bookingData?.rideFlow?.driverEarning
+    || (bookingData?.invoice?.total ? Number(bookingData.invoice.total) * 0.9 : 0)
+  );
+
+  const handleCancelRide = async () => {
+    if (!bookingId || !canCancel) return;
+    try {
+      setActionBusy('cancel');
+      const result = await api.cancelBooking(bookingId);
+      if (result?.error) throw new Error(result.error);
+      refreshTracking();
+    } catch (err) {
+      setError(err?.message || 'Unable to cancel ride right now.');
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleMarkArrived = async () => {
+    if (!bookingId || !canMarkArrived) return;
+    try {
+      setActionBusy('arrived');
+      const result = await api.markDriverArrived(bookingId);
+      if (result?.error) throw new Error(result.error);
+      refreshTracking();
+    } catch (err) {
+      setError(err?.message || 'Unable to mark arrived.');
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleStartRide = async () => {
+    if (!bookingId || !canStartRide) return;
+    const enteredOtp = String(otpInput || '').trim();
+    if (!/^\d{4}$/.test(enteredOtp)) {
+      setError('Enter valid 4-digit OTP to start ride.');
+      return;
+    }
+
+    try {
+      setActionBusy('start');
+      setError('');
+      const result = await api.startRideWithOTP(bookingId, enteredOtp);
+      if (result?.error || result?.success === false) throw new Error(result?.error || result?.message || 'Unable to start ride.');
+      setOtpInput('');
+      refreshTracking();
+    } catch (err) {
+      setError(err?.message || 'Unable to start ride.');
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleEndRide = async () => {
+    if (!bookingId || !canEndRide) return;
+    try {
+      setActionBusy('end');
+      const result = await api.completeRide(bookingId);
+      if (result?.error) throw new Error(result.error);
+      refreshTracking();
+    } catch (err) {
+      setError(err?.message || 'Unable to end ride.');
+    } finally {
+      setActionBusy('');
+    }
+  };
 
   useEffect(() => {
     if (!bookingId) {
@@ -402,6 +517,7 @@ export default function TrackBooking() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.4 }}
+          ref={mapSectionRef}
           style={{
             backgroundColor: '#0b0f19',
             borderRadius: '16px',
@@ -421,7 +537,7 @@ export default function TrackBooking() {
           />
         </motion.div>
 
-        {/* Driver Info Grid */}
+        {/* Role-Based Info Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -432,7 +548,7 @@ export default function TrackBooking() {
             gap: '20px',
           }}
         >
-          {/* Left: Driver Details */}
+          {/* Left: Role Primary Details */}
           <div
             style={{
               backgroundColor: 'rgba(34, 197, 94, 0.05)',
@@ -441,108 +557,231 @@ export default function TrackBooking() {
               padding: '20px',
             }}
           >
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-              {bookingData?.driver?.avatar ? (
-                <motion.img
-                  src={bookingData.driver.avatar}
-                  alt={bookingData.driver.name || 'Driver'}
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '12px',
-                    objectFit: 'cover',
-                    border: '2px solid #22c55e',
-                  }}
-                  onError={(event) => {
-                    event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '12px',
-                    background: '#20293a',
-                    border: '2px solid #22c55e',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '32px',
-                    fontWeight: 'bold',
-                    color: '#22c55e',
-                  }}
-                >
-                  {bookingData?.driver?.name?.charAt(0).toUpperCase()}
+            {isCustomerView ? (
+              <>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                  {bookingData?.driver?.avatar ? (
+                    <motion.img
+                      src={bookingData.driver.avatar}
+                      alt={bookingData.driver.name || 'Driver'}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '12px',
+                        objectFit: 'cover',
+                        border: '2px solid #22c55e',
+                      }}
+                      onError={(event) => {
+                        event.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '12px',
+                        background: '#20293a',
+                        border: '2px solid #22c55e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '32px',
+                        fontWeight: 'bold',
+                        color: '#22c55e',
+                      }}
+                    >
+                      {bookingData?.driver?.name?.charAt(0).toUpperCase() || 'D'}
+                    </div>
+                  )}
+                  <div>
+                    <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '18px' }}>
+                      {bookingData?.driver?.name || 'Driver will be assigned soon'}
+                    </h3>
+                    <p style={{ margin: 0, color: '#93c5fd', fontSize: '13px' }}>
+                      {bookingData?.driver
+                        ? `⭐ ${bookingData.driver.rating || 0} • ${bookingData.driver.vehicle.name}`
+                        : 'Waiting for assignment'}
+                    </p>
+                    <p style={{ margin: '4px 0 0 0', color: '#aaa', fontSize: '12px' }}>
+                      {bookingData?.driver?.vehicle?.plate || 'No vehicle details yet'}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div>
-                <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '18px' }}>
-                  {bookingData?.driver?.name || 'Driver will be assigned soon'}
-                </h3>
-                <p style={{ margin: 0, color: '#93c5fd', fontSize: '13px' }}>
-                  {bookingData?.driver
-                    ? `⭐ ${bookingData.driver.rating || 0} • ${bookingData.driver.vehicle.name}`
-                    : 'Waiting for assignment'}
-                </p>
-                <p style={{ margin: '4px 0 0 0', color: '#aaa', fontSize: '12px' }}>
-                  {bookingData?.driver?.vehicle?.plate || 'No vehicle details yet'}
-                </p>
-              </div>
-            </div>
 
-            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
-              <p style={{ margin: '0 0 12px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
-                Driver Details
-              </p>
-              <a
-                href={bookingData?.driver?.phone ? `tel:${bookingData.driver.phone.replace(/\s/g, '')}` : '#'}
-                style={{
-                  display: 'inline-block',
-                  padding: '10px 16px',
-                  backgroundColor: 'rgba(147, 197, 253, 0.1)',
-                  border: '1px solid rgba(147, 197, 253, 0.3)',
-                  color: '#93c5fd',
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  marginRight: '8px',
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = 'rgba(147, 197, 253, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(147, 197, 253, 0.1)';
-                }}
-              >
-                📞 Call Driver
-              </a>
-              <button
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: 'rgba(147, 197, 253, 0.1)',
-                  border: '1px solid rgba(147, 197, 253, 0.3)',
-                  color: '#93c5fd',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = 'rgba(147, 197, 253, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(147, 197, 253, 0.1)';
-                }}
-              >
-                💬 Send Message
-              </button>
-            </div>
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                  <p style={{ margin: '0 0 12px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
+                    Customer Actions
+                  </p>
+                  <a
+                    href={bookingData?.driver?.phone ? `tel:${bookingData.driver.phone.replace(/\s/g, '')}` : '#'}
+                    style={{
+                      display: 'inline-block',
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                      border: '1px solid rgba(147, 197, 253, 0.3)',
+                      color: '#93c5fd',
+                      borderRadius: '8px',
+                      textDecoration: 'none',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginRight: '8px',
+                    }}
+                  >
+                    📞 Call Driver
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      color: '#86efac',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginRight: '8px',
+                    }}
+                  >
+                    📍 Track Ride
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(147, 197, 253, 0.1)',
+                      border: '1px solid rgba(147, 197, 253, 0.3)',
+                      color: '#93c5fd',
+                      borderRadius: '8px',
+                      cursor: 'not-allowed',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      opacity: 0.75,
+                    }}
+                    title="Chat feature coming soon"
+                  >
+                    💬 Chat (Soon)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelRide}
+                    disabled={!canCancel || actionBusy === 'cancel'}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: '#fca5a5',
+                      borderRadius: '8px',
+                      cursor: canCancel ? 'pointer' : 'not-allowed',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginLeft: '8px',
+                      opacity: canCancel ? 1 : 0.6,
+                    }}
+                  >
+                    {actionBusy === 'cancel' ? 'Cancelling...' : 'Cancel Ride'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '18px' }}>
+                    {bookingData?.customer?.name || 'Customer'}
+                  </h3>
+                  <p style={{ margin: '0 0 6px 0', color: '#93c5fd', fontSize: '13px' }}>
+                    📞 {bookingData?.customer?.phone || 'N/A'}
+                  </p>
+                  <p style={{ margin: 0, color: '#aaa', fontSize: '12px' }}>
+                    Pickup Instructions: {bookingData?.pickupInstructions || 'No special instructions'}
+                  </p>
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                  <p style={{ margin: '0 0 12px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
+                    Driver Actions
+                  </p>
+                  <p style={{ margin: '0 0 10px 0', color: '#d1fae5', fontSize: '13px' }}>
+                    Distance to Pickup: {pickupDistanceKm !== null ? `${pickupDistanceKm} km` : 'N/A'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleMarkArrived}
+                    disabled={!canMarkArrived || actionBusy === 'arrived'}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                      border: '1px solid rgba(34, 197, 94, 0.4)',
+                      color: '#86efac',
+                      borderRadius: '8px',
+                      cursor: canMarkArrived ? 'pointer' : 'not-allowed',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginRight: '8px',
+                      opacity: canMarkArrived ? 1 : 0.6,
+                    }}
+                  >
+                    {actionBusy === 'arrived' ? 'Marking...' : 'Mark Arrived'}
+                  </button>
+                  <input
+                    type="text"
+                    value={otpInput}
+                    onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Enter OTP"
+                    style={{
+                      width: '130px',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(148, 163, 184, 0.4)',
+                      backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                      color: '#fff',
+                      marginRight: '8px',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleStartRide}
+                    disabled={!canStartRide || actionBusy === 'start'}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      border: '1px solid rgba(59, 130, 246, 0.45)',
+                      color: '#93c5fd',
+                      borderRadius: '8px',
+                      cursor: canStartRide ? 'pointer' : 'not-allowed',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginRight: '8px',
+                      opacity: canStartRide ? 1 : 0.6,
+                    }}
+                  >
+                    {actionBusy === 'start' ? 'Starting...' : 'Start Ride'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEndRide}
+                    disabled={!canEndRide || actionBusy === 'end'}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      color: '#fde68a',
+                      borderRadius: '8px',
+                      cursor: canEndRide ? 'pointer' : 'not-allowed',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      opacity: canEndRide ? 1 : 0.6,
+                    }}
+                  >
+                    {actionBusy === 'end' ? 'Ending...' : 'End Ride'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -565,7 +804,8 @@ export default function TrackBooking() {
                 {statusText[bookingData?.status] || 'Tracking your booking in real-time.'}
               </p>
               <p style={{ margin: '12px 0 0 0', color: '#aaa', fontSize: '12px' }}>
-                ETA {bookingData?.estimatedTime || '--'} mins • Distance {bookingData?.distance || 0} km • Payment {bookingData?.paymentStatus || 'completed'}
+                ETA {bookingData?.estimatedTime || '--'} mins • Distance {bookingData?.distance || 0} km
+                {isCustomerView ? ` • Payment ${bookingData?.paymentStatus || 'completed'}` : ''}
               </p>
               <p style={{ margin: '8px 0 0 0', color: '#93c5fd', fontSize: '12px' }}>
                 {socketConnected ? 'Live socket connected' : 'Live socket reconnecting, polling every 10s'}
@@ -600,7 +840,7 @@ export default function TrackBooking() {
               ) : null}
             </motion.div>
 
-            {bookingData?.verification?.otp && !bookingData?.verification?.otpVerified && (
+            {isCustomerView && bookingData?.verification?.otp && !bookingData?.verification?.otpVerified && (
               <motion.div
                 whileHover={{ y: -4 }}
                 style={{
@@ -622,7 +862,7 @@ export default function TrackBooking() {
               </motion.div>
             )}
 
-            {bookingData?.invoice && (
+            {isCustomerView && bookingData?.invoice && (
               <motion.div
                 whileHover={{ y: -4 }}
                 style={{
@@ -642,6 +882,28 @@ export default function TrackBooking() {
                 <p style={{ margin: '4px 0', color: '#fde68a', fontSize: '13px' }}>Insurance: ₹{bookingData.invoice.insurance}</p>
                 <p style={{ margin: '8px 0 0 0', color: '#ffc107', fontWeight: 700, fontSize: '18px' }}>
                   Total Paid: ₹{bookingData.invoice.total}
+                </p>
+              </motion.div>
+            )}
+
+            {isDriverView && (
+              <motion.div
+                whileHover={{ y: -4 }}
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                }}
+              >
+                <p style={{ margin: '0 0 8px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
+                  Earnings
+                </p>
+                <div style={{ margin: 0, color: '#86efac', fontWeight: 700, fontSize: '24px' }}>
+                  ₹{Number(driverEarnings || 0).toFixed(0)}
+                </div>
+                <p style={{ margin: '8px 0 0 0', color: '#93c5fd', fontSize: '12px' }}>
+                  Driver earning preview for this ride.
                 </p>
               </motion.div>
             )}
