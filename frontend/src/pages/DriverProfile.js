@@ -202,13 +202,6 @@ export default function DriverProfile() {
             👤 Personal Info
           </button>
           <button
-            className={`tab-btn ${activeTab === 'vehicle' ? 'active' : ''}`}
-            onClick={() => setActiveTab('vehicle')}
-            disabled={isEditing}
-          >
-            🚗 Vehicle Info
-          </button>
-          <button
             className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
             disabled={isEditing}
@@ -356,88 +349,6 @@ export default function DriverProfile() {
                   <div className="info-item">
                     <label>Years of Experience</label>
                     <p>{formData.experience?.yearsOfExperience || '0'} years</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Vehicle Info Tab */}
-          {activeTab === 'vehicle' && (
-            <div className="profile-tab-content">
-              <h2>🚗 Vehicle Information</h2>
-              {isEditing ? (
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Vehicle Model</label>
-                    <input
-                      type="text"
-                      value={vehicleInfo.model || ''}
-                      onChange={(e) => handleNestedInputChange('vehicle', 'model', e.target.value)}
-                      className="form-input"
-                      placeholder="e.g., Honda City"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Registration Number</label>
-                    <input
-                      type="text"
-                      value={vehicleInfo.registrationNumber || ''}
-                      onChange={(e) => handleNestedInputChange('vehicle', 'registrationNumber', e.target.value)}
-                      className="form-input"
-                      placeholder="e.g., DL01AB1234"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Color</label>
-                    <input
-                      type="text"
-                      value={vehicleInfo.color || ''}
-                      onChange={(e) => handleNestedInputChange('vehicle', 'color', e.target.value)}
-                      className="form-input"
-                      placeholder="e.g., White"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Seat Capacity</label>
-                    <input
-                      type="number"
-                      value={vehicleInfo.seatCapacity || ''}
-                      onChange={(e) => handleNestedInputChange('vehicle', 'seatCapacity', parseInt(e.target.value) || 0)}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Insurance Expiry</label>
-                    <input
-                      type="date"
-                      value={vehicleInfo.insuranceExpiry ? vehicleInfo.insuranceExpiry.split('T')[0] : ''}
-                      onChange={(e) => handleNestedInputChange('vehicle', 'insuranceExpiry', e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Vehicle Model</label>
-                    <p>{vehicleInfo.model || '-'}</p>
-                  </div>
-                  <div className="info-item">
-                    <label>Registration Number</label>
-                    <p className="highlight">{vehicleInfo.registrationNumber || '-'}</p>
-                  </div>
-                  <div className="info-item">
-                    <label>Color</label>
-                    <p>{vehicleInfo.color || '-'}</p>
-                  </div>
-                  <div className="info-item">
-                    <label>Seat Capacity</label>
-                    <p>{vehicleInfo.seatCapacity || '-'} seats</p>
-                  </div>
-                  <div className="info-item">
-                    <label>Insurance Expiry</label>
-                    <p>{vehicleInfo.insuranceExpiry ? new Date(vehicleInfo.insuranceExpiry).toLocaleDateString() : '-'}</p>
                   </div>
                 </div>
               )}
