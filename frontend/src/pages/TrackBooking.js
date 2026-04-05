@@ -18,7 +18,7 @@ export default function TrackBooking() {
   const [loading, setLoading] = useState(true);
   const [bookingData, setBookingData] = useState(null);
   const [error, setError] = useState('');
-  const [driverLocation, setDriverLocation] = useState({ lat: 26.9124, lng: 75.7873 });
+  const [driverLocation, setDriverLocation] = useState({ lat: null, lng: null });
   const [socketConnected, setSocketConnected] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
   const [otpInput, setOtpInput] = useState('');
@@ -93,13 +93,13 @@ export default function TrackBooking() {
         status: booking?.status || 'pending',
         pickup: {
           address: pickup.address || 'Pickup not available',
-          lat: Number(pickup.latitude) || 26.9124,
-          lng: Number(pickup.longitude) || 75.7873,
+          lat: Number.isFinite(Number(pickup.latitude)) ? Number(pickup.latitude) : null,
+          lng: Number.isFinite(Number(pickup.longitude)) ? Number(pickup.longitude) : null,
         },
         dropoff: {
           address: dropoff.address || 'Drop not available',
-          lat: Number(dropoff.latitude) || 26.8389,
-          lng: Number(dropoff.longitude) || 75.8753,
+          lat: Number.isFinite(Number(dropoff.latitude)) ? Number(dropoff.latitude) : null,
+          lng: Number.isFinite(Number(dropoff.longitude)) ? Number(dropoff.longitude) : null,
         },
         driver: driver
           ? {
@@ -168,8 +168,10 @@ export default function TrackBooking() {
             setDriverLocation({ lat: trackedLat, lng: trackedLng });
           } else if (Number.isFinite(mapped.driver?.location?.lat) && Number.isFinite(mapped.driver?.location?.lng)) {
             setDriverLocation({ lat: mapped.driver.location.lat, lng: mapped.driver.location.lng });
-          } else {
+          } else if (Number.isFinite(mapped.pickup?.lat) && Number.isFinite(mapped.pickup?.lng)) {
             setDriverLocation({ lat: mapped.pickup.lat, lng: mapped.pickup.lng });
+          } else {
+            setDriverLocation({ lat: null, lng: null });
           }
         }
       } catch (err) {
