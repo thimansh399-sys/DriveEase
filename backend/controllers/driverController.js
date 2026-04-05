@@ -386,29 +386,94 @@ exports.updateProfilePicture = async (req, res) => {
 
 exports.updateDriverProfile = async (req, res) => {
   try {
-    const driverId = req.user.id;
-    const { name, email, bloodGroup, city, state, pincode, address } = req.body;
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (bloodGroup) updateData['personalDetails.bloodGroup'] = bloodGroup;
-    if (city) {
+    const driverId = req.user?.driverId || req.user?.id;
+    if (!driverId) {
+      return res.status(401).json({ error: 'Driver ID not found in token' });
+    }
+
+    const {
+      name,
+      email,
+      phone,
+      upiId,
+      personalDetails,
+      vehicle,
+      bankDetails,
+      documents,
+      experience,
+      bloodGroup,
+      city,
+      state,
+      pincode,
+      address
+    } = req.body || {};
+
+    const updateData = { updatedAt: new Date() };
+
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (upiId !== undefined) updateData.upiId = upiId;
+
+    const personal = personalDetails && typeof personalDetails === 'object' ? personalDetails : {};
+    if (personal.dateOfBirth !== undefined) updateData['personalDetails.dateOfBirth'] = personal.dateOfBirth || null;
+    if (personal.address !== undefined) updateData['personalDetails.address'] = personal.address;
+    if (personal.city !== undefined) {
+      updateData['personalDetails.city'] = personal.city;
+      updateData['currentLocation.city'] = personal.city;
+    }
+    if (personal.state !== undefined) {
+      updateData['personalDetails.state'] = personal.state;
+      updateData['currentLocation.state'] = personal.state;
+    }
+    if (personal.pincode !== undefined) {
+      const normalizedPincode = personal.pincode ? String(personal.pincode) : '';
+      updateData['personalDetails.pincode'] = normalizedPincode;
+      updateData['currentLocation.pincode'] = normalizedPincode;
+    }
+    if (personal.bloodGroup !== undefined) updateData['personalDetails.bloodGroup'] = personal.bloodGroup;
+
+    const vehicleInfo = vehicle && typeof vehicle === 'object' ? vehicle : {};
+    if (vehicleInfo.model !== undefined) updateData['vehicle.model'] = vehicleInfo.model;
+    if (vehicleInfo.registrationNumber !== undefined) updateData['vehicle.registrationNumber'] = vehicleInfo.registrationNumber;
+    if (vehicleInfo.color !== undefined) updateData['vehicle.color'] = vehicleInfo.color;
+    if (vehicleInfo.seatCapacity !== undefined) updateData['vehicle.seatCapacity'] = Number(vehicleInfo.seatCapacity) || 0;
+    if (vehicleInfo.seatsAvailable !== undefined) updateData['vehicle.seatsAvailable'] = Number(vehicleInfo.seatsAvailable) || 0;
+    if (vehicleInfo.insuranceExpiry !== undefined) updateData['vehicle.insuranceExpiry'] = vehicleInfo.insuranceExpiry || null;
+
+    const bank = bankDetails && typeof bankDetails === 'object' ? bankDetails : {};
+    if (bank.accountHolder !== undefined) updateData['bankDetails.accountHolder'] = bank.accountHolder;
+    if (bank.accountNumber !== undefined) updateData['bankDetails.accountNumber'] = bank.accountNumber;
+    if (bank.ifscCode !== undefined) updateData['bankDetails.ifscCode'] = bank.ifscCode;
+    if (bank.bankName !== undefined) updateData['bankDetails.bankName'] = bank.bankName;
+
+    const docs = documents && typeof documents === 'object' ? documents : {};
+    if (docs.drivingLicense?.number !== undefined) updateData['documents.drivingLicense.number'] = docs.drivingLicense.number;
+    if (docs.drivingLicense?.expiryDate !== undefined) updateData['documents.drivingLicense.expiryDate'] = docs.drivingLicense.expiryDate || null;
+    if (docs.aadhar?.number !== undefined) updateData['documents.aadhar.number'] = docs.aadhar.number;
+
+    const exp = experience && typeof experience === 'object' ? experience : {};
+    if (exp.yearsOfExperience !== undefined) updateData['experience.yearsOfExperience'] = Number(exp.yearsOfExperience) || 0;
+
+    // Backward compatibility for older payload shapes.
+    if (bloodGroup !== undefined) updateData['personalDetails.bloodGroup'] = bloodGroup;
+    if (address !== undefined) updateData['personalDetails.address'] = address;
+    if (city !== undefined) {
       updateData['personalDetails.city'] = city;
       updateData['currentLocation.city'] = city;
     }
-    if (state) {
+    if (state !== undefined) {
       updateData['personalDetails.state'] = state;
       updateData['currentLocation.state'] = state;
     }
-    if (pincode) {
-      updateData['personalDetails.pincode'] = String(pincode);
-      updateData['currentLocation.pincode'] = String(pincode);
+    if (pincode !== undefined) {
+      const normalizedPincode = pincode ? String(pincode) : '';
+      updateData['personalDetails.pincode'] = normalizedPincode;
+      updateData['currentLocation.pincode'] = normalizedPincode;
     }
-    if (address) updateData['personalDetails.address'] = address;
-    updateData.updatedAt = new Date();
 
-    const driver = await Driver.findByIdAndUpdate(driverId, updateData, { new: true });
-    res.json({ message: 'Profile updated', driver });
+    const driver = await Driver.findByIdAndUpdate(driverId, { $set: updateData }, { new: true });
+    res.json({ message: 'Profile updated', driver: withLegacyProfilePicture(driver) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -181,6 +181,17 @@ export const api = {
     }).then(r => r.json());
   },
 
+  uploadDriverDocument: (driverId, type, file) => {
+    const formData = new FormData();
+    formData.append(type, file);
+
+    return fetch(`${API_BASE_URL}/driver-registration/${driverId}/upload/${type}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: formData
+    }).then(r => r.json());
+  },
+
   updateDriverProfile: (data) =>
     fetch(`${API_BASE_URL}/drivers/profile`, {
       method: 'PUT',

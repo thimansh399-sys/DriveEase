@@ -15,6 +15,11 @@ export default function DriverProfile() {
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState('');
   const [formData, setFormData] = useState(null);
+  const [uploadingDoc, setUploadingDoc] = useState({
+    aadhar: false,
+    license: false,
+    selfie: false
+  });
 
   useEffect(() => {
     const fetchDriver = async () => {
@@ -65,7 +70,8 @@ export default function DriverProfile() {
         upiId: formData.upiId,
         personalDetails: formData.personalDetails || {},
         vehicle: formData.vehicle || {},
-        bankDetails: formData.bankDetails || {}
+        bankDetails: formData.bankDetails || {},
+        documents: formData.documents || {}
       };
 
       const response = await api.updateDriverProfile(updatePayload);
@@ -89,6 +95,32 @@ export default function DriverProfile() {
     setFormData(JSON.parse(JSON.stringify(driver)));
     setIsEditing(false);
     setSaveError('');
+  };
+
+  const handleDocumentUpload = async (type, file) => {
+    if (!file || !driver?._id) return;
+
+    try {
+      setUploadingDoc((prev) => ({ ...prev, [type]: true }));
+      setSaveError('');
+      setSaveSuccess('');
+
+      const result = await api.uploadDriverDocument(driver._id, type, file);
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      const refreshed = await api.getDriverProfile();
+      const refreshedDriver = refreshed?.driver || refreshed;
+      setDriver(refreshedDriver);
+      setFormData(JSON.parse(JSON.stringify(refreshedDriver)));
+      setSaveSuccess(`${type.toUpperCase()} uploaded successfully. Verification pending.`);
+      setTimeout(() => setSaveSuccess(''), 3000);
+    } catch (err) {
+      setSaveError(err?.message || `Failed to upload ${type}`);
+    } finally {
+      setUploadingDoc((prev) => ({ ...prev, [type]: false }));
+    }
   };
 
   if (loading) {
@@ -197,21 +229,18 @@ export default function DriverProfile() {
           <button
             className={`tab-btn ${activeTab === 'personal' ? 'active' : ''}`}
             onClick={() => setActiveTab('personal')}
-            disabled={isEditing}
           >
             👤 Personal Info
           </button>
           <button
             className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
-            disabled={isEditing}
           >
             🪪 Documents
           </button>
           <button
             className={`tab-btn ${activeTab === 'account' ? 'active' : ''}`}
             onClick={() => setActiveTab('account')}
-            disabled={isEditing}
           >
             💰 Account Info
           </button>
@@ -359,6 +388,119 @@ export default function DriverProfile() {
           {activeTab === 'documents' && (
             <div className="profile-tab-content">
               <h2>🪪 Documents & Verification</h2>
+              {isEditing ? (
+                <div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Driving License Number</label>
+                      <input
+                        type="text"
+                        value={documents.drivingLicense?.number || ''}
+                        onChange={(e) => setFormData((prev) => ({
+                          ...prev,
+                          documents: {
+                            ...(prev.documents || {}),
+                            drivingLicense: {
+                              ...(prev.documents?.drivingLicense || {}),
+                              number: e.target.value
+                            }
+                          }
+                        }))}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Driving License Expiry</label>
+                      <input
+                        type="date"
+                        value={documents.drivingLicense?.expiryDate ? documents.drivingLicense.expiryDate.split('T')[0] : ''}
+                        onChange={(e) => setFormData((prev) => ({
+                          ...prev,
+                          documents: {
+                            ...(prev.documents || {}),
+                            drivingLicense: {
+                              ...(prev.documents?.drivingLicense || {}),
+                              expiryDate: e.target.value
+                            }
+                          }
+                        }))}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Aadhaar Number</label>
+                      <input
+                        type="text"
+                        value={documents.aadhar?.number || ''}
+                        onChange={(e) => setFormData((prev) => ({
+                          ...prev,
+                          documents: {
+                            ...(prev.documents || {}),
+                            aadhar: {
+                              ...(prev.documents?.aadhar || {}),
+                              number: e.target.value
+                            }
+                          }
+                        }))}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="documents-grid" style={{ marginTop: '20px' }}>
+                    <div className="doc-card">
+                      <h3>Upload Driving License</h3>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="form-input"
+                        onChange={(e) => handleDocumentUpload('license', e.target.files?.[0])}
+                        disabled={uploadingDoc.license}
+                      />
+                      <p style={{ color: '#9ca3af', fontSize: '13px' }}>{uploadingDoc.license ? 'Uploading...' : 'Upload clear front-side image or PDF'}</p>
+                      {documents.drivingLicense?.file && (
+                        <a href={buildAssetUrl(documents.drivingLicense.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
+                          View Current License →
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="doc-card">
+                      <h3>Upload Aadhaar</h3>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        className="form-input"
+                        onChange={(e) => handleDocumentUpload('aadhar', e.target.files?.[0])}
+                        disabled={uploadingDoc.aadhar}
+                      />
+                      <p style={{ color: '#9ca3af', fontSize: '13px' }}>{uploadingDoc.aadhar ? 'Uploading...' : 'Upload Aadhaar image or PDF'}</p>
+                      {documents.aadhar?.file && (
+                        <a href={buildAssetUrl(documents.aadhar.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
+                          View Current Aadhaar →
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="doc-card">
+                      <h3>Upload Selfie</h3>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="form-input"
+                        onChange={(e) => handleDocumentUpload('selfie', e.target.files?.[0])}
+                        disabled={uploadingDoc.selfie}
+                      />
+                      <p style={{ color: '#9ca3af', fontSize: '13px' }}>{uploadingDoc.selfie ? 'Uploading...' : 'Upload a clear selfie for verification'}</p>
+                      {documents.selfie?.file && (
+                        <a href={buildAssetUrl(documents.selfie.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
+                          View Current Selfie →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <div className="documents-grid">
                 <div className="doc-card">
                   <h3>Driving License</h3>
@@ -371,7 +513,7 @@ export default function DriverProfile() {
                     </span>
                   </p>
                   {documents.drivingLicense?.file && (
-                    <a href={documents.drivingLicense.file} target="_blank" rel="noopener noreferrer" className="doc-link">
+                    <a href={buildAssetUrl(documents.drivingLicense.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
                       View Document →
                     </a>
                   )}
@@ -387,7 +529,7 @@ export default function DriverProfile() {
                     </span>
                   </p>
                   {documents.aadhar?.file && (
-                    <a href={documents.aadhar.file} target="_blank" rel="noopener noreferrer" className="doc-link">
+                    <a href={buildAssetUrl(documents.aadhar.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
                       View Document →
                     </a>
                   )}
@@ -402,7 +544,7 @@ export default function DriverProfile() {
                     </span>
                   </p>
                   {documents.selfie?.file && (
-                    <a href={documents.selfie.file} target="_blank" rel="noopener noreferrer" className="doc-link">
+                    <a href={buildAssetUrl(documents.selfie.file)} target="_blank" rel="noopener noreferrer" className="doc-link">
                       View Document →
                     </a>
                   )}
@@ -414,6 +556,7 @@ export default function DriverProfile() {
                   <p style={{ color: '#888' }}>Upload via vehicle details section</p>
                 </div>
               </div>
+              )}
             </div>
           )}
 
