@@ -1395,6 +1395,15 @@ exports.getDriverBookings = async (req, res) => {
         otpVerified: b.verification?.otpVerified || false,
         otpExpiry: b.verification?.otpExpiry || null,
       },
+      assignment: {
+        currentAssignedDriverId: b.assignment?.currentAssignedDriverId || null,
+        currentAssignedAt: b.assignment?.currentAssignedAt || null,
+        currentAssignmentExpiresAt: b.assignment?.currentAssignmentExpiresAt || null,
+        acceptedAt: b.assignment?.acceptedAt || null,
+        attemptCount: b.assignment?.attemptCount || 0,
+        maxAttempts: b.assignment?.maxAttempts || getMaxAssignmentAttempts(),
+        lastEvent: b.assignment?.lastEvent || 'created',
+      },
       canStartRide: ['confirmed', 'driver_arrived', 'arrived'].includes(String(b.status || '').toLowerCase())
         && !(b.verification?.otpVerified),
       canAccept: (isOpenPending && inDriverArea && !isRejectedByCurrentDriver) ||

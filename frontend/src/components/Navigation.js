@@ -22,7 +22,6 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
 
   const guestTabs = [
     { to: '/', label: 'Home', end: true },
-    { to: '/drivers', label: 'Drivers' },
     { to: '/subscriptions', label: 'Plans' },
     { to: '/insurance', label: 'Insurance' },
     { to: '/pay', label: 'Pay' },

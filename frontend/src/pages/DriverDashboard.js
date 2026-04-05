@@ -36,9 +36,15 @@ export default function DriverDashboard() {
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [error, setError] = useState('');
+  const [nowMs, setNowMs] = useState(Date.now());
   const seenPendingRef = useRef(new Set());
   const socketRef = useRef(null);
   const locationTimerRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const storedDriver = JSON.parse(localStorage.getItem('driver') || 'null');
@@ -220,6 +226,20 @@ export default function DriverDashboard() {
   const activeBookings = bookings.filter((b) => ACTIVE_STATUSES.includes(b.status));
   const completedBookings = bookings.filter((b) => b.status === 'completed');
 
+  const getAssignmentCountdownLabel = (booking) => {
+    const expiresAtRaw = booking?.assignment?.currentAssignmentExpiresAt;
+    const expiresAt = expiresAtRaw ? new Date(expiresAtRaw).getTime() : null;
+    if (!Number.isFinite(expiresAt)) return '';
+
+    const diffMs = expiresAt - nowMs;
+    if (diffMs <= 0) return 'Reassigning to next online driver...';
+
+    const totalSeconds = Math.ceil(diffMs / 1000);
+    const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const ss = String(totalSeconds % 60).padStart(2, '0');
+    return `Accept within ${mm}:${ss} or this ride will auto-assign to another online driver.`;
+  };
+
   const submitOtp = async () => {
     if (!otpModalBooking?._id) return;
     const currentBookingId = String(otpModalBooking._id);
@@ -307,6 +327,8 @@ export default function DriverDashboard() {
                 const otpVerified = Boolean(booking.verification?.otpVerified);
                 const normalizedStatus = String(booking.status || '').toLowerCase();
                 const busy = actionBusyId.startsWith(String(booking._id));
+                const isAssignedRequest = normalizedStatus === 'driver_assigned' && Boolean(booking.canAccept);
+                const assignmentCountdownLabel = isAssignedRequest ? getAssignmentCountdownLabel(booking) : '';
 
                 return (
                   <div key={booking._id} style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: 12 }}>
@@ -319,6 +341,11 @@ export default function DriverDashboard() {
                     <p style={{ margin: '4px 0' }}><strong>Drop:</strong> {booking.dropLocation?.address || '-'}</p>
                     <p style={{ margin: '4px 0' }}><strong>Fare:</strong> ₹{fare}</p>
                     <p style={{ margin: '4px 0' }}><strong>OTP Shared:</strong> {otpShared ? 'Yes' : 'No'}</p>
+                    {assignmentCountdownLabel ? (
+                      <p style={{ margin: '6px 0', color: '#fcd34d', fontWeight: 600 }}>
+                        ⏱ {assignmentCountdownLabel}
+                      </p>
+                    ) : null}
 
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
                       {(booking.status === 'pending' || booking.status === 'driver_assigned') && (
