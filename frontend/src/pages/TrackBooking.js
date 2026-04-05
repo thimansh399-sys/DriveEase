@@ -23,6 +23,13 @@ export default function TrackBooking() {
   const [actionBusy, setActionBusy] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  const [feedbackSuccess, setFeedbackSuccess] = useState('');
   const socketRef = useRef(null);
   const role = String(localStorage.getItem('userRole') || '').toUpperCase();
   const isDriverView = role === 'DRIVER';
@@ -129,6 +136,7 @@ export default function TrackBooking() {
           otpVerified: Boolean(booking?.verification?.otpVerified),
           otpExpiry: booking?.verification?.otpExpiry || null,
         },
+        feedback: booking?.feedback || null,
         invoice,
       };
     };
@@ -349,6 +357,68 @@ export default function TrackBooking() {
   const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`;
   const openMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(driverPoint)}&destination=${encodeURIComponent(rideStarted ? dropPoint : pickupPoint)}&travelmode=driving`;
 
+  useEffect(() => {
+    if (!isCustomerView || !bookingData?.id) return;
+
+    const isCompleted = String(bookingData?.status || '').toLowerCase() === 'completed';
+    const hasFeedback = Boolean(bookingData?.feedback?.rating);
+
+    if (isCompleted && !hasFeedback && !feedbackDismissed) {
+      setShowFeedbackModal(true);
+    }
+  }, [isCustomerView, bookingData?.id, bookingData?.status, bookingData?.feedback?.rating, feedbackDismissed]);
+
+  const handleSubmitFeedback = async () => {
+    if (!bookingId) return;
+    if (!feedbackRating || feedbackRating < 1 || feedbackRating > 5) {
+      setFeedbackError('Please select a rating between 1 and 5.');
+      return;
+    }
+
+    try {
+      setFeedbackBusy(true);
+      setFeedbackError('');
+
+      const result = await api.addFeedback(bookingId, {
+        rating: feedbackRating,
+        comment: feedbackComment
+      });
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      setShowFeedbackModal(false);
+      setFeedbackDismissed(true);
+      setFeedbackSuccess('Thanks! Your feedback was submitted successfully.');
+      setBookingData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          feedback: {
+            rating: feedbackRating,
+            comment: String(feedbackComment || '').trim(),
+            date: new Date().toISOString()
+          },
+          driver: prev.driver
+            ? {
+                ...prev.driver,
+                rating: Number(result?.driverRating?.averageRating || prev.driver.rating || 0)
+              }
+            : prev.driver
+        };
+      });
+      setFeedbackComment('');
+      setFeedbackRating(0);
+      setTimeout(() => setFeedbackSuccess(''), 3000);
+      refreshTracking();
+    } catch (err) {
+      setFeedbackError(err?.message || 'Unable to submit feedback right now.');
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <motion.div
@@ -383,14 +453,39 @@ export default function TrackBooking() {
   }
 
   return (
-    <motion.div
-      className="ux-page"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      style={{ padding: '0' }}
-    >
-      <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', padding: '20px' }}>
+    <>
+      {feedbackSuccess ? (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed',
+            top: '18px',
+            right: '18px',
+            zIndex: 10000,
+            padding: '12px 14px',
+            borderRadius: '10px',
+            border: '1px solid rgba(34, 197, 94, 0.4)',
+            backgroundColor: 'rgba(22, 101, 52, 0.92)',
+            color: '#dcfce7',
+            fontWeight: 600,
+            fontSize: '13px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
+          }}
+        >
+          {feedbackSuccess}
+        </motion.div>
+      ) : null}
+
+      <motion.div
+        className="ux-page"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        style={{ padding: '0' }}
+      >
+        <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', padding: '20px' }}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -800,6 +895,43 @@ export default function TrackBooking() {
               </motion.div>
             )}
 
+            {isCustomerView && bookingData?.feedback?.rating && (
+              <motion.div
+                whileHover={{ y: -4 }}
+                style={{
+                  backgroundColor: 'rgba(250, 204, 21, 0.08)',
+                  border: '1px solid rgba(250, 204, 21, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                }}
+              >
+                <p style={{ margin: '0 0 8px 0', color: '#aaa', fontSize: '12px', textTransform: 'uppercase' }}>
+                  Your Feedback
+                </p>
+                <div style={{ color: '#fde047', fontSize: '18px', marginBottom: '8px' }}>
+                  {'★'.repeat(Number(bookingData.feedback.rating) || 0)}
+                  {'☆'.repeat(Math.max(0, 5 - Number(bookingData.feedback.rating || 0)))}
+                  <span style={{ color: '#fde68a', marginLeft: '8px', fontSize: '14px', fontWeight: 700 }}>
+                    {Number(bookingData.feedback.rating).toFixed(1)}/5
+                  </span>
+                </div>
+                {bookingData.feedback.comment ? (
+                  <p style={{ margin: 0, color: '#fde68a', fontSize: '13px', lineHeight: 1.45 }}>
+                    {bookingData.feedback.comment}
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '13px' }}>
+                    No written comment provided.
+                  </p>
+                )}
+                {bookingData.feedback.date ? (
+                  <p style={{ margin: '8px 0 0 0', color: '#9ca3af', fontSize: '11px' }}>
+                    Submitted on {new Date(bookingData.feedback.date).toLocaleString('en-IN')}
+                  </p>
+                ) : null}
+              </motion.div>
+            )}
+
             {isDriverView && (
               <motion.div
                 whileHover={{ y: -4 }}
@@ -855,7 +987,122 @@ export default function TrackBooking() {
             </p>
           </div>
         </motion.div>
-      </div>
-    </motion.div>
+        </div>
+      </motion.div>
+
+      {showFeedbackModal && isCustomerView && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              width: '100%',
+              maxWidth: '520px',
+              background: 'linear-gradient(160deg, #0f172a 0%, #111827 100%)',
+              border: '1px solid rgba(34, 197, 94, 0.35)',
+              borderRadius: '14px',
+              padding: '20px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.45)'
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px 0', color: '#fff' }}>Ride Completed</h3>
+            <p style={{ margin: '0 0 14px 0', color: '#9ca3af', fontSize: '14px' }}>
+              Please rate your driver and share feedback.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={`track-feedback-star-${value}`}
+                  type="button"
+                  onClick={() => setFeedbackRating(value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '30px',
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                    color: value <= feedbackRating ? '#facc15' : '#4b5563'
+                  }}
+                  aria-label={`Rate ${value} star`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={feedbackComment}
+              onChange={(event) => setFeedbackComment(event.target.value.slice(0, 500))}
+              rows={4}
+              placeholder="Write feedback (optional)"
+              style={{
+                width: '100%',
+                borderRadius: '10px',
+                border: '1px solid rgba(148, 163, 184, 0.4)',
+                backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                color: '#fff',
+                padding: '12px',
+                resize: 'vertical',
+                marginBottom: '10px'
+              }}
+            />
+
+            {feedbackError ? (
+              <div style={{ color: '#fca5a5', fontSize: '13px', marginBottom: '10px' }}>{feedbackError}</div>
+            ) : null}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setFeedbackDismissed(true);
+                }}
+                disabled={feedbackBusy}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(148,163,184,0.4)',
+                  background: 'transparent',
+                  color: '#cbd5e1',
+                  cursor: feedbackBusy ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Later
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitFeedback}
+                disabled={feedbackBusy}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(34,197,94,0.5)',
+                  background: 'rgba(34,197,94,0.15)',
+                  color: '#86efac',
+                  fontWeight: 700,
+                  cursor: feedbackBusy ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {feedbackBusy ? 'Submitting...' : 'Submit Feedback'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </>
   );
 }

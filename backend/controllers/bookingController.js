@@ -989,32 +989,81 @@ exports.cancelBooking = async (req, res) => {
 
 exports.addFeedback = async (req, res) => {
   try {
-    const { rating, comment } = req.body;
     const bookingId = req.params.id;
+    const normalizedRole = String(req.user?.role || '').toLowerCase();
+    const numericRating = Number(req.body?.rating);
+    const comment = String(req.body?.comment || '').trim();
 
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      {
-        feedback: {
-          rating,
-          comment,
-          date: new Date()
-        },
-        updatedAt: new Date()
-      },
-      { new: true }
-    );
-
-    // Update driver rating
-    if (booking.driverId) {
-      const driver = await Driver.findById(booking.driverId);
-      const totalRating = (driver.rating.averageRating * driver.rating.totalRatings) + rating;
-      driver.rating.totalRatings += 1;
-      driver.rating.averageRating = (totalRating / driver.rating.totalRatings).toFixed(1);
-      await driver.save();
+    if (!['customer', 'user'].includes(normalizedRole)) {
+      return res.status(403).json({ error: 'Only customers can submit ride feedback' });
     }
 
-    res.json({ message: 'Feedback added', booking });
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    if (comment.length > 500) {
+      return res.status(400).json({ error: 'Feedback comment is too long (max 500 chars)' });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (String(booking.customerId || '') !== String(req.user?.id || '')) {
+      return res.status(403).json({ error: 'You can only rate your own booking' });
+    }
+
+    if (String(booking.status || '').toLowerCase() !== 'completed') {
+      return res.status(400).json({ error: 'Feedback can only be submitted after ride completion' });
+    }
+
+    if (booking.feedback?.rating) {
+      return res.status(409).json({ error: 'Feedback already submitted for this ride' });
+    }
+
+    booking.feedback = {
+      rating: numericRating,
+      comment,
+      date: new Date()
+    };
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    let updatedDriverRating = null;
+
+    // Auto-update driver rating aggregate.
+    if (booking.driverId) {
+      const driver = await Driver.findById(booking.driverId);
+      if (driver) {
+        const prevAverage = Number(driver.rating?.averageRating || 0);
+        const prevCount = Number(driver.rating?.totalRatings || 0);
+        const totalScore = (prevAverage * prevCount) + numericRating;
+        const newCount = prevCount + 1;
+        const newAverage = Number((totalScore / newCount).toFixed(1));
+
+        driver.rating = {
+          ...(driver.rating || {}),
+          totalRatings: newCount,
+          averageRating: newAverage
+        };
+        driver.updatedAt = new Date();
+        await driver.save();
+
+        updatedDriverRating = {
+          averageRating: newAverage,
+          totalRatings: newCount
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Feedback added successfully',
+      booking,
+      driverRating: updatedDriverRating
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

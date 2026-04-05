@@ -40,6 +40,22 @@ export default function DriverProfile() {
     fetchDriver();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (isEditing) return;
+      try {
+        const response = await api.getDriverProfile();
+        const driverData = response?.driver || response;
+        setDriver(driverData);
+        setFormData(JSON.parse(JSON.stringify(driverData)));
+      } catch (_) {
+        // Ignore silent refresh failures; main fetch already handles errors.
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [isEditing]);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
