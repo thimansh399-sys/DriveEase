@@ -697,7 +697,7 @@ exports.bookRide = async (req, res) => {
       }
     }
     const otp = generateRideOTP();
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const otpExpiresAt = null;
 
     const booking = new Booking({
       bookingId: generateBookingId(),
@@ -720,14 +720,14 @@ exports.bookRide = async (req, res) => {
       verification: {
         otp,
         otpGenerated: new Date(),
-        otpExpiry: otpExpiresAt,
+        otpExpiry: null,
         otpSharedWithDriver: false,
         otpSharedAt: null,
         otpSharedByCustomer: false,
         otpVerified: false,
       },
       otp,
-      otpExpiresAt,
+      otpExpiresAt: null,
       otpAttempts: 0,
       fareRatePerKm: 15,
       distance: 0,
@@ -1634,11 +1634,6 @@ exports.startRideWithOTP = async (req, res) => {
       return res.status(400).json({ error: 'Invalid OTP' });
     }
 
-    const expiresAt = booking.otpExpiresAt || booking.verification?.otpExpiry;
-    if (expiresAt && new Date() > new Date(expiresAt)) {
-      return res.status(400).json({ error: 'OTP expired' });
-    }
-
     booking.verification.otpVerified = true;
     booking.verification.otpVerificationTime = new Date();
     booking.verification.otp = null;
@@ -1707,10 +1702,6 @@ exports.shareRideOTP = async (req, res) => {
       return res.status(400).json({ error: 'No OTP found for this booking' });
     }
 
-    if ((booking.otpExpiresAt || booking.verification?.otpExpiry) && new Date() > new Date(booking.otpExpiresAt || booking.verification?.otpExpiry)) {
-      return res.status(400).json({ error: 'OTP expired. Please contact support to regenerate OTP.' });
-    }
-
     if (booking.verification?.otpVerified) {
       return res.status(400).json({ error: 'OTP already verified and ride started' });
     }
@@ -1718,6 +1709,8 @@ exports.shareRideOTP = async (req, res) => {
     booking.verification.otpSharedWithDriver = true;
     booking.verification.otpSharedAt = new Date();
     booking.verification.otpSharedByCustomer = true;
+    booking.verification.otpExpiry = null;
+    booking.otpExpiresAt = null;
 
     if (booking.status === 'pending') {
       booking.status = 'confirmed';
@@ -1932,11 +1925,11 @@ exports.bookNow = async (req, res) => {
       fareBreakdown: bill.breakdown,
       verification: {
         otp,
-        otpExpiry: new Date(Date.now() + 5 * 60 * 1000),
+        otpExpiry: null,
         otpVerified: false,
       },
       otp,
-      otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      otpExpiresAt: null,
       otpAttempts: 0,
       fareRatePerKm: 15,
       distance: 0,

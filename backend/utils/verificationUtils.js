@@ -30,19 +30,15 @@ function generateBookingConfirmationCode(bookingId, customerId) {
 }
 
 /**
- * Verify OTP matches and hasn't expired
+ * Verify OTP matches
  * @param {String} providedOTP - OTP provided by user
  * @param {String} storedOTP - OTP stored in database
- * @param {Date} otpExpiry - Expiry time of OTP
+ * @param {Date} otpExpiry - Retained for backward compatibility (ignored)
  * @returns {Object} - {verified: Boolean, message: String}
  */
 function verifyOTP(providedOTP, storedOTP, otpExpiry) {
   if (!storedOTP) {
     return { verified: false, message: 'OTP not found. Please request a new OTP.' };
-  }
-  
-  if (new Date() > new Date(otpExpiry)) {
-    return { verified: false, message: 'OTP has expired. Please request a new OTP.' };
   }
   
   if (providedOTP !== storedOTP) {
