@@ -14,6 +14,7 @@ import MyBookings from './pages/MyBookings';
 import Services from './pages/Services';
 import DriverDashboard from './pages/DriverDashboard';
 import DriverProfile from './pages/DriverProfile';
+import DriverEarnings from './pages/DriverEarnings';
 import Payment from './pages/Payment';
 import Insurance from './pages/Insurance';
 import Pay from './pages/Pay';
@@ -80,6 +81,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
           <Route path="/payment" element={isLoggedIn ? <Payment /> : <Navigate to="/login" />} />
           <Route path="/customer-dashboard" element={isLoggedIn ? <CustomerDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/driver-dashboard" element={isLoggedIn && userRole === 'driver' ? <DriverDashboard /> : <Navigate to="/login" />} />
+          <Route path="/driver-earnings" element={isLoggedIn && userRole === 'driver' ? <DriverEarnings /> : <Navigate to="/login" />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={canAccessAdmin ? <AdminDashboardWorkspace /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-dashboard" element={canAccessAdmin ? <AdminDashboardEnhanced /> : <Navigate to="/admin-login" />} />

@@ -6,8 +6,9 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isDriver = isLoggedIn && userRole === 'driver';
-  const isCustomer = isLoggedIn && (userRole === 'customer' || userRole === 'user');
+  const normalizedRole = String(userRole || '').toLowerCase();
+  const isDriver = isLoggedIn && normalizedRole === 'driver';
+  const isCustomer = isLoggedIn && (normalizedRole === 'customer' || normalizedRole === 'user');
   const showLogoutOnMainScreens =
     location.pathname === '/' ||
     location.pathname === '/profile' ||
@@ -19,7 +20,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
     navigate('/');
   };
 
-  const tabs = [
+  const guestTabs = [
     { to: '/', label: 'Home', end: true },
     { to: '/drivers', label: 'Drivers' },
     { to: '/subscriptions', label: 'Plans' },
@@ -27,14 +28,21 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
     { to: '/pay', label: 'Pay' },
   ];
 
-  if (isLoggedIn) {
-    tabs.push({ to: '/profile', label: 'Profile' });
-  }
-  if (isCustomer) tabs.push({ to: '/my-bookings', label: 'My Bookings' });
-  if (isDriver) {
-    tabs.push({ to: '/driver-dashboard', label: 'Dashboard' });
-    tabs.push({ to: '/my-bookings', label: 'My Rides' });
-  }
+  const customerTabs = [
+    { to: '/', label: 'Home', end: true },
+    { to: '/book-ride', label: 'Book Ride' },
+    { to: '/my-bookings', label: 'My Bookings' },
+    { to: '/profile', label: 'Profile' },
+  ];
+
+  const driverTabs = [
+    { to: '/driver-dashboard', label: 'Dashboard' },
+    { to: '/my-bookings', label: 'Active Rides' },
+    { to: '/driver-earnings', label: 'Earnings' },
+    { to: '/profile', label: 'Profile' },
+  ];
+
+  const tabs = isDriver ? driverTabs : isCustomer ? customerTabs : guestTabs;
 
   return (
     <nav className="navigation">
@@ -83,6 +91,11 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
                   <Link to="/driver-dashboard" className="nav-link" onClick={() => setMenuOpen(false)}>Dashboard</Link>
                 </li>
               )}
+              {isDriver && (
+                <li className="nav-mobile-only">
+                  <Link to="/driver-earnings" className="nav-link" onClick={() => setMenuOpen(false)}>Earnings</Link>
+                </li>
+              )}
               {!isDriver && (
                 <li className="nav-mobile-only">
                   <Link to="/register-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Register as Driver</Link>
@@ -122,6 +135,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
               {isDriver && (
                 <>
                   <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
+                  <Link to="/driver-earnings" className="nav-button btn-outline">Earnings</Link>
                   {showLogoutOnMainScreens && (
                     <button type="button" className="nav-button btn-logout" onClick={handleLogout}>Logout</button>
                   )}
