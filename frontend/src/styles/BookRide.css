@@ -335,6 +335,40 @@
   font-size: 0.78rem;
 }
 
+.book-ride-assigning-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.book-ride-assigning-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 rgba(74, 222, 128, 0.75);
+  animation: assigningPulse 1.2s infinite;
+}
+
+@keyframes assigningPulse {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.65);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 9px rgba(74, 222, 128, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
 .book-ride-insurance-card {
   margin-top: 12px;
   border-radius: 12px;

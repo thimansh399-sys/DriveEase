@@ -120,6 +120,24 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     enum: ['none', 'per_ride', 'monthly']
   },
+  insuranceCoverageStatus: {
+    type: String,
+    enum: ['not_opted', 'active', 'expired'],
+    default: 'not_opted'
+  },
+  insuranceActivatedAt: {
+    type: Date,
+    default: null
+  },
+  insuranceEndedAt: {
+    type: Date,
+    default: null
+  },
+  insuranceProvider: {
+    name: { type: String, default: 'DriveEase Insurance Partner' },
+    policyUrl: { type: String, default: 'https://www.icicilombard.com/' },
+    claimsUrl: { type: String, default: 'https://www.icicilombard.com/claims' }
+  },
   driverInsuranceOpted: {
     type: Boolean,
     default: false

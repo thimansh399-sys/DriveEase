@@ -42,6 +42,7 @@ export default function BookRide() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
   const [insuranceOpted, setInsuranceOpted] = useState(false);
+  const [autoFetchDriver, setAutoFetchDriver] = useState(true);
   const shouldAutoDetectPickupRef = useRef(true);
 
   const mapQuery = form.pickup && form.drop
@@ -213,6 +214,7 @@ export default function BookRide() {
         pickup: form.pickup,
         drop: form.drop,
         rideType: form.rideType,
+        autoFetchDriver,
         pickupLatitude: pickupCoords.latitude,
         pickupLongitude: pickupCoords.longitude,
         insuranceOpted,
@@ -222,7 +224,7 @@ export default function BookRide() {
       if (data?.booking?._id || data?.booking?.bookingId) {
         setSuccess(data);
         setTrackedBooking(data.booking);
-        setTrackerMessage('Searching nearby drivers...');
+        setTrackerMessage('Assigning Driver Soon...');
       } else {
         setError(data?.error || data?.message || 'Booking failed');
       }
@@ -248,7 +250,7 @@ export default function BookRide() {
 
         const status = String(detail.status || '').toLowerCase();
         if (status === 'pending') {
-          setTrackerMessage('Searching nearby drivers...');
+          setTrackerMessage('Assigning Driver Soon...');
         } else if (status === 'confirmed') {
           setTrackerMessage('Driver accepted your ride. Wait for arrival at pickup.');
         } else if (status === 'driver_arrived') {
@@ -301,6 +303,9 @@ export default function BookRide() {
     const pickupAddress = live.pickupLocation?.address || success.booking?.pickup || '-';
     const dropAddress = live.dropLocation?.address || success.booking?.drop || '-';
     const canShareOtp = liveStatus === 'driver_arrived' && !live.verification?.otpSharedWithDriver;
+    const successSubtitle = liveStatus === 'pending'
+      ? 'Assigning Driver Soon...'
+      : (success.message || 'Ride request submitted successfully.');
 
     return (
       <div className="book-ride-page">
@@ -308,7 +313,7 @@ export default function BookRide() {
           <div className="book-ride-success-badge">Booking Confirmed</div>
           <div className="book-ride-success-icon">✅</div>
           <h2>Ride Booked!</h2>
-          <p className="book-ride-subtitle">{success.message}</p>
+          <p className="book-ride-subtitle">{successSubtitle}</p>
 
           <div className="book-ride-success-panel">
             <p><b>Booking ID:</b> {live.bookingId || success.booking?.bookingId}</p>
@@ -322,7 +327,10 @@ export default function BookRide() {
             )}
             <p className="book-ride-otp">AI Secure OTP: {success.booking?.otp || live.verification?.otp || '-'}</p>
             <p className="book-ride-otp-hint">Share this OTP with your driver to start the ride</p>
-            <p style={{ marginTop: 10, color: '#86efac', fontWeight: 600 }}>{trackerMessage}</p>
+            <div className="book-ride-assigning-status" style={{ marginTop: 10 }}>
+              {liveStatus === 'pending' ? <span className="book-ride-assigning-dot" /> : null}
+              <p style={{ margin: 0, color: '#86efac', fontWeight: 600 }}>{trackerMessage}</p>
+            </div>
 
             {canShareOtp && (
               <button
@@ -511,8 +519,26 @@ export default function BookRide() {
 
             <div className="book-ride-insurance-links">
               <a href="/insurance">View DriveEase Insurance Plans</a>
-              <a href="https://www.irdai.gov.in/" target="_blank" rel="noreferrer">Insurance Regulator (IRDAI)</a>
+              <a href="https://www.icicilombard.com/" target="_blank" rel="noreferrer">Insurance Company Partner</a>
+              <a href="https://www.icicilombard.com/claims" target="_blank" rel="noreferrer">Claims Portal</a>
             </div>
+          </div>
+
+          <div className="book-ride-insurance-card">
+            <div className="book-ride-insurance-head">
+              <h4>Driver Auto-Fetch</h4>
+              <label className="book-ride-insurance-toggle">
+                <input
+                  type="checkbox"
+                  checked={autoFetchDriver}
+                  onChange={(event) => setAutoFetchDriver(event.target.checked)}
+                />
+                <span>{autoFetchDriver ? 'On' : 'Off'}</span>
+              </label>
+            </div>
+            <p className="book-ride-insurance-copy">
+              Keep this ON to auto-assign nearest available driver immediately after booking.
+            </p>
           </div>
 
           <button

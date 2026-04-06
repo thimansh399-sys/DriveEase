@@ -115,6 +115,12 @@ function roundAmount(value) {
   return Number((Number(value) || 0).toFixed(2));
 }
 
+const INSURANCE_PROVIDER = {
+  name: 'DriveEase Insurance Partner',
+  policyUrl: 'https://www.icicilombard.com/',
+  claimsUrl: 'https://www.icicilombard.com/claims',
+};
+
 const CUSTOMER_PLAN_RULES = {
   BASIC: {
     key: 'BASIC',
@@ -661,6 +667,10 @@ exports.createBooking = async (req, res) => {
       insuranceOpted,
       insuranceAmount,
       insuranceType: insuranceOpted ? insuranceType : 'none',
+      insuranceCoverageStatus: insuranceOpted ? 'active' : 'not_opted',
+      insuranceActivatedAt: insuranceOpted ? new Date() : null,
+      insuranceEndedAt: null,
+      insuranceProvider: INSURANCE_PROVIDER,
       fareBreakdown: bill.breakdown,
     });
 
@@ -840,6 +850,10 @@ exports.bookRide = async (req, res) => {
       paymentMethod,
       insuranceOpted,
       insuranceAmount: normalizedInsuranceAmount,
+      insuranceCoverageStatus: insuranceOpted ? 'active' : 'not_opted',
+      insuranceActivatedAt: insuranceOpted ? new Date() : null,
+      insuranceEndedAt: null,
+      insuranceProvider: INSURANCE_PROVIDER,
       insuranceType: insuranceOpted ? 'per_ride' : 'none',
       fareBreakdown: bill.breakdown,
       subscriptionId: customerPlanProfile.user?.subscriptionPlan?._id || null,
@@ -1959,6 +1973,10 @@ exports.completeRide = async (req, res) => {
     booking.status = 'completed';
     booking.rideCompletion = booking.rideCompletion || {};
     booking.rideCompletion.actualEndTime = new Date();
+    if (booking.insuranceOpted) {
+      booking.insuranceCoverageStatus = 'expired';
+      booking.insuranceEndedAt = new Date();
+    }
     booking.updatedAt = new Date();
     await booking.save();
     logBookingEvent('booking_completed', booking, {
@@ -2003,7 +2021,16 @@ exports.completeRide = async (req, res) => {
         pickupLocation: booking.pickupLocation,
         dropLocation: booking.dropLocation,
         finalPrice: booking.finalPrice,
-        rideCompletion: booking.rideCompletion
+        rideCompletion: booking.rideCompletion,
+        insurance: {
+          opted: booking.insuranceOpted,
+          amount: booking.insuranceAmount,
+          type: booking.insuranceType,
+          coverageStatus: booking.insuranceCoverageStatus,
+          activatedAt: booking.insuranceActivatedAt,
+          endedAt: booking.insuranceEndedAt,
+          provider: booking.insuranceProvider,
+        }
       }
     });
   } catch (error) {
@@ -2093,6 +2120,7 @@ exports.bookNow = async (req, res) => {
       pickup,
       drop,
       rideType = 'daily',
+      autoFetchDriver = true,
       pickupLatitude,
       pickupLongitude,
       dropLatitude,
@@ -2153,8 +2181,13 @@ exports.bookNow = async (req, res) => {
     const planPricing = applyCustomerPlanPricing(baseBill, customerPlanProfile.plan);
     const quotePayload = getPlanAwareQuotePayload(baseBill, customerPlanProfile.planKey);
 
-    const availableDriversRaw = await findAssignableDrivers(null, pickup);
-    const availableDrivers = applyCustomerPlanDriverFilters(availableDriversRaw, customerPlanProfile.plan);
+    const shouldAutoFetchDriver = autoFetchDriver !== false;
+    const availableDriversRaw = shouldAutoFetchDriver
+      ? await findAssignableDrivers(null, pickup)
+      : [];
+    const availableDrivers = shouldAutoFetchDriver
+      ? applyCustomerPlanDriverFilters(availableDriversRaw, customerPlanProfile.plan)
+      : [];
     const driversByDistance = availableDrivers
       .filter((driver) =>
         Number.isFinite(Number(driver?.currentLocation?.latitude))
@@ -2197,6 +2230,10 @@ exports.bookNow = async (req, res) => {
       insuranceOpted,
       insuranceAmount: normalizedInsuranceAmount,
       insuranceType: insuranceOpted ? 'per_ride' : 'none',
+      insuranceCoverageStatus: insuranceOpted ? 'active' : 'not_opted',
+      insuranceActivatedAt: insuranceOpted ? new Date() : null,
+      insuranceEndedAt: null,
+      insuranceProvider: INSURANCE_PROVIDER,
       fareBreakdown: {
         ...(baseBill.breakdown || {}),
         customerPlan: customerPlanProfile.planKey,
@@ -2250,7 +2287,7 @@ exports.bookNow = async (req, res) => {
     return res.status(201).json({
       message: assignedDriver
         ? 'Ride request created and nearest driver assigned.'
-        : `Ride request created, but no nearby driver found within ${maxAutoAssignDistanceKm} km.`,
+        : `Ride request created. Assigning Driver Soon...`,
       booking: {
         _id: booking._id,
         bookingId: booking.bookingId,
@@ -2270,6 +2307,7 @@ exports.bookNow = async (req, res) => {
         nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
         eligibleDriversForPlan: availableDrivers.length,
         totalAvailableDrivers: availableDriversRaw.length,
+        autoFetchDriver: shouldAutoFetchDriver,
       },
     });
   } catch (error) {
