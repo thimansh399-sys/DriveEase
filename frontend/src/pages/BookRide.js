@@ -439,7 +439,7 @@ export default function BookRide() {
           </div>
 
           <div className="book-ride-map-summary" style={{ marginTop: 14 }}>
-            <p>
+            <p className="book-ride-geo-row">
               <span>Pickup Geolocation</span>
               <b>
                 {pickupCoords

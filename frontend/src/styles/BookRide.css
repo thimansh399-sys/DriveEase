@@ -400,6 +400,15 @@
   cursor: pointer;
 }
 
+.book-ride-insurance-toggle input {
+  margin: 0;
+}
+
+.book-ride-map-summary p.book-ride-geo-row b {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .book-ride-insurance-copy {
   margin: 0 0 7px;
   color: #cbd5e1;
@@ -567,6 +576,47 @@
 
   .book-ride-quote-grid b {
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .book-ride-insurance-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .book-ride-insurance-head h4 {
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.3;
+  }
+
+  .book-ride-insurance-toggle {
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.76rem;
+  }
+
+  .book-ride-insurance-toggle input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .book-ride-insurance-links a {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .book-ride-map-summary p {
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .book-ride-map-summary p b {
+    flex: 1 1 100%;
+    text-align: left;
   }
 }
 
