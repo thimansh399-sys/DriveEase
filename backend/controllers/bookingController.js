@@ -115,6 +115,127 @@ function roundAmount(value) {
   return Number((Number(value) || 0).toFixed(2));
 }
 
+const CUSTOMER_PLAN_RULES = {
+  BASIC: {
+    key: 'BASIC',
+    label: 'Basic',
+    discountPct: 0,
+    minDriverRating: 0,
+    driverQuality: 'Normal drivers',
+    priorityBadge: 'Standard',
+    priorityWeight: 0,
+    requiresVerified: false,
+  },
+  SMART: {
+    key: 'SMART',
+    label: 'Smart',
+    discountPct: 0.08,
+    minDriverRating: 4,
+    driverQuality: '4★+ drivers',
+    priorityBadge: 'Priority',
+    priorityWeight: 14,
+    requiresVerified: false,
+  },
+  ELITE: {
+    key: 'ELITE',
+    label: 'Elite',
+    discountPct: 0.14,
+    minDriverRating: 4.5,
+    driverQuality: '4.5★+ verified drivers',
+    priorityBadge: '🔥 Fastest Pickup',
+    priorityWeight: 24,
+    requiresVerified: true,
+  },
+};
+
+const resolvePlanKeyFromSubscription = (subscription) => {
+  const source = `${subscription?.planName || ''} ${subscription?.planType || ''}`.toLowerCase();
+  if (!source.trim()) return 'BASIC';
+
+  if (source.includes('elite') || source.includes('premium')) return 'ELITE';
+  if (source.includes('smart') || source.includes('growth')) return 'SMART';
+  return 'BASIC';
+};
+
+async function getCustomerPlanProfile(customerId) {
+  const user = await User.findById(customerId).populate('subscriptionPlan');
+  const planKey = resolvePlanKeyFromSubscription(user?.subscriptionPlan);
+  const plan = CUSTOMER_PLAN_RULES[planKey] || CUSTOMER_PLAN_RULES.BASIC;
+
+  return {
+    user,
+    planKey,
+    plan,
+  };
+}
+
+function isDriverVerifiedForPremium(driver) {
+  if (!driver) return false;
+
+  const statusApproved = ['approved', 'online', 'offline'].includes(String(driver.status || '').toLowerCase());
+  const verificationOk = String(driver?.backgroundVerification?.status || '').toLowerCase() === 'verified';
+  return statusApproved || verificationOk;
+}
+
+function applyCustomerPlanDriverFilters(drivers = [], planProfile = CUSTOMER_PLAN_RULES.BASIC) {
+  const minRating = Number(planProfile?.minDriverRating || 0);
+
+  return (Array.isArray(drivers) ? drivers : [])
+    .filter((driver) => Number(driver?.rating?.averageRating || 0) >= minRating)
+    .filter((driver) => (!planProfile?.requiresVerified || isDriverVerifiedForPremium(driver)));
+}
+
+function applyCustomerPlanPricing(baseBill, planProfile = CUSTOMER_PLAN_RULES.BASIC) {
+  const discountPct = Number(planProfile?.discountPct || 0);
+  const baseEstimated = roundAmount(baseBill?.estimatedPrice || 0);
+  const baseFinal = roundAmount(baseBill?.finalPrice || 0);
+
+  const discountAmount = roundAmount(baseEstimated * discountPct);
+  const estimatedPrice = roundAmount(Math.max(0, baseEstimated - discountAmount));
+  const finalPrice = roundAmount(Math.max(0, baseFinal - discountAmount));
+
+  return {
+    estimatedPrice,
+    finalPrice,
+    discountAmount,
+    discountPct,
+  };
+}
+
+function getPlanAwareQuotePayload(baseBill, activePlanKey = 'BASIC') {
+  const basicPricing = applyCustomerPlanPricing(baseBill, CUSTOMER_PLAN_RULES.BASIC);
+  const smartPricing = applyCustomerPlanPricing(baseBill, CUSTOMER_PLAN_RULES.SMART);
+  const elitePricing = applyCustomerPlanPricing(baseBill, CUSTOMER_PLAN_RULES.ELITE);
+
+  const activeRule = CUSTOMER_PLAN_RULES[activePlanKey] || CUSTOMER_PLAN_RULES.BASIC;
+  const activePricing = applyCustomerPlanPricing(baseBill, activeRule);
+
+  return {
+    activePlan: {
+      key: activeRule.key,
+      label: activeRule.label,
+      priorityBadge: activeRule.priorityBadge,
+      driverQuality: activeRule.driverQuality,
+      minDriverRating: activeRule.minDriverRating,
+      discountPct: activePricing.discountPct,
+      discountAmount: activePricing.discountAmount,
+      estimatedPrice: activePricing.estimatedPrice,
+      finalPrice: activePricing.finalPrice,
+    },
+    comparison: {
+      BASIC: basicPricing,
+      SMART: smartPricing,
+      ELITE: elitePricing,
+    },
+    recommendUpgrade: activeRule.key === 'BASIC' ? {
+      targetPlan: 'SMART',
+      message: 'Upgrade to Smart & save ₹20 on this ride',
+      indicativeSaving: 20,
+      actualSaving: roundAmount(Math.max(0, basicPricing.estimatedPrice - smartPricing.estimatedPrice)),
+    } : null,
+  };
+}
+
 function buildInvoiceSummary(booking) {
   const fallbackBreakdown = booking?.fareBreakdown || {};
   const lineItems = booking?.invoice?.lineItems || fallbackBreakdown;
@@ -631,7 +752,9 @@ exports.bookRide = async (req, res) => {
       return res.status(400).json({ error: 'Invalid data: pickup and drop locations are required' });
     }
 
-    const availableDrivers = await findAssignableDrivers(null, pickupLocation?.address || pickupLocation?.city || '');
+    const customerPlanProfile = await getCustomerPlanProfile(customerId);
+
+    const availableDriversRaw = await findAssignableDrivers(null, pickupLocation?.address || pickupLocation?.city || '');
 
     const pickupLat = Number(pickupLocation?.latitude);
     const pickupLng = Number(pickupLocation?.longitude);
@@ -654,8 +777,10 @@ exports.bookRide = async (req, res) => {
       overtimeHours,
       insuranceAmount: normalizedInsuranceAmount,
     });
-    const estimatedPrice = bill.estimatedPrice;
-    const finalPrice = bill.finalPrice;
+    const planPricing = applyCustomerPlanPricing(bill, customerPlanProfile.plan);
+    const estimatedPrice = planPricing.estimatedPrice;
+    const finalPrice = planPricing.finalPrice;
+    const availableDrivers = applyCustomerPlanDriverFilters(availableDriversRaw, customerPlanProfile.plan);
     const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
     const assignmentNow = new Date();
     const assignmentExpiry = new Date(assignmentNow.getTime() + assignmentTimeoutMs);
@@ -717,6 +842,7 @@ exports.bookRide = async (req, res) => {
       insuranceAmount: normalizedInsuranceAmount,
       insuranceType: insuranceOpted ? 'per_ride' : 'none',
       fareBreakdown: bill.breakdown,
+      subscriptionId: customerPlanProfile.user?.subscriptionPlan?._id || null,
       verification: {
         otp,
         otpGenerated: new Date(),
@@ -744,6 +870,7 @@ exports.bookRide = async (req, res) => {
         escalated: false,
         lastEvent: assignedDriver ? 'assigned' : 'created',
       },
+      notes: `Customer Plan: ${customerPlanProfile.planKey}`
     });
 
     await booking.save();
@@ -779,6 +906,17 @@ exports.bookRide = async (req, res) => {
         estimatedDistance,
         estimatedPrice,
         finalPrice,
+        pricingPlan: {
+          key: customerPlanProfile.plan.key,
+          label: customerPlanProfile.plan.label,
+          priorityBadge: customerPlanProfile.plan.priorityBadge,
+          driverQuality: customerPlanProfile.plan.driverQuality,
+          discountPct: planPricing.discountPct,
+          discountAmount: planPricing.discountAmount,
+        },
+        upgradePrompt: customerPlanProfile.planKey === 'BASIC'
+          ? 'Upgrade to Smart & save ₹20 on this ride'
+          : null,
         invoice: buildInvoiceSummary(booking),
         confirmationMessage: assignedDriver
           ? 'Ride request sent to driver. Once accepted, your booking status will show Confirmed and the OTP can be shared to start the ride.'
@@ -1870,6 +2008,80 @@ exports.completeRide = async (req, res) => {
 };
 
 // Simple book-now endpoint (creates a shared nearby driver request)
+exports.getRideQuote = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const {
+      pickup,
+      drop,
+      rideType = 'daily',
+      pickupLatitude,
+      pickupLongitude,
+      dropLatitude,
+      dropLongitude,
+      waitingMinutes = 0,
+      overtimeHours = 0,
+      numberOfDays = 1,
+      totalHours,
+      insuranceOpted = false,
+      insuranceAmount = 0,
+    } = req.body || {};
+
+    if (!pickup || !drop) {
+      return res.status(400).json({ error: 'Pickup and drop locations are required for quote' });
+    }
+
+    const customerPlanProfile = await getCustomerPlanProfile(customerId);
+
+    const pickupLat = Number(pickupLatitude);
+    const pickupLng = Number(pickupLongitude);
+    const dropLat = Number(dropLatitude);
+    const dropLng = Number(dropLongitude);
+    const hasPickupCoords = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+    const hasDropCoords = Number.isFinite(dropLat) && Number.isFinite(dropLng);
+    const estimatedDistance = hasPickupCoords && hasDropCoords
+      ? Number(calculateDistance(pickupLat, pickupLng, dropLat, dropLng))
+      : 0;
+
+    const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
+    const normalizedRideType = validRideTypes.includes(rideType) ? rideType : 'daily';
+    const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
+    const estimatedHours = Number(totalHours) || (normalizedRideType === 'hourly' ? 4 : normalizedRideType === 'outstation' ? 10 : 8);
+
+    const baseBill = calculateRideBill({
+      bookingType: normalizedRideType,
+      distance: estimatedDistance,
+      hours: estimatedHours,
+      days: Number(numberOfDays) || 1,
+      bookingTime: new Date(),
+      waitingMinutes,
+      overtimeHours,
+      insuranceAmount: normalizedInsuranceAmount,
+    });
+
+    const driversRaw = await findAssignableDrivers(null, pickup);
+    const eligibleDrivers = applyCustomerPlanDriverFilters(driversRaw, customerPlanProfile.plan);
+    const quotePayload = getPlanAwareQuotePayload(baseBill, customerPlanProfile.planKey);
+
+    return res.json({
+      success: true,
+      quote: {
+        rideType: normalizedRideType,
+        estimatedDistance,
+        baseEstimatedPrice: roundAmount(baseBill.estimatedPrice),
+        baseFinalPrice: roundAmount(baseBill.finalPrice),
+        ...quotePayload,
+        driverPool: {
+          totalAvailable: driversRaw.length,
+          eligibleForPlan: eligibleDrivers.length,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.bookNow = async (req, res) => {
   try {
     const customerId = req.user.id;
@@ -1908,6 +2120,7 @@ exports.bookNow = async (req, res) => {
 
     const validRideTypes = ['hourly', 'daily', 'outstation', 'subscription'];
     const normalizedRideType = validRideTypes.includes(rideType) ? rideType : 'daily';
+    const customerPlanProfile = await getCustomerPlanProfile(customerId);
     const maxAutoAssignDistanceKm = getAutoAssignRadiusKm();
     const assignmentTimeoutMs = getAssignmentResponseTimeoutMs();
     const assignmentNow = new Date();
@@ -1923,7 +2136,7 @@ exports.bookNow = async (req, res) => {
       : 0;
     const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
     const estimatedHours = Number(totalHours) || (normalizedRideType === 'hourly' ? 4 : normalizedRideType === 'outstation' ? 10 : 8);
-    const bill = calculateRideBill({
+    const baseBill = calculateRideBill({
       bookingType: normalizedRideType,
       distance: estimatedDistance,
       hours: estimatedHours,
@@ -1933,8 +2146,11 @@ exports.bookNow = async (req, res) => {
       overtimeHours,
       insuranceAmount: normalizedInsuranceAmount,
     });
+    const planPricing = applyCustomerPlanPricing(baseBill, customerPlanProfile.plan);
+    const quotePayload = getPlanAwareQuotePayload(baseBill, customerPlanProfile.planKey);
 
-    const availableDrivers = await findAssignableDrivers(null, pickup);
+    const availableDriversRaw = await findAssignableDrivers(null, pickup);
+    const availableDrivers = applyCustomerPlanDriverFilters(availableDriversRaw, customerPlanProfile.plan);
     const driversByDistance = availableDrivers
       .filter((driver) =>
         Number.isFinite(Number(driver?.currentLocation?.latitude))
@@ -1969,15 +2185,20 @@ exports.bookNow = async (req, res) => {
       bookingType: normalizedRideType,
       startDate: new Date(),
       estimatedDistance,
-      estimatedPrice: bill.estimatedPrice,
-      finalPrice: bill.finalPrice,
+      estimatedPrice: planPricing.estimatedPrice,
+      finalPrice: planPricing.finalPrice,
       status: assignedDriver ? 'driver_assigned' : 'pending',
       paymentStatus: 'pending',
       paymentMethod: 'upi',
       insuranceOpted,
       insuranceAmount: normalizedInsuranceAmount,
       insuranceType: insuranceOpted ? 'per_ride' : 'none',
-      fareBreakdown: bill.breakdown,
+      fareBreakdown: {
+        ...(baseBill.breakdown || {}),
+        customerPlan: customerPlanProfile.planKey,
+        planDiscountAmount: planPricing.discountAmount,
+      },
+      subscriptionId: customerPlanProfile.user?.subscriptionPlan?._id || null,
       verification: {
         otp,
         otpExpiry: null,
@@ -1989,6 +2210,7 @@ exports.bookNow = async (req, res) => {
       fareRatePerKm: 15,
       distance: 0,
       fare: 0,
+      notes: `Customer Plan: ${customerPlanProfile.planKey}`,
       assignment: {
         strategy: 'nearest_v2',
         maxAttempts,
@@ -2034,11 +2256,16 @@ exports.bookNow = async (req, res) => {
         status: booking.status,
         otp,
         estimatedDistance,
-        estimatedPrice: bill.estimatedPrice,
-        finalPrice: bill.finalPrice,
+        estimatedPrice: planPricing.estimatedPrice,
+        finalPrice: planPricing.finalPrice,
+        pricingPlan: quotePayload.activePlan,
+        planComparison: quotePayload.comparison,
+        upgradePrompt: quotePayload.recommendUpgrade,
         invoice: buildInvoiceSummary(booking),
         driver: assignedDriver ? buildDriverSummary(assignedDriver) : null,
         nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
+        eligibleDriversForPlan: availableDrivers.length,
+        totalAvailableDrivers: availableDriversRaw.length,
       },
     });
   } catch (error) {

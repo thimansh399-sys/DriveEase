@@ -271,6 +271,25 @@ export const api = {
     return result;
   },
 
+  getRideQuote: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/bookings/quote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return {
+        ...result,
+        error: result?.error || result?.message || `Request failed (${response.status})`
+      };
+    }
+    return result;
+  },
+
   getMyBookings: () =>
     fetch(`${API_BASE_URL}/bookings/customer`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }

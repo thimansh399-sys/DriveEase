@@ -31,6 +31,9 @@ export default function BookRide() {
   const [trackedBooking, setTrackedBooking] = useState(null);
   const [trackerMessage, setTrackerMessage] = useState('');
   const [shareOtpLoading, setShareOtpLoading] = useState(false);
+  const [rideQuote, setRideQuote] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
   const shouldAutoDetectPickupRef = useRef(true);
 
   const mapQuery = form.pickup && form.drop
@@ -134,6 +137,48 @@ export default function BookRide() {
       requestPickupGeolocation();
     }
   }, []);
+
+  useEffect(() => {
+    if (!form.pickup || !form.drop) {
+      setRideQuote(null);
+      setQuoteError('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setQuoteLoading(true);
+      setQuoteError('');
+      try {
+        const response = await api.getRideQuote({
+          pickup: form.pickup,
+          drop: form.drop,
+          rideType: form.rideType,
+          pickupLatitude: pickupCoords?.latitude,
+          pickupLongitude: pickupCoords?.longitude,
+        });
+
+        if (cancelled) return;
+        if (response?.error) {
+          setRideQuote(null);
+          setQuoteError(response.error);
+        } else {
+          setRideQuote(response?.quote || null);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setRideQuote(null);
+        setQuoteError(err?.message || 'Unable to fetch quote right now.');
+      } finally {
+        if (!cancelled) setQuoteLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [form.pickup, form.drop, form.rideType, pickupCoords?.latitude, pickupCoords?.longitude]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -372,6 +417,54 @@ export default function BookRide() {
                   : (geoLoading ? 'Fetching location...' : 'Not captured')}
               </b>
             </p>
+          </div>
+
+          <div className="book-ride-quote-card">
+            <div className="book-ride-quote-head">
+              <h4>Plan Based Estimate</h4>
+              {quoteLoading ? <span>Updating...</span> : null}
+            </div>
+
+            {quoteError ? <p className="book-ride-quote-error">{quoteError}</p> : null}
+
+            {rideQuote?.activePlan ? (
+              <>
+                <div className="book-ride-quote-grid">
+                  <div>
+                    <label>Active Plan</label>
+                    <b>{rideQuote.activePlan.label}</b>
+                  </div>
+                  <div>
+                    <label>Estimated Price</label>
+                    <b>₹{rideQuote.activePlan.estimatedPrice}</b>
+                  </div>
+                  <div>
+                    <label>Driver Priority</label>
+                    <b>{rideQuote.activePlan.priorityBadge}</b>
+                  </div>
+                  <div>
+                    <label>Driver Quality</label>
+                    <b>{rideQuote.activePlan.driverQuality}</b>
+                  </div>
+                </div>
+
+                <div className="book-ride-plan-strip">
+                  <span>BASIC ₹{rideQuote.comparison?.BASIC?.estimatedPrice ?? '-'}</span>
+                  <span>SMART ₹{rideQuote.comparison?.SMART?.estimatedPrice ?? '-'}</span>
+                  <span>ELITE ₹{rideQuote.comparison?.ELITE?.estimatedPrice ?? '-'}</span>
+                </div>
+
+                {rideQuote?.recommendUpgrade?.message ? (
+                  <div className="book-ride-upgrade-popup">
+                    {rideQuote.recommendUpgrade.message}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <p className="book-ride-quote-placeholder">
+                Enter pickup and drop to see live quote and plan benefits.
+              </p>
+            )}
           </div>
 
           <button
