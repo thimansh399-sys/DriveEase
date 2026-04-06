@@ -4,23 +4,6 @@ import '../styles/Dashboard.css';
 import api from '../utils/api';
 import { connectRideSocket } from '../utils/rideSocket';
 
-function Sidebar({ onBookRide, onDashboard }) {
-  return (
-    <div className="sidebar">
-      <h2>DriveEase</h2>
-      <button type="button" className="active sidebar-link-btn" onClick={onDashboard}>Dashboard</button>
-      <button
-        type="button"
-        className="sidebar-book-cta"
-        onClick={onBookRide}
-      >
-        <span className="sidebar-book-cta-text">Book a Ride</span>
-        <span className="sidebar-book-cta-arrow">→</span>
-      </button>
-    </div>
-  );
-}
-
 function Header({ user }) {
   return (
     <div className="header">
@@ -154,7 +137,6 @@ export default function CustomerDashboard() {
 
   return (
     <div className="dashboard">
-      <Sidebar onBookRide={() => navigate('/book-ride')} onDashboard={() => navigate('/customer-dashboard')} />
       <div className="main">
         <Header user={user} />
         <div className="content">
