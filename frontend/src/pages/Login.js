@@ -130,8 +130,11 @@ function Login({ onLogin }) {
     <div className="login-page">
       <div className="login-container">
         <div className="login-card-modern">
-          <h2 className="login-modern-title">Welcome to DriveEase 🚗</h2>
-          <p className="login-modern-subtitle">Safe rides, verified drivers</p>
+          <div className="login-modern-hero">
+            <span className="login-modern-kicker">Trusted Driver Platform</span>
+            <h2 className="login-modern-title">Welcome to DriveEase 🚗</h2>
+            <p className="login-modern-subtitle">Safe rides, verified drivers</p>
+          </div>
 
           <div className="login-role-toggle" role="tablist" aria-label="Login role">
             <button
