@@ -340,7 +340,7 @@ function Home() {
             <span className="home-eta-dot" />
             <div>
               <div style={{ fontWeight: 700, fontSize: '14px' }}>Driver En Route</div>
-              <div style={{ color: '#22c55e', fontSize: '12px' }}>ETA: 4 mins</div>
+                <div style={{ color: '#22c55e', fontSize: '12px' }}>ETA: 30 mins</div>
             </div>
           </motion.div>
         </motion.div>
@@ -454,7 +454,7 @@ function Home() {
             <div className="home-map-overlay">
               <div className="home-map-eta">
                 <span className="home-eta-pulse" />
-                Driver 4 mins away · 2.3 km remaining
+                Driver 30 mins away · 2.3 km remaining
               </div>
             </div>
           </div>
@@ -464,7 +464,7 @@ function Home() {
               <div style={{ color: '#22c55e', fontSize: '20px' }}>📍</div>
               <div>
                 <div style={{ fontWeight: 700 }}>ETA</div>
-                <div style={{ color: '#22c55e' }}>4 mins</div>
+                <div style={{ color: '#22c55e' }}>30 mins</div>
               </div>
             </div>
             <div className="home-map-info-card" style={{ borderColor: '#93c5fd' }}>
