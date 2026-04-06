@@ -1329,9 +1329,20 @@
 
   .home-v2-media,
   .home-v2-media img {
-    min-height: 320px;
-    height: 320px;
+    min-height: 0;
+    height: auto;
     border-radius: 16px;
+  }
+
+  .home-v2-media {
+    aspect-ratio: 4 / 5;
+  }
+
+  .home-v2-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
   }
 
   .home-eta-card {
@@ -1375,8 +1386,16 @@
 
   .home-v2-media,
   .home-v2-media img {
-    min-height: 270px;
-    height: 270px;
+    min-height: 0;
+    height: auto;
+  }
+
+  .home-v2-media {
+    aspect-ratio: 4 / 5;
+  }
+
+  .home-v2-media img {
+    object-position: center top;
   }
 
   .home-v2-section h2 {
