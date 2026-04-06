@@ -301,6 +301,10 @@ function Home() {
             >
               Book Ride →
             </motion.button>
+
+            <Link className="home-driver-details-link" to="/driver-directory">
+              View Driver Details
+            </Link>
           </motion.div>
 
           <div className="home-v2-quick-points">

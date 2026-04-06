@@ -32,6 +32,7 @@ import CustomerConfirmation from './pages/CustomerConfirmation';
 import AdminSupport from './pages/AdminSupport';
 import AdminAnalytics from './pages/AdminAnalytics';
 import SplashScreen from './components/SplashScreen';
+import DriverDirectory from './pages/DriverDirectory';
 
 function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
   const location = useLocation();
@@ -88,6 +89,7 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
           <Route path="/admin-analytics" element={canAccessAdmin ? <AdminAnalytics /> : <Navigate to="/admin-login" />} />
           <Route path="/admin-support" element={canAccessAdmin ? <AdminSupport /> : <Navigate to="/admin-login" />} />
           <Route path="/drivers" element={<Drivers />} />
+          <Route path="/driver-directory" element={<DriverDirectory />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/track-booking" element={<TrackBooking />} />
           <Route path="/track-booking/:bookingId" element={<TrackBooking />} />

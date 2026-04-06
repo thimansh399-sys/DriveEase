@@ -22,6 +22,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
 
   const guestTabs = [
     { to: '/', label: 'Home', end: true },
+    { to: '/driver-directory', label: 'Driver Details' },
     { to: '/subscriptions', label: 'Plans' },
     { to: '/insurance', label: 'Insurance' },
     { to: '/pay', label: 'Pay' },
@@ -30,6 +31,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
   const customerTabs = [
     { to: '/', label: 'Home', end: true },
     { to: '/book-ride', label: 'Book Ride' },
+    { to: '/driver-directory', label: 'Drivers' },
     { to: '/my-bookings', label: 'My Bookings' },
     { to: '/profile', label: 'Profile' },
   ];
@@ -37,6 +39,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
   const driverTabs = [
     { to: '/driver-dashboard', label: 'Dashboard' },
     { to: '/my-bookings', label: 'Active Rides' },
+    { to: '/driver-directory', label: 'Drivers' },
     { to: '/driver-earnings', label: 'Earnings' },
     { to: '/profile', label: 'Profile' },
   ];
