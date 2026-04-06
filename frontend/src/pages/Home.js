@@ -563,7 +563,7 @@ function Home() {
         <h2>Ready to Ride?</h2>
         <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
         <div className="home-cta-actions">
-          <Link to="/book-driver" className="home-cta-link">
+          <Link to="/book-ride" className="home-cta-link">
             <motion.button
               className="home-book-btn home-cta-primary"
               whileHover={{ scale: 1.05 }}

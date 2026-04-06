@@ -26,7 +26,6 @@ import Drivers from './pages/Drivers';
 import Subscriptions from './pages/Plans';
 import TrackBooking from './pages/TrackBooking';
 import Messages from './pages/Messages';
-import BookDriver from './pages/BookDriver';
 import BookRide from './pages/BookRide';
 import CustomerConfirmation from './pages/CustomerConfirmation';
 import AdminSupport from './pages/AdminSupport';
@@ -59,12 +58,12 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
         <Routes location={location}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/book-driver" element={<BookDriver />} />
+          <Route path="/book-driver" element={<Navigate to={isLoggedIn ? '/book-ride' : '/login'} replace />} />
           <Route path="/book-ride" element={isLoggedIn ? <BookRide /> : <Navigate to="/login" />} />
           <Route path="/browse" element={isLoggedIn ? <Browse /> : <Navigate to="/login" />} />
           <Route path="/available-drivers" element={<AvailableDrivers />} />
-          <Route path="/booking/:driverId" element={<BookDriver />} />
-          <Route path="/booking" element={<BookDriver />} />
+          <Route path="/booking/:driverId" element={<Navigate to={isLoggedIn ? '/book-ride' : '/login'} replace />} />
+          <Route path="/booking" element={<Navigate to={isLoggedIn ? '/book-ride' : '/login'} replace />} />
           <Route path="/register-driver" element={<DriverRegistrationFlow />} />
           <Route path="/driver-registration" element={<DriverRegistrationFlow />} />
           <Route path="/my-bookings" element={isLoggedIn ? <MyBookings /> : <Navigate to="/login" />} />

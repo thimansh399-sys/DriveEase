@@ -110,9 +110,6 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
             </>
           )}
 
-          <li className="nav-mobile-only">
-            <Link to="/book-driver" className="nav-link" onClick={() => setMenuOpen(false)}>Book a Driver</Link>
-          </li>
         </ul>
 
         {/* Right Buttons */}

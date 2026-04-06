@@ -181,9 +181,9 @@ function Browse() {
       if (bookingForm.customerName?.trim()) params.set('name', bookingForm.customerName.trim());
       if (bookingForm.customerPhone?.trim()) params.set('phone', bookingForm.customerPhone.trim());
 
-      setBookingSuccess('Redirecting to map booking page...');
+      setBookingSuccess('Redirecting to booking page...');
       setBookingDriver(null);
-      navigate(`/book-driver?${params.toString()}`);
+      navigate(`/book-ride?${params.toString()}`);
     } catch (err) {
       setBookingError(err.message || 'Booking failed. Please try again.');
     } finally {
