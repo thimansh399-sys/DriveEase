@@ -357,6 +357,37 @@ function getAttemptedDriverIds(booking) {
   return attempted.filter(Boolean).map((id) => String(id));
 }
 
+function getCurrentAssignmentDriverId(booking) {
+  return booking?.assignment?.currentAssignedDriverId || booking?.driverId || null;
+}
+
+function isAssignmentWindowActive(booking, now = new Date()) {
+  if (booking?.assignment?.acceptedAt) {
+    return true;
+  }
+
+  const expiry = booking?.assignment?.currentAssignmentExpiresAt;
+  if (!expiry) {
+    return true;
+  }
+
+  const expiryDate = new Date(expiry);
+  if (Number.isNaN(expiryDate.getTime())) {
+    return true;
+  }
+
+  return expiryDate > now;
+}
+
+function isBookingAssignedToDriver(booking, driverId, now = new Date()) {
+  const currentAssignedDriverId = getCurrentAssignmentDriverId(booking);
+  if (!currentAssignedDriverId) {
+    return false;
+  }
+
+  return String(currentAssignedDriverId) === String(driverId) && isAssignmentWindowActive(booking, now);
+}
+
 async function markBookingEscalated(booking, reason = 'No assignable drivers found') {
   const maxAttempts = Number(booking?.assignment?.maxAttempts || getMaxAssignmentAttempts());
   const attemptCount = Number(booking?.assignment?.attemptCount || 0);
@@ -1447,6 +1478,7 @@ exports.getDriverBookings = async (req, res) => {
     let ownFilter = {
       $or: [
         { driverId: { $in: driverIds } },
+        { 'assignment.currentAssignedDriverId': { $in: driverIds } },
         { 'rejectedByDrivers.driverId': { $in: driverIds } },
       ],
     };
@@ -1461,25 +1493,8 @@ exports.getDriverBookings = async (req, res) => {
       .populate('customerId', 'name phone email')
       .sort({ createdAt: -1 });
 
-    const pendingPool = await Booking.find({
-      status: 'pending',
-      $or: [{ driverId: null }, { driverId: { $exists: false } }],
-      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    })
-      .populate('customerId', 'name phone email')
-      .sort({ createdAt: -1 });
-
-    const visiblePoolBookings = pendingPool.filter((booking) => {
-      const rejectedByCurrentDriver = Array.isArray(booking.rejectedByDrivers)
-        ? booking.rejectedByDrivers.some((r) => driverIds.some((id) => String(id) === String(r?.driverId)))
-        : false;
-
-      if (rejectedByCurrentDriver) return false;
-      return bookingMatchesDriverArea(booking, candidateDrivers);
-    });
-
     const bookingById = new Map();
-    [...ownBookings, ...visiblePoolBookings].forEach((booking) => {
+    ownBookings.forEach((booking) => {
       bookingById.set(String(booking._id), booking);
     });
     const bookings = Array.from(bookingById.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1521,9 +1536,9 @@ exports.getDriverBookings = async (req, res) => {
           .sort((a, c) => new Date(c?.rejectedAt || 0) - new Date(a?.rejectedAt || 0))[0]
         : null;
 
-      const isCurrentlyAssignedToCandidate = driverIds.some((id) => String(id) === String(b.driverId));
-      const isOpenPending = b.status === 'pending' && !b.driverId;
-      const inDriverArea = bookingMatchesDriverArea(b, candidateDrivers);
+      const isCurrentlyAssignedToCandidate = driverIds.some((id) => isBookingAssignedToDriver(b, id));
+      const canDriverRespond = ['driver_assigned', 'pending'].includes(String(b.status || '').toLowerCase())
+        && isCurrentlyAssignedToCandidate;
 
       return ({
       _id: b._id,
@@ -1562,9 +1577,8 @@ exports.getDriverBookings = async (req, res) => {
       },
       canStartRide: ['confirmed', 'driver_arrived', 'arrived'].includes(String(b.status || '').toLowerCase())
         && !(b.verification?.otpVerified),
-      canAccept: (isOpenPending && inDriverArea && !isRejectedByCurrentDriver) ||
-        ((b.status === 'pending' || b.status === 'driver_assigned') && isCurrentlyAssignedToCandidate),
-      canReject: ((b.status === 'pending' && isOpenPending) || b.status === 'driver_assigned' || b.status === 'pending') && !isRejectedByCurrentDriver,
+      canAccept: canDriverRespond && !isRejectedByCurrentDriver,
+      canReject: canDriverRespond && !isRejectedByCurrentDriver,
       invoice: buildInvoiceSummary(b),
       insurance: {
         opted: b.insuranceOpted || false,
@@ -1616,50 +1630,21 @@ exports.driverRespondBooking = async (req, res) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    const isAssignedToCurrentDriver = booking.driverId && String(booking.driverId) === String(driverId);
-    const isOpenPending = booking.status === 'pending' && !booking.driverId;
+    const assignmentNow = new Date();
+    const isAssignedToCurrentDriver = isBookingAssignedToDriver(booking, driverId, assignmentNow);
 
     if (parsedAction === 'accept') {
-      if (isOpenPending) {
-        const currentDriver = await Driver.findById(driverId);
-        if (!currentDriver || !bookingMatchesDriverArea(booking, [currentDriver])) {
-          return res.status(403).json({ error: 'This booking is outside your service location' });
-        }
-
-        const claimed = await Booking.findOneAndUpdate(
-          {
-            _id: bookingId,
-            status: 'pending',
-            $or: [{ driverId: null }, { driverId: { $exists: false } }],
-          },
-          {
-            driverId,
-            status: 'confirmed',
-            updatedAt: new Date(),
-            'assignment.acceptedAt': new Date(),
-            'assignment.currentAssignedDriverId': driverId,
-            'assignment.currentAssignmentExpiresAt': null,
-            'assignment.lastEvent': 'accepted',
-          },
-          { new: true }
-        ).populate('customerId', 'name phone');
-
-        if (!claimed) {
-          return res.status(409).json({ error: 'Ride already accepted by another driver' });
-        }
-
-        booking = claimed;
-      } else if (isAssignedToCurrentDriver) {
+      if (isAssignedToCurrentDriver) {
         booking.status = 'confirmed';
         booking.assignment = booking.assignment || {};
-        booking.assignment.acceptedAt = new Date();
+        booking.assignment.acceptedAt = assignmentNow;
         booking.assignment.currentAssignedDriverId = driverId;
         booking.assignment.currentAssignmentExpiresAt = null;
         booking.assignment.lastEvent = 'accepted';
-        booking.updatedAt = new Date();
+        booking.updatedAt = assignmentNow;
         await booking.save();
       } else {
-        return res.status(403).json({ error: 'This ride is not available to accept' });
+        return res.status(403).json({ error: 'This ride is no longer assigned to you' });
       }
 
       logBookingEvent('booking_accepted', booking, {
@@ -1709,6 +1694,10 @@ exports.driverRespondBooking = async (req, res) => {
     }
 
     // Reject/Decline flow for shared booking pool
+    if (!isAssignedToCurrentDriver) {
+      return res.status(403).json({ error: 'This ride is no longer assigned to you' });
+    }
+
     await Driver.findByIdAndUpdate(driverId, {
       availabilityStatus: 'AVAILABLE',
       lastActiveAt: new Date(),
@@ -1731,6 +1720,7 @@ exports.driverRespondBooking = async (req, res) => {
       booking.assignment.currentAssignedDriverId = null;
       booking.assignment.currentAssignedAt = null;
       booking.assignment.currentAssignmentExpiresAt = null;
+      booking.assignment.acceptedAt = null;
       booking.assignment.lastEvent = 'declined';
     }
 
@@ -1754,6 +1744,10 @@ exports.driverRespondBooking = async (req, res) => {
         notes: booking.notes,
         updatedAt: booking.updatedAt
       }
+    });
+
+    assignNearestDriverForPendingBooking(booking).catch((reassignError) => {
+      console.error('Immediate reassignment after driver decline failed:', reassignError.message);
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
