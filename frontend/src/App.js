@@ -30,7 +30,6 @@ import BookRide from './pages/BookRide';
 import CustomerConfirmation from './pages/CustomerConfirmation';
 import AdminSupport from './pages/AdminSupport';
 import AdminAnalytics from './pages/AdminAnalytics';
-import SplashScreen from './components/SplashScreen';
 import DriverDirectory from './pages/DriverDirectory';
 
 function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
@@ -103,7 +102,6 @@ function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
-  const [showSplash, setShowSplash] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
 
@@ -113,10 +111,6 @@ function App() {
     if (storedToken) {
       setUserRole(storedRole);
       setIsLoggedIn(true);
-      setShowSplash(false); // Skip splash if logged in
-    } else {
-      const splashTimer = setTimeout(() => setShowSplash(false), 1800);
-      return () => clearTimeout(splashTimer);
     }
   }, []);
 
@@ -181,7 +175,6 @@ function App() {
     <NotificationProvider>
       <Router>
         <div className="app">
-          <SplashScreen visible={showSplash} />
           {/* Modern sticky Navigation bar on all pages */}
           <Navigation isLoggedIn={isLoggedIn} userRole={userRole} onLogout={handleLogout} />
           
