@@ -68,6 +68,41 @@ body {
   z-index: 1;
 }
 
+.install-app-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 84px;
+  z-index: 999;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(22, 163, 74, 0.35);
+}
+
+.install-app-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(22, 163, 74, 0.42);
+}
+
+.install-app-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .install-app-btn {
+    right: 14px;
+    bottom: 76px;
+    font-size: 12px;
+    padding: 10px 14px;
+  }
+}
+
 .page-transition-shell {
   min-height: calc(100vh - 126px);
 }
