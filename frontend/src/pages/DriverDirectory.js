@@ -43,9 +43,10 @@ export default function DriverDirectory() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (areaFilter) params.set('area', areaFilter);
       if (statusFilter !== STATUS_ALL) params.set('onlineStatus', statusFilter);
+      params.set('_ts', String(Date.now()));
 
       const url = buildApiUrl(`/public/drivers-directory?${params.toString()}`);
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch driver directory');
       const data = await res.json();
       setDrivers(Array.isArray(data.drivers) ? data.drivers : []);
@@ -61,7 +62,7 @@ export default function DriverDirectory() {
 
   useEffect(() => {
     fetchDrivers();
-    const interval = setInterval(fetchDrivers, 15000);
+    const interval = setInterval(fetchDrivers, 5000);
     return () => clearInterval(interval);
   }, [fetchDrivers]);
 

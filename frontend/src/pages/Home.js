@@ -303,7 +303,7 @@ function Home() {
             </motion.button>
 
             <Link className="home-driver-details-link" to="/driver-directory">
-              View Driver Details
+              Live Driver
             </Link>
           </motion.div>
 

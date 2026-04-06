@@ -82,19 +82,34 @@ router.get('/drivers-directory', async (req, res) => {
     const Driver = require('../models/Driver');
     const { search, area, onlineStatus } = req.query;
 
-    // Include approved, online, and offline drivers — exclude only pending/rejected/blocked
-    const query = { status: { $nin: ['pending', 'rejected', 'blocked'] } };
+    // Include all registered drivers from MongoDB except blocked/rejected.
+    const query = { status: { $nin: ['rejected', 'blocked'] } };
+    const andConditions = [];
 
-    if (onlineStatus === 'online') query.isOnline = true;
-    if (onlineStatus === 'offline') query.isOnline = false;
+    if (onlineStatus === 'online') {
+      andConditions.push({
+        $or: [{ isOnline: true }, { status: 'online' }]
+      });
+    }
+    if (onlineStatus === 'offline') {
+      andConditions.push({
+        $and: [{ isOnline: { $ne: true } }, { status: { $ne: 'online' } }]
+      });
+    }
 
     if (area) {
-      query.$or = [
-        { 'currentLocation.city': new RegExp(area, 'i') },
-        { 'currentLocation.state': new RegExp(area, 'i') },
-        { 'personalDetails.city': new RegExp(area, 'i') },
-        { serviceAreas: new RegExp(area, 'i') },
-      ];
+      andConditions.push({
+        $or: [
+          { 'currentLocation.city': new RegExp(area, 'i') },
+          { 'currentLocation.state': new RegExp(area, 'i') },
+          { 'personalDetails.city': new RegExp(area, 'i') },
+          { serviceAreas: new RegExp(area, 'i') },
+        ]
+      });
+    }
+
+    if (andConditions.length) {
+      query.$and = andConditions;
     }
 
     let drivers = await Driver.find(query)
@@ -133,16 +148,18 @@ router.get('/drivers-directory', async (req, res) => {
         phone: maskedPhone,
         area,
         state: d.currentLocation?.state || d.personalDetails?.state || '',
-        isOnline: d.isOnline || false,
+        isOnline: Boolean(d.isOnline || d.status === 'online'),
         rating: d.rating?.averageRating || 0,
         totalRatings: d.rating?.totalRatings || 0,
         totalRides: d.experience?.totalRides || 0,
         vehicle: d.vehicle?.model || '',
         profilePicture: d.profilePicture || null,
         serviceAreas: Array.isArray(d.serviceAreas) ? d.serviceAreas : [],
+        status: d.status || 'unknown',
       };
     });
 
+    res.set('Cache-Control', 'no-store');
     res.json({ total: sanitized.length, drivers: sanitized });
   } catch (error) {
     console.error('Error fetching drivers directory:', error);
