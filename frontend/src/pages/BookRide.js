@@ -2,12 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/BookRide.css';
 import api from '../utils/api';
+import { downloadInvoicePdf } from '../utils/invoiceUtils';
 
 const RIDE_TYPES = [
   { value: 'hourly', label: '⏱ Hourly' },
   { value: 'daily', label: '🚗 Daily' },
   { value: 'outstation', label: '🛣 Outstation' },
 ];
+
+const INSURANCE_BY_RIDE_TYPE = {
+  hourly: { amount: 29, cover: '₹5 lakh accidental cover' },
+  daily: { amount: 39, cover: '₹5 lakh accidental + medical' },
+  outstation: { amount: 49, cover: '₹5 lakh premium travel cover' },
+};
 
 export default function BookRide() {
   const navigate = useNavigate();
@@ -34,6 +41,7 @@ export default function BookRide() {
   const [rideQuote, setRideQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
+  const [insuranceOpted, setInsuranceOpted] = useState(false);
   const shouldAutoDetectPickupRef = useRef(true);
 
   const mapQuery = form.pickup && form.drop
@@ -49,6 +57,7 @@ export default function BookRide() {
         : !form.drop
           ? 'drop'
           : '';
+  const selectedInsurance = INSURANCE_BY_RIDE_TYPE[form.rideType] || INSURANCE_BY_RIDE_TYPE.daily;
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -156,6 +165,8 @@ export default function BookRide() {
           rideType: form.rideType,
           pickupLatitude: pickupCoords?.latitude,
           pickupLongitude: pickupCoords?.longitude,
+          insuranceOpted,
+          insuranceAmount: insuranceOpted ? selectedInsurance.amount : 0,
         });
 
         if (cancelled) return;
@@ -178,7 +189,7 @@ export default function BookRide() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.pickup, form.drop, form.rideType, pickupCoords?.latitude, pickupCoords?.longitude]);
+  }, [form.pickup, form.drop, form.rideType, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -204,6 +215,8 @@ export default function BookRide() {
         rideType: form.rideType,
         pickupLatitude: pickupCoords.latitude,
         pickupLongitude: pickupCoords.longitude,
+        insuranceOpted,
+        insuranceAmount: insuranceOpted ? selectedInsurance.amount : 0,
       });
 
       if (data?.booking?._id || data?.booking?.bookingId) {
@@ -303,6 +316,7 @@ export default function BookRide() {
             <p><b>Drop:</b> {dropAddress}</p>
             <p><b>Ride Type:</b> {success.booking?.rideType || live.bookingType || '-'}</p>
             <p><b>Status:</b> <span className="book-ride-status">{live.status || success.booking?.status}</span></p>
+            <p><b>Ride Insurance:</b> {live.insuranceOpted || success.booking?.insuranceOpted ? `Enabled (₹${live.insuranceAmount || selectedInsurance.amount})` : 'Not selected'}</p>
             {driverInfo && (
               <p><b>Driver:</b> {driverInfo.name} - {driverInfo.phone}</p>
             )}
@@ -344,6 +358,14 @@ export default function BookRide() {
             <button className="book-ride-submit" onClick={() => navigate('/customer-dashboard')}>
               Back to Dashboard
             </button>
+            {String(liveStatus || '').toLowerCase() === 'completed' && live.invoice ? (
+              <button
+                className="book-ride-submit"
+                onClick={() => downloadInvoicePdf(live, 'customer')}
+              >
+                Download Invoice PDF
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -465,6 +487,32 @@ export default function BookRide() {
                 Enter pickup and drop to see live quote and plan benefits.
               </p>
             )}
+          </div>
+
+          <div className="book-ride-insurance-card">
+            <div className="book-ride-insurance-head">
+              <h4>Per Ride Insurance</h4>
+              <label className="book-ride-insurance-toggle">
+                <input
+                  type="checkbox"
+                  checked={insuranceOpted}
+                  onChange={(event) => setInsuranceOpted(event.target.checked)}
+                />
+                <span>{insuranceOpted ? 'Added' : 'Add'}</span>
+              </label>
+            </div>
+
+            <p className="book-ride-insurance-copy">
+              Protect this ride with <strong>{selectedInsurance.cover}</strong> for just <strong>₹{selectedInsurance.amount}</strong>.
+            </p>
+            <p className="book-ride-insurance-copy">
+              Insurance partner support available during active ride and claim follow-up.
+            </p>
+
+            <div className="book-ride-insurance-links">
+              <a href="/insurance">View DriveEase Insurance Plans</a>
+              <a href="https://www.irdai.gov.in/" target="_blank" rel="noreferrer">Insurance Regulator (IRDAI)</a>
+            </div>
           </div>
 
           <button

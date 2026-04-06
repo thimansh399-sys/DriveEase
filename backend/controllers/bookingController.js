@@ -906,6 +906,10 @@ exports.bookRide = async (req, res) => {
         estimatedDistance,
         estimatedPrice,
         finalPrice,
+        insuranceOpted,
+        insuranceAmount: normalizedInsuranceAmount,
+        insuranceOpted,
+        insuranceAmount: normalizedInsuranceAmount,
         pricingPlan: {
           key: customerPlanProfile.plan.key,
           label: customerPlanProfile.plan.label,

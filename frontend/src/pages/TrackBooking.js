@@ -6,6 +6,7 @@ import '../styles/UnifiedUI.css';
 import '../styles/EnhancedAnimations.css';
 import { buildAssetUrl } from '../utils/network';
 import { connectRideSocket } from '../utils/rideSocket';
+import { downloadInvoicePdf } from '../utils/invoiceUtils';
 
 /**
  * Track Booking Page
@@ -45,6 +46,16 @@ export default function TrackBooking() {
     ON_TRIP: 'Ride in progress. Enjoy your trip safely.',
     completed: 'Ride completed successfully.',
     cancelled: 'Booking was cancelled.',
+  };
+
+  const isValidCoordinatePair = (lat, lng) => {
+    const parsedLat = Number(lat);
+    const parsedLng = Number(lng);
+    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return false;
+    if (Math.abs(parsedLat) > 90 || Math.abs(parsedLng) > 180) return false;
+    // Guard against default/null-island coordinates sneaking in as valid numbers.
+    if (Math.abs(parsedLat) < 0.000001 && Math.abs(parsedLng) < 0.000001) return false;
+    return true;
   };
 
   useEffect(() => {
@@ -93,13 +104,13 @@ export default function TrackBooking() {
         status: booking?.status || 'pending',
         pickup: {
           address: pickup.address || 'Pickup not available',
-          lat: Number.isFinite(Number(pickup.latitude)) ? Number(pickup.latitude) : null,
-          lng: Number.isFinite(Number(pickup.longitude)) ? Number(pickup.longitude) : null,
+          lat: isValidCoordinatePair(pickup.latitude, pickup.longitude) ? Number(pickup.latitude) : null,
+          lng: isValidCoordinatePair(pickup.latitude, pickup.longitude) ? Number(pickup.longitude) : null,
         },
         dropoff: {
           address: dropoff.address || 'Drop not available',
-          lat: Number.isFinite(Number(dropoff.latitude)) ? Number(dropoff.latitude) : null,
-          lng: Number.isFinite(Number(dropoff.longitude)) ? Number(dropoff.longitude) : null,
+          lat: isValidCoordinatePair(dropoff.latitude, dropoff.longitude) ? Number(dropoff.latitude) : null,
+          lng: isValidCoordinatePair(dropoff.latitude, dropoff.longitude) ? Number(dropoff.longitude) : null,
         },
         driver: driver
           ? {
@@ -164,11 +175,11 @@ export default function TrackBooking() {
           const trackedLat = Number(trackResponse?.driverLocation?.latitude);
           const trackedLng = Number(trackResponse?.driverLocation?.longitude);
 
-          if (Number.isFinite(trackedLat) && Number.isFinite(trackedLng)) {
+          if (isValidCoordinatePair(trackedLat, trackedLng)) {
             setDriverLocation({ lat: trackedLat, lng: trackedLng });
-          } else if (Number.isFinite(mapped.driver?.location?.lat) && Number.isFinite(mapped.driver?.location?.lng)) {
+          } else if (isValidCoordinatePair(mapped.driver?.location?.lat, mapped.driver?.location?.lng)) {
             setDriverLocation({ lat: mapped.driver.location.lat, lng: mapped.driver.location.lng });
-          } else if (Number.isFinite(mapped.pickup?.lat) && Number.isFinite(mapped.pickup?.lng)) {
+          } else if (isValidCoordinatePair(mapped.pickup?.lat, mapped.pickup?.lng)) {
             setDriverLocation({ lat: mapped.pickup.lat, lng: mapped.pickup.lng });
           } else {
             setDriverLocation({ lat: null, lng: null });
@@ -353,7 +364,7 @@ export default function TrackBooking() {
   }, [bookingId]);
 
   const getMapPoint = (lat, lng, fallbackAddress) => {
-    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+    if (isValidCoordinatePair(lat, lng)) {
       return `${Number(lat)},${Number(lng)}`;
     }
     return fallbackAddress || '';
@@ -364,8 +375,10 @@ export default function TrackBooking() {
   const driverPoint = getMapPoint(driverLocation?.lat, driverLocation?.lng, bookingData?.pickup?.address);
   const normalizedStatus = String(bookingData?.status || '').toLowerCase();
   const rideStarted = ['in_progress', 'on_trip', 'completed'].includes(normalizedStatus);
-  const mapOrigin = rideStarted ? driverPoint : driverPoint;
-  const mapDestination = rideStarted ? dropPoint : pickupPoint;
+  const mapOrigin = driverPoint || pickupPoint || dropPoint || 'India';
+  const mapDestination = rideStarted
+    ? (dropPoint || pickupPoint || 'India')
+    : (pickupPoint || dropPoint || 'India');
   const mapEmbedUrl = `https://www.google.com/maps?saddr=${encodeURIComponent(mapOrigin)}&daddr=${encodeURIComponent(mapDestination)}&output=embed`;
   const openMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(mapOrigin)}&destination=${encodeURIComponent(mapDestination)}&travelmode=driving`;
 
@@ -956,6 +969,25 @@ export default function TrackBooking() {
                 <p style={{ margin: '8px 0 0 0', color: '#ffc107', fontWeight: 700, fontSize: '18px' }}>
                   Total Paid: ₹{bookingData.invoice.total}
                 </p>
+                {String(bookingData?.status || '').toLowerCase() === 'completed' ? (
+                  <button
+                    type="button"
+                    onClick={() => downloadInvoicePdf(bookingData, 'customer')}
+                    style={{
+                      marginTop: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 193, 7, 0.45)',
+                      backgroundColor: 'rgba(255, 193, 7, 0.18)',
+                      color: '#fde68a',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    Download Invoice PDF
+                  </button>
+                ) : null}
               </motion.div>
             )}
 

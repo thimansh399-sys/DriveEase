@@ -335,6 +335,66 @@
   font-size: 0.78rem;
 }
 
+.book-ride-insurance-card {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: rgba(15, 23, 42, 0.62);
+  padding: 12px;
+}
+
+.book-ride-insurance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.book-ride-insurance-head h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #dbeafe;
+}
+
+.book-ride-insurance-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #93c5fd;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.book-ride-insurance-copy {
+  margin: 0 0 7px;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.book-ride-insurance-copy strong {
+  color: #d1fae5;
+}
+
+.book-ride-insurance-links {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.book-ride-insurance-links a {
+  display: inline-block;
+  text-decoration: none;
+  color: #93c5fd;
+  font-size: 0.75rem;
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .book-ride-submit:disabled {
   opacity: 0.7;
   cursor: wait;
