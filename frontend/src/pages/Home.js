@@ -167,6 +167,9 @@ function Home() {
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
   const [hourlyPackage, setHourlyPackage] = useState(4);
+  const [outstationTripType, setOutstationTripType] = useState('one_way');
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationNote, setLocationNote] = useState('');
 
   const features = [
     { icon: '⚡', title: 'Fast Booking', desc: 'Book a verified driver in under 60 seconds.' },
@@ -193,17 +196,99 @@ function Home() {
     { name: 'Corporate', price: 'Custom', desc: 'Tailored for businesses' },
   ];
 
+  const isDestinationRequired = rideMode === 'one_way' || rideMode === 'outstation';
+  const estimatedFareRange = (() => {
+    if (rideMode === 'hourly') {
+      if (hourlyPackage === 2) return '₹299 - ₹449';
+      if (hourlyPackage === 8) return '₹899 - ₹1399';
+      return '₹499 - ₹799';
+    }
+
+    if (rideMode === 'outstation') {
+      return outstationTripType === 'round_trip' ? '₹1899 - ₹2999' : '₹999 - ₹1799';
+    }
+
+    return '₹120 - ₹180';
+  })();
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationNote('Location is not supported in this browser.');
+      return;
+    }
+
+    setDetectingLocation(true);
+    setLocationNote('Detecting your current location...');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = Number(position.coords.latitude);
+        const lng = Number(position.coords.longitude);
+        setPickupPlace({ address: '', lat, lng, source: 'gps' });
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
+            {
+              headers: {
+                Accept: 'application/json'
+              }
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error('Reverse lookup failed');
+          }
+
+          const data = await response.json();
+          const address = data?.display_name || `Current Location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+          setPickup(address);
+          setPickupPlace({ address, lat, lng, source: 'gps' });
+          setLocationNote('Pickup set from your current location.');
+          setInputError('');
+        } catch (_) {
+          const fallbackAddress = `Current Location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+          setPickup(fallbackAddress);
+          setPickupPlace({ address: fallbackAddress, lat, lng, source: 'gps' });
+          setLocationNote('Pickup set from GPS coordinates.');
+          setInputError('');
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      () => {
+        setDetectingLocation(false);
+        setLocationNote('Unable to detect location. Please allow GPS permission.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   const handleBookRide = () => {
     if (!pickup.trim()) {
       setInputError('Please enter pickup location.');
       return;
     }
+
+    if (isDestinationRequired && !drop.trim()) {
+      setInputError('Please enter destination for this ride type.');
+      return;
+    }
+
     setInputError('');
     const normalizedRideType = rideMode === 'one_way' ? 'daily' : rideMode;
     const search = new URLSearchParams({ pickup, rideType: normalizedRideType });
 
     if (drop.trim()) {
       search.set('drop', drop.trim());
+    }
+
+    if (rideMode === 'outstation') {
+      search.set('tripType', outstationTripType);
     }
 
     if (normalizedRideType === 'hourly') {
@@ -235,6 +320,7 @@ function Home() {
       dropPlace,
       rideType: normalizedRideType,
       totalHours: normalizedRideType === 'hourly' ? hourlyPackage : undefined,
+      tripType: normalizedRideType === 'outstation' ? outstationTripType : undefined,
     }));
     navigate('/login');
   };
@@ -290,7 +376,11 @@ function Home() {
               <button
                 type="button"
                 className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
-                onClick={() => setRideMode('hourly')}
+                onClick={() => {
+                  setRideMode('hourly');
+                  setDrop('');
+                  setDropPlace(null);
+                }}
               >
                 Hire Driver (2h/4h)
               </button>
@@ -319,6 +409,32 @@ function Home() {
                 >
                   4 Hours
                 </button>
+                <button
+                  type="button"
+                  className={`home-hourly-package-btn ${hourlyPackage === 8 ? 'active' : ''}`}
+                  onClick={() => setHourlyPackage(8)}
+                >
+                  8 Hours
+                </button>
+              </div>
+            )}
+
+            {rideMode === 'outstation' && (
+              <div className="home-hourly-package-row">
+                <button
+                  type="button"
+                  className={`home-hourly-package-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
+                  onClick={() => setOutstationTripType('one_way')}
+                >
+                  One-way
+                </button>
+                <button
+                  type="button"
+                  className={`home-hourly-package-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
+                  onClick={() => setOutstationTripType('round_trip')}
+                >
+                  Round trip
+                </button>
               </div>
             )}
 
@@ -329,15 +445,31 @@ function Home() {
               placeholder="Pickup Location"
               icon="🟢"
             />
-            <div className="home-input-divider" />
-            <LocationInput
-              value={drop}
-              onChange={(v) => { setDrop(v); setInputError(''); }}
-              onSelect={setDropPlace}
-              placeholder="Destination (optional)"
-              icon="🔴"
-            />
-            <p className="home-optional-hint">Where are you going? (optional)</p>
+            {rideMode !== 'hourly' && (
+              <>
+                <div className="home-input-divider" />
+                <LocationInput
+                  value={drop}
+                  onChange={(v) => { setDrop(v); setInputError(''); }}
+                  onSelect={setDropPlace}
+                  placeholder="Destination"
+                  icon="🔴"
+                />
+              </>
+            )}
+
+            <button
+              type="button"
+              className="home-current-location-btn"
+              onClick={useCurrentLocation}
+              disabled={detectingLocation}
+            >
+              {detectingLocation ? 'Detecting GPS...' : '📍 Use Current Location'}
+            </button>
+            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
+
+            <div className="home-availability-hint">⚡ 3 drivers available near you</div>
+            <div className="home-fare-preview">Estimated Fare: {estimatedFareRange}</div>
 
             <AnimatePresence>
               {inputError && (
@@ -358,7 +490,7 @@ function Home() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              Book Ride →
+              Find Drivers
             </motion.button>
 
           </motion.div>

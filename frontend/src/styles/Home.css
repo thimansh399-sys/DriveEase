@@ -1007,6 +1007,38 @@
   font-size: 12px;
 }
 
+.home-current-location-btn {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #dbe7f6;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-current-location-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.home-availability-hint {
+  margin-top: 10px;
+  color: #bbf7d0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-fare-preview {
+  margin-top: 4px;
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .home-input-group {
   display: flex;
   align-items: center;

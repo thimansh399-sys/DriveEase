@@ -29,6 +29,7 @@ export default function BookRide() {
     rideType: 'daily',
   });
   const [hourlyPackage, setHourlyPackage] = useState(4);
+  const [outstationTripType, setOutstationTripType] = useState('one_way');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,6 +47,7 @@ export default function BookRide() {
   const [autoFetchDriver, setAutoFetchDriver] = useState(true);
   const shouldAutoDetectPickupRef = useRef(true);
 
+  const isDestinationRequired = form.rideType === 'daily' || form.rideType === 'outstation';
   const mapQuery = form.pickup && form.drop
     ? `${form.pickup} to ${form.drop}`
     : (form.pickup || form.drop || 'India');
@@ -66,6 +68,7 @@ export default function BookRide() {
     const draftDrop = search.get('drop') || '';
     const draftRideType = search.get('rideType') || '';
     const draftTotalHours = Number(search.get('totalHours'));
+    const draftTripType = search.get('tripType') || '';
     const pickupLatFromQuery = Number(search.get('pickupLat'));
     const pickupLngFromQuery = Number(search.get('pickupLng'));
     const pendingDraftRaw = localStorage.getItem('pendingRideDraft');
@@ -83,6 +86,7 @@ export default function BookRide() {
     const seedPickup = draftPickup || pendingDraft?.pickup || '';
     const seedDrop = draftDrop || pendingDraft?.drop || '';
     const seedRideType = draftRideType || pendingDraft?.rideType || '';
+    const seedTripType = draftTripType || pendingDraft?.tripType || '';
     const seedTotalHours = Number.isFinite(draftTotalHours) && draftTotalHours > 0
       ? draftTotalHours
       : Number(pendingDraft?.totalHours || 0);
@@ -112,6 +116,9 @@ export default function BookRide() {
       if (seedTotalHours === 2 || seedTotalHours === 4) {
         setHourlyPackage(seedTotalHours);
       }
+      if (seedTripType === 'one_way' || seedTripType === 'round_trip') {
+        setOutstationTripType(seedTripType);
+      }
       return;
     }
 
@@ -126,8 +133,12 @@ export default function BookRide() {
       rideType: ['hourly', 'daily', 'outstation'].includes(seedRideType) ? seedRideType : prev.rideType,
     }));
 
-    if (seedTotalHours === 2 || seedTotalHours === 4) {
+    if (seedTotalHours === 2 || seedTotalHours === 4 || seedTotalHours === 8) {
       setHourlyPackage(seedTotalHours);
+    }
+
+    if (seedTripType === 'one_way' || seedTripType === 'round_trip') {
+      setOutstationTripType(seedTripType);
     }
   }, [location.search]);
 
@@ -173,6 +184,12 @@ export default function BookRide() {
       return undefined;
     }
 
+    if (isDestinationRequired && !form.drop) {
+      setRideQuote(null);
+      setQuoteError('Please enter destination for this ride type.');
+      return undefined;
+    }
+
     const effectiveDrop = form.drop || form.pickup;
 
     let cancelled = false;
@@ -211,7 +228,7 @@ export default function BookRide() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.pickup, form.drop, form.rideType, hourlyPackage, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
+  }, [form.pickup, form.drop, form.rideType, hourlyPackage, isDestinationRequired, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -220,6 +237,11 @@ export default function BookRide() {
   const handleBooking = async () => {
     if (!form.name || !form.phone || !form.pickup) {
       setError('Please fill required fields (name, phone, pickup).');
+      return;
+    }
+
+    if (isDestinationRequired && !form.drop) {
+      setError('Please enter destination for this ride type.');
       return;
     }
 
@@ -238,6 +260,7 @@ export default function BookRide() {
         drop: effectiveDrop,
         rideType: form.rideType,
         totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
+        tripType: form.rideType === 'outstation' ? outstationTripType : undefined,
         autoFetchDriver,
         pickupLatitude: pickupCoords.latitude,
         pickupLongitude: pickupCoords.longitude,
@@ -442,7 +465,7 @@ export default function BookRide() {
             />
             <input
               name="drop"
-              placeholder="Destination (optional)"
+              placeholder={isDestinationRequired ? 'Destination' : 'Destination (optional)'}
               value={form.drop}
               onChange={handleChange}
               className="book-ride-input"
@@ -476,6 +499,32 @@ export default function BookRide() {
                 onClick={() => setHourlyPackage(4)}
               >
                 Hire for 4 hours
+              </button>
+              <button
+                type="button"
+                className={`book-ride-hourly-btn ${hourlyPackage === 8 ? 'active' : ''}`}
+                onClick={() => setHourlyPackage(8)}
+              >
+                Hire for 8 hours
+              </button>
+            </div>
+          )}
+
+          {form.rideType === 'outstation' && (
+            <div className="book-ride-hourly-packages">
+              <button
+                type="button"
+                className={`book-ride-hourly-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
+                onClick={() => setOutstationTripType('one_way')}
+              >
+                One-way
+              </button>
+              <button
+                type="button"
+                className={`book-ride-hourly-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
+                onClick={() => setOutstationTripType('round_trip')}
+              >
+                Round trip
               </button>
             </div>
           )}
