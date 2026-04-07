@@ -445,6 +445,18 @@ function buildVerificationSummary(booking, { includeOtp = true } = {}) {
   };
 }
 
+function emitDriverRideNotification(driverId, payload = {}) {
+  const io = getIO();
+  if (!io || !driverId) {
+    return;
+  }
+
+  io.to(`driver:${String(driverId)}`).emit('new_ride_request', {
+    timestamp: new Date().toISOString(),
+    ...payload,
+  });
+}
+
 async function findAssignableDrivers(excludeDriverIds = null, pickupAddress = '') {
   const excluded = Array.isArray(excludeDriverIds)
     ? excludeDriverIds.filter(Boolean).map((id) => String(id))
@@ -673,6 +685,15 @@ async function assignNearestDriverForPendingBooking(booking) {
       console.error('Driver notification failed:', notifyError.message);
     }
   }
+
+  emitDriverRideNotification(selected.driver?._id, {
+    bookingId: claimed.bookingId,
+    bookingObjectId: claimed._id,
+    pickup: claimed?.pickupLocation?.address || '',
+    drop: claimed?.dropLocation?.address || '',
+    status: claimed.status,
+    source: 'assignment_worker',
+  });
 
   return claimed;
 }
@@ -1092,6 +1113,15 @@ exports.bookRide = async (req, res) => {
         console.error('Driver notification failed:', notifyError.message);
       }
     }
+
+    emitDriverRideNotification(assignedDriver?._id, {
+      bookingId: booking.bookingId,
+      bookingObjectId: booking._id,
+      pickup,
+      drop,
+      status: booking.status,
+      source: 'bookRide',
+    });
 
     res.status(201).json({
       success: true,
@@ -1572,6 +1602,15 @@ exports.quickBook = async (req, res) => {
     } catch (smsErr) {
       console.error('SMS sending failed (booking still created):', smsErr.message);
     }
+
+    emitDriverRideNotification(driver._id, {
+      bookingId: booking.bookingId,
+      bookingObjectId: booking._id,
+      pickup: pickupAddress,
+      drop: dropAddress,
+      status: booking.status,
+      source: 'quickBook',
+    });
 
     res.status(201).json({
       message: 'Booking created successfully! Driver has been notified.',
@@ -2512,6 +2551,15 @@ exports.bookNow = async (req, res) => {
         console.error('Driver notification failed:', notifyError.message);
       }
     }
+
+    emitDriverRideNotification(assignedDriver?._id, {
+      bookingId: booking.bookingId,
+      bookingObjectId: booking._id,
+      pickup,
+      drop,
+      status: booking.status,
+      source: 'bookNow',
+    });
 
     return res.status(201).json({
       message: assignedDriver

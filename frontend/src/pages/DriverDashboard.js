@@ -4,7 +4,7 @@ import api from '../utils/api';
 import '../styles/DriverDashboard.css';
 import { playNotificationSound } from '../utils/notificationService';
 import { useNotification } from '../context/NotificationContext';
-import { connectRideSocket } from '../utils/rideSocket';
+import { connectRideSocket, connectDriverSocket } from '../utils/rideSocket';
 
 const ACTIVE_STATUSES = ['pending', 'driver_assigned', 'confirmed', 'driver_arrived', 'in_progress', 'ON_TRIP'];
 
@@ -36,9 +36,11 @@ export default function DriverDashboard() {
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [error, setError] = useState('');
+  const [driverSocketId, setDriverSocketId] = useState('');
   const [nowMs, setNowMs] = useState(Date.now());
   const seenPendingRef = useRef(new Set());
   const socketRef = useRef(null);
+  const driverSocketRef = useRef(null);
   const locationTimerRef = useRef(null);
 
   useEffect(() => {
@@ -55,6 +57,9 @@ export default function DriverDashboard() {
       name: base.name || 'Driver',
       city: base.city || base.personalDetails?.city || '-',
     });
+
+    const resolvedDriverId = String(base?._id || base?.id || localStorage.getItem('driverId') || '').trim();
+    setDriverSocketId(resolvedDriverId);
 
     setIsOnline(String(localStorage.getItem('driverOnline') || '').toLowerCase() === 'true');
   }, []);
@@ -103,6 +108,30 @@ export default function DriverDashboard() {
     const timer = setInterval(fetchBookings, 10000);
     return () => clearInterval(timer);
   }, [fetchBookings]);
+
+  useEffect(() => {
+    if (!driverSocketId) {
+      return undefined;
+    }
+
+    const driverSocket = connectDriverSocket(driverSocketId);
+    driverSocketRef.current = driverSocket;
+
+    driverSocket.on('new_ride_request', (payload = {}) => {
+      const bookingId = String(payload.bookingId || '').trim();
+      if (bookingId) {
+        seenPendingRef.current.delete(bookingId);
+      }
+      addNotification('New ride request received. Check pending bookings.', 'info', 4500, 'New Ride Request');
+      playNotificationSound();
+      fetchBookings();
+    });
+
+    return () => {
+      driverSocket.disconnect();
+      driverSocketRef.current = null;
+    };
+  }, [driverSocketId, addNotification, fetchBookings]);
 
   const liveBooking = useMemo(
     () => bookings.find((item) => ['driver_arrived', 'in_progress', 'ON_TRIP'].includes(item.status)),

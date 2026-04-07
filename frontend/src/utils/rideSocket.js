@@ -52,3 +52,24 @@ export function connectRideSocket(bookingId) {
 
   return socket;
 }
+
+export function connectDriverSocket(driverId) {
+  const safeDriverId = String(driverId || '').trim();
+  const socket = io(getSocketBaseUrl(), {
+    transports: ['websocket', 'polling'],
+    withCredentials: true,
+    reconnection: true,
+    reconnectionAttempts: 30,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 12000,
+    randomizationFactor: 0.5,
+    timeout: 10000,
+    query: safeDriverId ? { driverId: safeDriverId } : {},
+  });
+
+  if (safeDriverId) {
+    socket.emit('join_driver_room', { driverId: safeDriverId });
+  }
+
+  return socket;
+}
