@@ -21,6 +21,33 @@ function generateOTP() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+function getRideOtpValidityMinutes() {
+  const configured = Number(process.env.RIDE_OTP_VALIDITY_MINUTES);
+  if (Number.isFinite(configured) && configured > 0) {
+    return Math.floor(configured);
+  }
+  return 30;
+}
+
+function getRideOtpValidityMs() {
+  return getRideOtpValidityMinutes() * 60 * 1000;
+}
+
+function isRideOtpExpired(booking, now = new Date()) {
+  const explicitExpiry = booking?.otpExpiresAt || booking?.verification?.otpExpiry;
+  const sharedAt = booking?.verification?.otpSharedAt;
+
+  let effectiveExpiry = explicitExpiry ? new Date(explicitExpiry) : null;
+  if (sharedAt) {
+    const shareWindowExpiry = new Date(new Date(sharedAt).getTime() + getRideOtpValidityMs());
+    if (!effectiveExpiry || shareWindowExpiry > effectiveExpiry) {
+      effectiveExpiry = shareWindowExpiry;
+    }
+  }
+
+  return effectiveExpiry ? now > effectiveExpiry : false;
+}
+
 /**
  * Format date to IST string
  */
@@ -69,7 +96,7 @@ exports.bookRide = async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+    const otpExpiry = new Date(Date.now() + getRideOtpValidityMs());
 
     // Create booking
     const booking = new Booking({
@@ -322,8 +349,7 @@ async function verifyRideOtpStart({ bookingId, otp, driverId, res }) {
   }
 
   const now = new Date();
-  const expiresAt = booking.otpExpiresAt || booking.verification?.otpExpiry;
-  if (expiresAt && now > new Date(expiresAt)) {
+  if (isRideOtpExpired(booking, now)) {
     return res.status(400).json({ error: 'OTP expired' });
   }
 
@@ -400,7 +426,7 @@ exports.regenerateOTP = async (req, res) => {
     const otp = generateOTP();
     booking.otp = otp;
     booking.otpAttempts = 0;
-    booking.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    booking.otpExpiresAt = new Date(Date.now() + getRideOtpValidityMs());
     booking.verification.otp = otp;
     booking.verification.otpGenerated = new Date();
     booking.verification.otpExpiry = booking.otpExpiresAt;

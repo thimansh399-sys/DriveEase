@@ -60,6 +60,30 @@ export default function BookRide() {
         ? 'pickup'
         : '';
   const selectedInsurance = INSURANCE_BY_RIDE_TYPE[form.rideType] || INSURANCE_BY_RIDE_TYPE.daily;
+  const hasPickupValue = Boolean((form.pickup || '').trim());
+  const showPostPickupDetails = hasPickupValue;
+
+  const quotePrices = [
+    Number(rideQuote?.comparison?.BASIC?.estimatedPrice),
+    Number(rideQuote?.comparison?.SMART?.estimatedPrice),
+    Number(rideQuote?.comparison?.ELITE?.estimatedPrice),
+    Number(rideQuote?.activePlan?.estimatedPrice),
+  ].filter((value) => Number.isFinite(value) && value > 0);
+
+  const minEstimatedFare = quotePrices.length ? Math.min(...quotePrices) : null;
+  const maxEstimatedFare = quotePrices.length ? Math.max(...quotePrices) : null;
+  const availableDriverCount = Number(rideQuote?.driverPool?.totalAvailable || 0);
+
+  const handleFindDrivers = () => {
+    if (!hasPickupValue) {
+      setError('Please enter pickup location first.');
+      return;
+    }
+    setError('');
+    if (!pickupCoords && !geoLoading) {
+      requestPickupGeolocation();
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -181,12 +205,6 @@ export default function BookRide() {
     if (!form.pickup) {
       setRideQuote(null);
       setQuoteError('');
-      return undefined;
-    }
-
-    if (isDestinationRequired && !form.drop) {
-      setRideQuote(null);
-      setQuoteError('Please enter destination for this ride type.');
       return undefined;
     }
 
@@ -438,41 +456,7 @@ export default function BookRide() {
           <h2 className="book-ride-reveal delay-1">🚗 Book Your Ride</h2>
           {user && <p className="book-ride-subtitle book-ride-reveal delay-2">Hi {user.name}, where do you want to go?</p>}
 
-          <div className="book-ride-input-group book-ride-reveal delay-2">
-            <input
-              name="name"
-              placeholder="Full Name"
-              value={form.name}
-              onChange={handleChange}
-              className="book-ride-input"
-              autoFocus={firstEmptyField === 'name'}
-            />
-            <input
-              name="phone"
-              placeholder="Phone Number"
-              value={form.phone}
-              onChange={handleChange}
-              className="book-ride-input"
-              autoFocus={firstEmptyField === 'phone'}
-            />
-            <input
-              name="pickup"
-              placeholder="Pickup Location"
-              value={form.pickup}
-              onChange={handleChange}
-              className="book-ride-input"
-              autoFocus={firstEmptyField === 'pickup'}
-            />
-            <input
-              name="drop"
-              placeholder={isDestinationRequired ? 'Destination' : 'Destination (optional)'}
-              value={form.drop}
-              onChange={handleChange}
-              className="book-ride-input"
-            />
-          </div>
-
-          <div className="book-ride-types">
+          <div className="book-ride-types book-ride-reveal delay-2">
             {RIDE_TYPES.map(({ value, label }) => (
               <button
                 key={value}
@@ -484,33 +468,111 @@ export default function BookRide() {
             ))}
           </div>
 
-          {form.rideType === 'hourly' && (
-            <div className="book-ride-hourly-packages">
+          <div className="book-ride-input-group book-ride-reveal delay-2">
+            <input
+              name="pickup"
+              placeholder="Pickup Location"
+              value={form.pickup}
+              onChange={handleChange}
+              className="book-ride-input"
+              autoFocus={firstEmptyField === 'pickup'}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="book-ride-submit book-ride-reveal delay-3"
+            onClick={handleFindDrivers}
+            disabled={geoLoading}
+          >
+            {geoLoading ? 'Finding Drivers...' : 'Find Drivers'}
+          </button>
+
+          {showPostPickupDetails && (
+            <div className="book-ride-progressive-section book-ride-reveal delay-3">
               <button
                 type="button"
-                className={`book-ride-hourly-btn ${hourlyPackage === 2 ? 'active' : ''}`}
-                onClick={() => setHourlyPackage(2)}
+                className="book-ride-secondary"
+                onClick={requestPickupGeolocation}
+                disabled={geoLoading}
               >
-                Hire for 2 hours
+                {geoLoading ? 'Getting Location...' : '📍 Use current location'}
               </button>
-              <button
-                type="button"
-                className={`book-ride-hourly-btn ${hourlyPackage === 4 ? 'active' : ''}`}
-                onClick={() => setHourlyPackage(4)}
-              >
-                Hire for 4 hours
-              </button>
-              <button
-                type="button"
-                className={`book-ride-hourly-btn ${hourlyPackage === 8 ? 'active' : ''}`}
-                onClick={() => setHourlyPackage(8)}
-              >
-                Hire for 8 hours
-              </button>
+
+              <div className="book-ride-quick-stats">
+                <p className="book-ride-quick-item">
+                  <span>⚡ Drivers nearby</span>
+                  <b>
+                    {quoteLoading
+                      ? 'Finding...'
+                      : `${availableDriverCount || 0} available`}
+                  </b>
+                </p>
+                <p className="book-ride-quick-item">
+                  <span>💰 Estimated Fare</span>
+                  <b>
+                    {minEstimatedFare && maxEstimatedFare
+                      ? `₹${minEstimatedFare} - ₹${maxEstimatedFare}`
+                      : 'Calculating...'}
+                  </b>
+                </p>
+              </div>
+
+              {form.rideType === 'hourly' && (
+                <div className="book-ride-hourly-packages">
+                  <button
+                    type="button"
+                    className={`book-ride-hourly-btn ${hourlyPackage === 2 ? 'active' : ''}`}
+                    onClick={() => setHourlyPackage(2)}
+                  >
+                    Hire for 2 hours
+                  </button>
+                  <button
+                    type="button"
+                    className={`book-ride-hourly-btn ${hourlyPackage === 4 ? 'active' : ''}`}
+                    onClick={() => setHourlyPackage(4)}
+                  >
+                    Hire for 4 hours
+                  </button>
+                  <button
+                    type="button"
+                    className={`book-ride-hourly-btn ${hourlyPackage === 8 ? 'active' : ''}`}
+                    onClick={() => setHourlyPackage(8)}
+                  >
+                    Hire for 8 hours
+                  </button>
+                </div>
+              )}
+
+              <div className="book-ride-input-group">
+                <input
+                  name="name"
+                  placeholder="Full Name"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="book-ride-input"
+                  autoFocus={firstEmptyField === 'name'}
+                />
+                <input
+                  name="phone"
+                  placeholder="Phone Number"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="book-ride-input"
+                  autoFocus={firstEmptyField === 'phone'}
+                />
+                <input
+                  name="drop"
+                  placeholder={isDestinationRequired ? 'Destination' : 'Destination (optional)'}
+                  value={form.drop}
+                  onChange={handleChange}
+                  className="book-ride-input"
+                />
+              </div>
             </div>
           )}
 
-          {form.rideType === 'outstation' && (
+          {showPostPickupDetails && form.rideType === 'outstation' && (
             <div className="book-ride-hourly-packages">
               <button
                 type="button"
@@ -529,125 +591,113 @@ export default function BookRide() {
             </div>
           )}
 
-          <div className="book-ride-map-summary" style={{ marginTop: 14 }}>
-            <p className="book-ride-geo-row">
-              <span>Pickup Geolocation</span>
-              <b>
-                {pickupCoords
-                  ? `${pickupCoords.latitude.toFixed(6)}, ${pickupCoords.longitude.toFixed(6)}`
-                  : (geoLoading ? 'Fetching location...' : 'Not captured')}
-              </b>
-            </p>
-          </div>
+          {showPostPickupDetails && (
+            <div className="book-ride-quote-card">
+              <div className="book-ride-quote-head">
+                <h4>Plan Based Estimate</h4>
+                {quoteLoading ? <span>Updating...</span> : null}
+              </div>
 
-          <div className="book-ride-quote-card">
-            <div className="book-ride-quote-head">
-              <h4>Plan Based Estimate</h4>
-              {quoteLoading ? <span>Updating...</span> : null}
+              {quoteError ? <p className="book-ride-quote-error">{quoteError}</p> : null}
+
+              {rideQuote?.activePlan ? (
+                <>
+                  <div className="book-ride-quote-grid">
+                    <div>
+                      <label>Active Plan</label>
+                      <b>{rideQuote.activePlan.label}</b>
+                    </div>
+                    <div>
+                      <label>Estimated Price</label>
+                      <b>₹{rideQuote.activePlan.estimatedPrice}</b>
+                    </div>
+                    <div>
+                      <label>Driver Priority</label>
+                      <b>{rideQuote.activePlan.priorityBadge}</b>
+                    </div>
+                    <div>
+                      <label>Driver Quality</label>
+                      <b>{rideQuote.activePlan.driverQuality}</b>
+                    </div>
+                  </div>
+
+                  <div className="book-ride-plan-strip">
+                    <span>BASIC ₹{rideQuote.comparison?.BASIC?.estimatedPrice ?? '-'}</span>
+                    <span>SMART ₹{rideQuote.comparison?.SMART?.estimatedPrice ?? '-'}</span>
+                    <span>ELITE ₹{rideQuote.comparison?.ELITE?.estimatedPrice ?? '-'}</span>
+                  </div>
+
+                  {rideQuote?.recommendUpgrade?.message ? (
+                    <div className="book-ride-upgrade-popup">
+                      {rideQuote.recommendUpgrade.message}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <p className="book-ride-quote-placeholder">
+                  Enter pickup to see live quote. Destination is optional.
+                </p>
+              )}
             </div>
+          )}
 
-            {quoteError ? <p className="book-ride-quote-error">{quoteError}</p> : null}
-
-            {rideQuote?.activePlan ? (
-              <>
-                <div className="book-ride-quote-grid">
-                  <div>
-                    <label>Active Plan</label>
-                    <b>{rideQuote.activePlan.label}</b>
-                  </div>
-                  <div>
-                    <label>Estimated Price</label>
-                    <b>₹{rideQuote.activePlan.estimatedPrice}</b>
-                  </div>
-                  <div>
-                    <label>Driver Priority</label>
-                    <b>{rideQuote.activePlan.priorityBadge}</b>
-                  </div>
-                  <div>
-                    <label>Driver Quality</label>
-                    <b>{rideQuote.activePlan.driverQuality}</b>
-                  </div>
+          {showPostPickupDetails && (
+            <>
+              <div className="book-ride-insurance-card">
+                <div className="book-ride-insurance-head">
+                  <h4>Per Ride Insurance</h4>
+                  <label className="book-ride-insurance-toggle">
+                    <input
+                      type="checkbox"
+                      checked={insuranceOpted}
+                      onChange={(event) => setInsuranceOpted(event.target.checked)}
+                    />
+                    <span>{insuranceOpted ? 'Added' : 'Add'}</span>
+                  </label>
                 </div>
 
-                <div className="book-ride-plan-strip">
-                  <span>BASIC ₹{rideQuote.comparison?.BASIC?.estimatedPrice ?? '-'}</span>
-                  <span>SMART ₹{rideQuote.comparison?.SMART?.estimatedPrice ?? '-'}</span>
-                  <span>ELITE ₹{rideQuote.comparison?.ELITE?.estimatedPrice ?? '-'}</span>
+                <p className="book-ride-insurance-copy">
+                  Protect this ride with <strong>{selectedInsurance.cover}</strong> for just <strong>₹{selectedInsurance.amount}</strong>.
+                </p>
+                <p className="book-ride-insurance-copy">
+                  Insurance partner support available during active ride and claim follow-up.
+                </p>
+
+                <div className="book-ride-insurance-links">
+                  <a href="/insurance">View DriveEase Insurance Plans</a>
+                  <a href="https://www.icicilombard.com/" target="_blank" rel="noreferrer">Insurance Company Partner</a>
+                  <a href="https://www.icicilombard.com/claims" target="_blank" rel="noreferrer">Claims Portal</a>
                 </div>
+              </div>
 
-                {rideQuote?.recommendUpgrade?.message ? (
-                  <div className="book-ride-upgrade-popup">
-                    {rideQuote.recommendUpgrade.message}
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <p className="book-ride-quote-placeholder">
-                Enter pickup to see live quote. Destination is optional.
-              </p>
-            )}
-          </div>
+              <div className="book-ride-insurance-card">
+                <div className="book-ride-insurance-head">
+                  <h4>Driver Auto-Fetch</h4>
+                  <label className="book-ride-insurance-toggle">
+                    <input
+                      type="checkbox"
+                      checked={autoFetchDriver}
+                      onChange={(event) => setAutoFetchDriver(event.target.checked)}
+                    />
+                    <span>{autoFetchDriver ? 'On' : 'Off'}</span>
+                  </label>
+                </div>
+                <p className="book-ride-insurance-copy">
+                  Keep this ON to auto-assign nearest available driver immediately after booking.
+                </p>
+              </div>
+            </>
+          )}
 
-          <div className="book-ride-insurance-card">
-            <div className="book-ride-insurance-head">
-              <h4>Per Ride Insurance</h4>
-              <label className="book-ride-insurance-toggle">
-                <input
-                  type="checkbox"
-                  checked={insuranceOpted}
-                  onChange={(event) => setInsuranceOpted(event.target.checked)}
-                />
-                <span>{insuranceOpted ? 'Added' : 'Add'}</span>
-              </label>
-            </div>
-
-            <p className="book-ride-insurance-copy">
-              Protect this ride with <strong>{selectedInsurance.cover}</strong> for just <strong>₹{selectedInsurance.amount}</strong>.
-            </p>
-            <p className="book-ride-insurance-copy">
-              Insurance partner support available during active ride and claim follow-up.
-            </p>
-
-            <div className="book-ride-insurance-links">
-              <a href="/insurance">View DriveEase Insurance Plans</a>
-              <a href="https://www.icicilombard.com/" target="_blank" rel="noreferrer">Insurance Company Partner</a>
-              <a href="https://www.icicilombard.com/claims" target="_blank" rel="noreferrer">Claims Portal</a>
-            </div>
-          </div>
-
-          <div className="book-ride-insurance-card">
-            <div className="book-ride-insurance-head">
-              <h4>Driver Auto-Fetch</h4>
-              <label className="book-ride-insurance-toggle">
-                <input
-                  type="checkbox"
-                  checked={autoFetchDriver}
-                  onChange={(event) => setAutoFetchDriver(event.target.checked)}
-                />
-                <span>{autoFetchDriver ? 'On' : 'Off'}</span>
-              </label>
-            </div>
-            <p className="book-ride-insurance-copy">
-              Keep this ON to auto-assign nearest available driver immediately after booking.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="book-ride-secondary"
-            onClick={requestPickupGeolocation}
-            disabled={geoLoading}
-          >
-            {geoLoading ? 'Getting Location...' : 'Use My Current Location'}
-          </button>
-
-          {geoError ? <div className="book-ride-error">{geoError}</div> : null}
+          {showPostPickupDetails && geoError ? <div className="book-ride-error">{geoError}</div> : null}
 
           {error && <div className="book-ride-error book-ride-reveal delay-3">{error}</div>}
 
-          <button className="book-ride-submit book-ride-reveal delay-3" onClick={handleBooking} disabled={loading}>
-            {loading ? 'Booking...' : '🚗 Confirm Booking'}
-          </button>
+          {showPostPickupDetails && (
+            <button className="book-ride-submit book-ride-reveal delay-3" onClick={handleBooking} disabled={loading}>
+              {loading ? 'Booking...' : '🚗 Confirm Booking'}
+            </button>
+          )}
         </div>
 
         <aside className="book-ride-map-card book-ride-reveal delay-2">

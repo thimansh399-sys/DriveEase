@@ -45,7 +45,6 @@ function Footer() {
 
         {/* Brand Ambassador */}
         <div className="footer-section">
-          <h4>Brand Ambassador</h4>
           <p className="footer-description" style={{ marginBottom: '8px' }}>Himanshu Thakur</p>
           <p className="footer-description">Growing DriveEase across India 🇮🇳</p>
           <div className="footer-social">

@@ -31,6 +31,7 @@ import CustomerConfirmation from './pages/CustomerConfirmation';
 import AdminSupport from './pages/AdminSupport';
 import AdminAnalytics from './pages/AdminAnalytics';
 import DriverDirectory from './pages/DriverDirectory';
+import SplashScreen from './components/SplashScreen';
 
 function AppRoutes({ isLoggedIn, userRole, handleLogin, handleLogout }) {
   const location = useLocation();
@@ -104,6 +105,15 @@ function App() {
   const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const splashTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2200);
+
+    return () => clearTimeout(splashTimer);
+  }, []);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -173,6 +183,7 @@ function App() {
 
   return (
     <NotificationProvider>
+      <SplashScreen visible={showSplash} />
       <Router>
         <div className="app">
           {/* Modern sticky Navigation bar on all pages */}
