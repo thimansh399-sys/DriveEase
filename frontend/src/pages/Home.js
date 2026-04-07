@@ -412,6 +412,17 @@ function Home() {
             Verified drivers for your daily commute, family trips, and business travel.
           </p>
 
+          <div className="home-cars-strip">
+            <span>🚕 Car + Driver now available</span>
+            <button
+              type="button"
+              className="home-cars-strip-btn"
+              onClick={() => navigate('/book-ride?serviceType=car_driver')}
+            >
+              Try Now
+            </button>
+          </div>
+
           {/* Booking Input Card */}
           <motion.div
             className="home-booking-card"
@@ -419,17 +430,6 @@ function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.45 }}
           >
-            <div className="home-cars-inline-banner">
-              🚕 New: Car + Driver booking is now live across city routes.
-              <button
-                type="button"
-                className="home-cars-inline-btn"
-                onClick={() => navigate('/book-ride?serviceType=car_driver')}
-              >
-                Try Now
-              </button>
-            </div>
-
             <div className="home-ride-mode-row">
               <button
                 type="button"
@@ -458,51 +458,6 @@ function Home() {
               </button>
             </div>
 
-            {rideMode === 'hourly' && (
-              <div className="home-hourly-package-row">
-                <button
-                  type="button"
-                  className={`home-hourly-package-btn ${hourlyPackage === 2 ? 'active' : ''}`}
-                  onClick={() => setHourlyPackage(2)}
-                >
-                  2 Hours
-                </button>
-                <button
-                  type="button"
-                  className={`home-hourly-package-btn ${hourlyPackage === 4 ? 'active' : ''}`}
-                  onClick={() => setHourlyPackage(4)}
-                >
-                  4 Hours
-                </button>
-                <button
-                  type="button"
-                  className={`home-hourly-package-btn ${hourlyPackage === 8 ? 'active' : ''}`}
-                  onClick={() => setHourlyPackage(8)}
-                >
-                  8 Hours
-                </button>
-              </div>
-            )}
-
-            {rideMode === 'outstation' && (
-              <div className="home-hourly-package-row">
-                <button
-                  type="button"
-                  className={`home-hourly-package-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
-                  onClick={() => setOutstationTripType('one_way')}
-                >
-                  One-way
-                </button>
-                <button
-                  type="button"
-                  className={`home-hourly-package-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
-                  onClick={() => setOutstationTripType('round_trip')}
-                >
-                  Round trip
-                </button>
-              </div>
-            )}
-
             <LocationInput
               value={pickup}
               onChange={(v) => { setPickup(v); setInputError(''); }}
@@ -522,19 +477,6 @@ function Home() {
                 />
               </>
             )}
-
-            <button
-              type="button"
-              className="home-current-location-btn"
-              onClick={useCurrentLocation}
-              disabled={detectingLocation}
-            >
-              {detectingLocation ? 'Detecting GPS...' : '📍 Use Current Location'}
-            </button>
-            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
-
-            <div className="home-availability-hint">⚡ 3 drivers available near you</div>
-            <div className="home-fare-preview">Estimated Fare: {estimatedFareRange}</div>
 
             <AnimatePresence>
               {inputError && (
@@ -560,16 +502,35 @@ function Home() {
 
           </motion.div>
 
-          <div className="home-v2-quick-points">
-            <span>✔ Verified Drivers</span>
-            <span>✔ 24/7 Support</span>
-            <span>✔ Instant Booking</span>
+          <div className="home-secondary-info">
+            <button
+              type="button"
+              className="home-current-location-btn"
+              onClick={useCurrentLocation}
+              disabled={detectingLocation}
+            >
+              {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
+            </button>
+            <div className="home-secondary-info-grid">
+              <span>⚡ 3 drivers nearby</span>
+              <span>💰 {estimatedFareRange}</span>
+              <span>⏱ Pickup in 6 mins</span>
+            </div>
+            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
           </div>
 
-          <div className="home-v2-stats">
-            {['⭐ 4.8 Rating', '🚗 5000+ Drivers', '👥 10k+ Customers'].map((item) => (
-              <div key={item} className="home-v2-stat-card">{item}</div>
-            ))}
+          <div className="home-trust-strip">
+            <div className="home-v2-quick-points">
+              <span>✔ Verified Drivers</span>
+              <span>✔ 24/7 Support</span>
+              <span>✔ Instant Booking</span>
+            </div>
+
+            <div className="home-v2-stats">
+              {['⭐ 4.8 Rating', '🚗 5000+ Drivers', '👥 10k+ Users'].map((item) => (
+                <div key={item} className="home-v2-stat-card">{item}</div>
+              ))}
+            </div>
           </div>
         </motion.div>
 
@@ -599,6 +560,12 @@ function Home() {
                 <div style={{ color: '#22c55e', fontSize: '12px' }}>ETA: 30 mins</div>
             </div>
           </motion.div>
+
+          <div className="home-media-insights">
+            <span>🚗 2 mins away</span>
+            <span>👤 Verified Driver</span>
+            <span>⭐ 4.9 rating</span>
+          </div>
         </motion.div>
       </section>
 
