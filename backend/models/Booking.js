@@ -39,6 +39,26 @@ const bookingSchema = new mongoose.Schema({
     enum: ['hourly', 'daily', 'outstation', 'subscription'],
     default: 'daily'
   },
+  serviceType: {
+    type: String,
+    enum: ['driver_only', 'car_driver'],
+    default: 'driver_only'
+  },
+  driverType: {
+    type: String,
+    enum: ['standard', 'experienced', 'premium'],
+    default: 'standard'
+  },
+  carCategory: {
+    type: String,
+    enum: ['mini', 'sedan', 'suv'],
+    default: null
+  },
+  tripType: {
+    type: String,
+    enum: ['one_way', 'round_trip'],
+    default: 'one_way'
+  },
   startDate: Date,
   endDate: Date,
   numberOfDays: Number,

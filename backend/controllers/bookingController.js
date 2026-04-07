@@ -121,6 +121,159 @@ const INSURANCE_PROVIDER = {
   claimsUrl: 'https://www.icicilombard.com/claims',
 };
 
+const DRIVER_TYPE_HOURLY_EXTRA = {
+  standard: 0,
+  experienced: 20,
+  premium: 50,
+};
+
+const CAR_SERVICE_OPTIONS = {
+  mini: {
+    key: 'mini',
+    label: 'Mini',
+    models: 'WagonR, Alto',
+    ratePerKm: 10,
+    seats: '4 seats',
+    badge: 'Most Booked',
+  },
+  sedan: {
+    key: 'sedan',
+    label: 'Sedan',
+    models: 'Dzire, Aura',
+    ratePerKm: 12,
+    seats: '4 seats',
+    badge: 'Recommended',
+  },
+  suv: {
+    key: 'suv',
+    label: 'SUV',
+    models: 'Ertiga, Innova',
+    ratePerKm: 15,
+    seats: '6-7 seats',
+    badge: 'Best Value',
+  },
+};
+
+function normalizeServiceType(value) {
+  return String(value || '').toLowerCase() === 'car_driver' ? 'car_driver' : 'driver_only';
+}
+
+function normalizeDriverType(value) {
+  const normalized = String(value || '').toLowerCase();
+  return ['standard', 'experienced', 'premium'].includes(normalized) ? normalized : 'standard';
+}
+
+function normalizeCarCategory(value) {
+  const normalized = String(value || '').toLowerCase();
+  return ['mini', 'sedan', 'suv'].includes(normalized) ? normalized : 'sedan';
+}
+
+function normalizeTripType(value) {
+  return String(value || '').toLowerCase() === 'round_trip' ? 'round_trip' : 'one_way';
+}
+
+function getEnhancedServicePricing({
+  serviceType,
+  driverType,
+  carCategory,
+  tripType,
+  rideType,
+  totalHours,
+  estimatedDistance,
+  insuranceAmount,
+  waitingMinutes,
+  overtimeHours,
+  numberOfDays,
+}) {
+  const normalizedServiceType = normalizeServiceType(serviceType);
+  const normalizedDriverType = normalizeDriverType(driverType);
+  const normalizedCarCategory = normalizeCarCategory(carCategory);
+  const normalizedTripType = normalizeTripType(tripType);
+  const safeDistance = Math.max(0, Number(estimatedDistance) || 0);
+  const fallbackDistance = safeDistance > 0 ? safeDistance : 10;
+  const safeHours = Math.max(1, Number(totalHours) || (String(rideType).toLowerCase() === 'hourly' ? 4 : 8));
+  const safeInsuranceAmount = roundAmount(insuranceAmount || 0);
+
+  if (normalizedServiceType === 'car_driver') {
+    const selectedCar = CAR_SERVICE_OPTIONS[normalizedCarCategory] || CAR_SERVICE_OPTIONS.sedan;
+    const baseFare = 120;
+    let estimatedPrice = roundAmount(baseFare + (fallbackDistance * Number(selectedCar.ratePerKm || 0)));
+    if (normalizedTripType === 'round_trip') {
+      estimatedPrice = roundAmount(estimatedPrice * 1.8);
+    }
+    const finalPrice = roundAmount(estimatedPrice + safeInsuranceAmount);
+
+    return {
+      estimatedPrice,
+      finalPrice,
+      breakdown: {
+        pricingRule: 'Car+Driver: base + distance x car rate, round trip x1.8',
+        baseFare,
+        addOns: {
+          roundTripMultiplier: normalizedTripType === 'round_trip' ? 1.8 : 1,
+          insuranceAmount: safeInsuranceAmount,
+        },
+        inputs: {
+          distanceKm: roundAmount(fallbackDistance),
+          carCategory: selectedCar.key,
+          carRatePerKm: selectedCar.ratePerKm,
+          tripType: normalizedTripType,
+        },
+        estimatedPrice,
+        finalPrice,
+      },
+      modeDetails: {
+        serviceType: normalizedServiceType,
+        driverType: normalizedDriverType,
+        carCategory: selectedCar.key,
+        tripType: normalizedTripType,
+      },
+    };
+  }
+
+  const baseBill = calculateRideBill({
+    bookingType: rideType,
+    distance: safeDistance,
+    hours: safeHours,
+    days: Number(numberOfDays) || 1,
+    bookingTime: new Date(),
+    waitingMinutes,
+    overtimeHours,
+    insuranceAmount: safeInsuranceAmount,
+  });
+
+  const driverExtraPerHour = Number(DRIVER_TYPE_HOURLY_EXTRA[normalizedDriverType] || 0);
+  const driverTypeExtra = roundAmount(driverExtraPerHour * safeHours);
+  const estimatedPrice = roundAmount((baseBill.estimatedPrice || 0) + driverTypeExtra);
+  const finalPrice = roundAmount(estimatedPrice + safeInsuranceAmount);
+
+  return {
+    estimatedPrice,
+    finalPrice,
+    breakdown: {
+      ...(baseBill.breakdown || {}),
+      pricingRule: `${baseBill?.breakdown?.pricingRule || 'Driver only pricing'} + driver type uplift`,
+      addOns: {
+        ...((baseBill && baseBill.breakdown && baseBill.breakdown.addOns) || {}),
+        driverTypeExtra,
+      },
+      inputs: {
+        ...((baseBill && baseBill.breakdown && baseBill.breakdown.inputs) || {}),
+        driverType: normalizedDriverType,
+        driverExtraPerHour,
+      },
+      estimatedPrice,
+      finalPrice,
+    },
+    modeDetails: {
+      serviceType: normalizedServiceType,
+      driverType: normalizedDriverType,
+      carCategory: null,
+      tripType: normalizedTripType,
+    },
+  };
+}
+
 const CUSTOMER_PLAN_RULES = {
   BASIC: {
     key: 'BASIC',
@@ -2040,6 +2193,10 @@ exports.getRideQuote = async (req, res) => {
       pickup,
       drop,
       rideType = 'daily',
+      serviceType = 'driver_only',
+      driverType = 'standard',
+      carCategory = 'sedan',
+      tripType = 'one_way',
       pickupLatitude,
       pickupLongitude,
       dropLatitude,
@@ -2052,7 +2209,14 @@ exports.getRideQuote = async (req, res) => {
       insuranceAmount = 0,
     } = req.body || {};
 
-    if (!pickup || !drop) {
+    const normalizedServiceType = normalizeServiceType(serviceType);
+    const normalizedTripType = normalizeTripType(tripType);
+
+    if (!pickup) {
+      return res.status(400).json({ error: 'Pickup location is required for quote' });
+    }
+
+    if (normalizedServiceType === 'car_driver' && !drop) {
       return res.status(400).json({ error: 'Pickup and drop locations are required for quote' });
     }
 
@@ -2073,24 +2237,41 @@ exports.getRideQuote = async (req, res) => {
     const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
     const estimatedHours = Number(totalHours) || (normalizedRideType === 'hourly' ? 4 : normalizedRideType === 'outstation' ? 10 : 8);
 
-    const baseBill = calculateRideBill({
-      bookingType: normalizedRideType,
-      distance: estimatedDistance,
-      hours: estimatedHours,
-      days: Number(numberOfDays) || 1,
-      bookingTime: new Date(),
+    const enhancedPricing = getEnhancedServicePricing({
+      serviceType: normalizedServiceType,
+      driverType,
+      carCategory,
+      tripType: normalizedTripType,
+      rideType: normalizedRideType,
+      totalHours: estimatedHours,
+      estimatedDistance,
+      insuranceAmount: normalizedInsuranceAmount,
       waitingMinutes,
       overtimeHours,
-      insuranceAmount: normalizedInsuranceAmount,
+      numberOfDays,
     });
+
+    const baseBill = {
+      estimatedPrice: enhancedPricing.estimatedPrice,
+      finalPrice: enhancedPricing.finalPrice,
+      breakdown: enhancedPricing.breakdown,
+    };
 
     const driversRaw = await findAssignableDrivers(null, pickup);
     const eligibleDrivers = applyCustomerPlanDriverFilters(driversRaw, customerPlanProfile.plan);
     const quotePayload = getPlanAwareQuotePayload(baseBill, customerPlanProfile.planKey);
+    const selectedCar = CAR_SERVICE_OPTIONS[normalizeCarCategory(carCategory)] || CAR_SERVICE_OPTIONS.sedan;
+    const carOptions = Object.values(CAR_SERVICE_OPTIONS);
+    const carAvailabilityCount = Math.max(0, Math.min(eligibleDrivers.length || driversRaw.length || 0, 12));
+    const pickupEtaMinutes = Math.max(4, Math.min(16, 4 + Math.ceil((availableDrivers.length ? 8 / availableDrivers.length : 10))));
 
     return res.json({
       success: true,
       quote: {
+        serviceType: normalizedServiceType,
+        driverType: normalizeDriverType(driverType),
+        carCategory: normalizedServiceType === 'car_driver' ? selectedCar.key : null,
+        tripType: normalizedServiceType === 'car_driver' ? normalizedTripType : null,
         rideType: normalizedRideType,
         estimatedDistance,
         baseEstimatedPrice: roundAmount(baseBill.estimatedPrice),
@@ -2100,6 +2281,18 @@ exports.getRideQuote = async (req, res) => {
           totalAvailable: driversRaw.length,
           eligibleForPlan: eligibleDrivers.length,
         },
+        carOptions,
+        realtimePreview: {
+          carsAvailableNearby: normalizedServiceType === 'car_driver' ? carAvailabilityCount : 0,
+          pickupEtaMinutes,
+        },
+        smartSuggestion: normalizedServiceType === 'driver_only' && eligibleDrivers.length === 0
+          ? {
+            code: 'NO_DRIVERS_NEARBY',
+            message: 'No drivers nearby. Try booking a car instead.',
+            suggestedServiceType: 'car_driver',
+          }
+          : null,
       },
     });
   } catch (error) {
@@ -2114,6 +2307,10 @@ exports.bookNow = async (req, res) => {
       pickup,
       drop,
       rideType = 'daily',
+      serviceType = 'driver_only',
+      driverType = 'standard',
+      carCategory = 'sedan',
+      tripType = 'one_way',
       autoFetchDriver = true,
       pickupLatitude,
       pickupLongitude,
@@ -2127,8 +2324,15 @@ exports.bookNow = async (req, res) => {
       insuranceAmount = 0,
     } = req.body;
 
-    if (!pickup || !drop) {
-      return res.status(400).json({ message: 'Pickup and drop locations are required' });
+    const normalizedServiceType = normalizeServiceType(serviceType);
+    const normalizedTripType = normalizeTripType(tripType);
+
+    if (!pickup) {
+      return res.status(400).json({ message: 'Pickup location is required' });
+    }
+
+    if (normalizedServiceType === 'car_driver' && !drop) {
+      return res.status(400).json({ message: 'Destination is required for Car + Driver service' });
     }
 
     const pickupLat = Number(pickupLatitude);
@@ -2162,16 +2366,24 @@ exports.bookNow = async (req, res) => {
       : 0;
     const normalizedInsuranceAmount = insuranceOpted ? roundAmount(insuranceAmount) : 0;
     const estimatedHours = Number(totalHours) || (normalizedRideType === 'hourly' ? 4 : normalizedRideType === 'outstation' ? 10 : 8);
-    const baseBill = calculateRideBill({
-      bookingType: normalizedRideType,
-      distance: estimatedDistance,
-      hours: estimatedHours,
-      days: Number(numberOfDays) || 1,
-      bookingTime: new Date(),
+    const enhancedPricing = getEnhancedServicePricing({
+      serviceType: normalizedServiceType,
+      driverType,
+      carCategory,
+      tripType: normalizedTripType,
+      rideType: normalizedRideType,
+      totalHours: estimatedHours,
+      estimatedDistance,
+      insuranceAmount: normalizedInsuranceAmount,
       waitingMinutes,
       overtimeHours,
-      insuranceAmount: normalizedInsuranceAmount,
+      numberOfDays,
     });
+    const baseBill = {
+      estimatedPrice: enhancedPricing.estimatedPrice,
+      finalPrice: enhancedPricing.finalPrice,
+      breakdown: enhancedPricing.breakdown,
+    };
     const planPricing = applyCustomerPlanPricing(baseBill, customerPlanProfile.plan);
     const quotePayload = getPlanAwareQuotePayload(baseBill, customerPlanProfile.planKey);
 
@@ -2214,6 +2426,10 @@ exports.bookNow = async (req, res) => {
         ...(hasDropCoords ? { latitude: dropLat, longitude: dropLng } : {}),
       },
       bookingType: normalizedRideType,
+      serviceType: normalizedServiceType,
+      driverType: normalizeDriverType(driverType),
+      carCategory: normalizedServiceType === 'car_driver' ? normalizeCarCategory(carCategory) : null,
+      tripType: normalizedTripType,
       startDate: new Date(),
       estimatedDistance,
       estimatedPrice: planPricing.estimatedPrice,
@@ -2230,6 +2446,10 @@ exports.bookNow = async (req, res) => {
       insuranceProvider: INSURANCE_PROVIDER,
       fareBreakdown: {
         ...(baseBill.breakdown || {}),
+        serviceType: normalizedServiceType,
+        driverType: normalizeDriverType(driverType),
+        carCategory: normalizedServiceType === 'car_driver' ? normalizeCarCategory(carCategory) : null,
+        tripType: normalizedTripType,
         customerPlan: customerPlanProfile.planKey,
         planDiscountAmount: planPricing.discountAmount,
       },
@@ -2264,6 +2484,7 @@ exports.bookNow = async (req, res) => {
     logBookingEvent('booking_requested', booking, {
       source: 'bookNow',
       rideType: normalizedRideType,
+      serviceType: normalizedServiceType,
       assignedImmediately: Boolean(assignedDriver),
       nearestDriverDistanceKm: nearestDriverMatch ? Number(nearestDriverMatch.distanceKm.toFixed(2)) : null,
       maxAutoAssignDistanceKm,
@@ -2287,6 +2508,10 @@ exports.bookNow = async (req, res) => {
         bookingId: booking.bookingId,
         pickup,
         drop,
+        serviceType: normalizedServiceType,
+        driverType: normalizeDriverType(driverType),
+        carCategory: normalizedServiceType === 'car_driver' ? normalizeCarCategory(carCategory) : null,
+        tripType: normalizedTripType,
         rideType: normalizedRideType,
         status: booking.status,
         otp,

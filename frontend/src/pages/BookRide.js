@@ -10,6 +10,23 @@ const RIDE_TYPES = [
   { value: 'outstation', label: '🛣 Outstation Trip' },
 ];
 
+const SERVICE_TYPES = [
+  { value: 'driver_only', label: '🚗 Drive with Your Car', subtitle: 'Driver Only' },
+  { value: 'car_driver', label: '🚕 Book a Car + Driver', subtitle: 'Taxi Service' },
+];
+
+const DRIVER_TYPES = [
+  { value: 'standard', label: 'Standard', extra: 'Normal' },
+  { value: 'experienced', label: 'Experienced', extra: '+₹20/hr' },
+  { value: 'premium', label: 'Premium', extra: '+₹50/hr' },
+];
+
+const CAR_OPTIONS = [
+  { value: 'mini', title: '🚗 Mini', models: 'WagonR, Alto', rate: 10, seats: '4 seats', badge: 'Most Booked' },
+  { value: 'sedan', title: '🚙 Sedan', models: 'Dzire, Aura', rate: 12, seats: '4 seats', badge: 'Recommended' },
+  { value: 'suv', title: '🚘 SUV', models: 'Ertiga, Innova', rate: 15, seats: '6-7 seats', badge: 'Best Value' },
+];
+
 const INSURANCE_BY_RIDE_TYPE = {
   hourly: { amount: 29, cover: '₹5 lakh accidental cover' },
   daily: { amount: 39, cover: '₹5 lakh accidental + medical' },
@@ -28,8 +45,12 @@ export default function BookRide() {
     drop: '',
     rideType: 'daily',
   });
+  const [serviceType, setServiceType] = useState('driver_only');
+  const [driverType, setDriverType] = useState('standard');
+  const [carCategory, setCarCategory] = useState('sedan');
   const [hourlyPackage, setHourlyPackage] = useState(4);
   const [outstationTripType, setOutstationTripType] = useState('one_way');
+  const [taxiTripType, setTaxiTripType] = useState('one_way');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +68,9 @@ export default function BookRide() {
   const [autoFetchDriver, setAutoFetchDriver] = useState(true);
   const shouldAutoDetectPickupRef = useRef(true);
 
-  const isDestinationRequired = form.rideType === 'daily' || form.rideType === 'outstation';
+  const isDriverOnly = serviceType === 'driver_only';
+  const isCarDriver = serviceType === 'car_driver';
+  const isDestinationRequired = isCarDriver || form.rideType === 'daily' || form.rideType === 'outstation';
   const mapQuery = form.pickup && form.drop
     ? `${form.pickup} to ${form.drop}`
     : (form.pickup || form.drop || 'India');
@@ -62,6 +85,8 @@ export default function BookRide() {
   const selectedInsurance = INSURANCE_BY_RIDE_TYPE[form.rideType] || INSURANCE_BY_RIDE_TYPE.daily;
   const hasPickupValue = Boolean((form.pickup || '').trim());
   const showPostPickupDetails = hasPickupValue;
+  const showTaxiSteps = isCarDriver && showPostPickupDetails;
+  const dynamicFindLabel = isCarDriver ? 'Find Cars' : 'Find Drivers';
 
   const quotePrices = [
     Number(rideQuote?.comparison?.BASIC?.estimatedPrice),
@@ -73,6 +98,9 @@ export default function BookRide() {
   const minEstimatedFare = quotePrices.length ? Math.min(...quotePrices) : null;
   const maxEstimatedFare = quotePrices.length ? Math.max(...quotePrices) : null;
   const availableDriverCount = Number(rideQuote?.driverPool?.totalAvailable || 0);
+  const carsAvailableCount = Number(rideQuote?.realtimePreview?.carsAvailableNearby || 0);
+  const pickupEtaMinutes = Number(rideQuote?.realtimePreview?.pickupEtaMinutes || 6);
+  const showNoDriverSuggestion = isDriverOnly && showPostPickupDetails && availableDriverCount === 0 && !quoteLoading;
 
   const handleFindDrivers = () => {
     if (!hasPickupValue) {
@@ -91,6 +119,9 @@ export default function BookRide() {
     const draftPickup = search.get('pickup') || '';
     const draftDrop = search.get('drop') || '';
     const draftRideType = search.get('rideType') || '';
+    const draftServiceType = search.get('serviceType') || '';
+    const draftDriverType = search.get('driverType') || '';
+    const draftCarCategory = search.get('carCategory') || '';
     const draftTotalHours = Number(search.get('totalHours'));
     const draftTripType = search.get('tripType') || '';
     const pickupLatFromQuery = Number(search.get('pickupLat'));
@@ -110,6 +141,9 @@ export default function BookRide() {
     const seedPickup = draftPickup || pendingDraft?.pickup || '';
     const seedDrop = draftDrop || pendingDraft?.drop || '';
     const seedRideType = draftRideType || pendingDraft?.rideType || '';
+    const seedServiceType = draftServiceType || pendingDraft?.serviceType || '';
+    const seedDriverType = draftDriverType || pendingDraft?.driverType || '';
+    const seedCarCategory = draftCarCategory || pendingDraft?.carCategory || '';
     const seedTripType = draftTripType || pendingDraft?.tripType || '';
     const seedTotalHours = Number.isFinite(draftTotalHours) && draftTotalHours > 0
       ? draftTotalHours
@@ -142,6 +176,16 @@ export default function BookRide() {
       }
       if (seedTripType === 'one_way' || seedTripType === 'round_trip') {
         setOutstationTripType(seedTripType);
+        setTaxiTripType(seedTripType);
+      }
+      if (seedServiceType === 'driver_only' || seedServiceType === 'car_driver') {
+        setServiceType(seedServiceType);
+      }
+      if (['standard', 'experienced', 'premium'].includes(seedDriverType)) {
+        setDriverType(seedDriverType);
+      }
+      if (['mini', 'sedan', 'suv'].includes(seedCarCategory)) {
+        setCarCategory(seedCarCategory);
       }
       return;
     }
@@ -163,6 +207,19 @@ export default function BookRide() {
 
     if (seedTripType === 'one_way' || seedTripType === 'round_trip') {
       setOutstationTripType(seedTripType);
+      setTaxiTripType(seedTripType);
+    }
+
+    if (seedServiceType === 'driver_only' || seedServiceType === 'car_driver') {
+      setServiceType(seedServiceType);
+    }
+
+    if (['standard', 'experienced', 'premium'].includes(seedDriverType)) {
+      setDriverType(seedDriverType);
+    }
+
+    if (['mini', 'sedan', 'suv'].includes(seedCarCategory)) {
+      setCarCategory(seedCarCategory);
     }
   }, [location.search]);
 
@@ -218,6 +275,10 @@ export default function BookRide() {
         const response = await api.getRideQuote({
           pickup: form.pickup,
           drop: effectiveDrop,
+          serviceType,
+          driverType,
+          carCategory,
+          tripType: isCarDriver ? taxiTripType : outstationTripType,
           rideType: form.rideType,
           totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
           pickupLatitude: pickupCoords?.latitude,
@@ -246,7 +307,7 @@ export default function BookRide() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.pickup, form.drop, form.rideType, hourlyPackage, isDestinationRequired, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
+  }, [form.pickup, form.drop, form.rideType, serviceType, driverType, carCategory, taxiTripType, outstationTripType, hourlyPackage, isDestinationRequired, isCarDriver, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -255,6 +316,11 @@ export default function BookRide() {
   const handleBooking = async () => {
     if (!form.name || !form.phone || !form.pickup) {
       setError('Please fill required fields (name, phone, pickup).');
+      return;
+    }
+
+    if (isCarDriver && !form.drop) {
+      setError('Destination is mandatory for Car + Driver.');
       return;
     }
 
@@ -276,9 +342,12 @@ export default function BookRide() {
       const data = await api.bookNow({
         pickup: form.pickup,
         drop: effectiveDrop,
+        serviceType,
+        driverType,
+        carCategory,
         rideType: form.rideType,
         totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
-        tripType: form.rideType === 'outstation' ? outstationTripType : undefined,
+        tripType: isCarDriver ? taxiTripType : (form.rideType === 'outstation' ? outstationTripType : 'one_way'),
         autoFetchDriver,
         pickupLatitude: pickupCoords.latitude,
         pickupLongitude: pickupCoords.longitude,
@@ -384,6 +453,9 @@ export default function BookRide() {
             <p><b>Booking ID:</b> {live.bookingId || success.booking?.bookingId}</p>
             <p><b>Pickup:</b> {pickupAddress}</p>
             <p><b>Drop:</b> {dropAddress}</p>
+            <p><b>Service:</b> {success.booking?.serviceType === 'car_driver' ? 'Car + Driver' : 'Driver Only'}</p>
+            {success.booking?.driverType ? <p><b>Driver Type:</b> {success.booking.driverType}</p> : null}
+            {success.booking?.carCategory ? <p><b>Car:</b> {success.booking.carCategory}</p> : null}
             <p><b>Ride Type:</b> {success.booking?.rideType || live.bookingType || '-'}</p>
             <p><b>Status:</b> <span className="book-ride-status">{live.status || success.booking?.status}</span></p>
             <p><b>Ride Insurance:</b> {live.insuranceOpted || success.booking?.insuranceOpted ? `Enabled (₹${live.insuranceAmount || selectedInsurance.amount})` : 'Not selected'}</p>
@@ -456,17 +528,32 @@ export default function BookRide() {
           <h2 className="book-ride-reveal delay-1">🚗 Book Your Ride</h2>
           {user && <p className="book-ride-subtitle book-ride-reveal delay-2">Hi {user.name}, where do you want to go?</p>}
 
-          <div className="book-ride-types book-ride-reveal delay-2">
-            {RIDE_TYPES.map(({ value, label }) => (
+          <div className="book-ride-types book-ride-service-types book-ride-reveal delay-2">
+            {SERVICE_TYPES.map(({ value, label, subtitle }) => (
               <button
                 key={value}
-                onClick={() => setForm((prev) => ({ ...prev, rideType: value }))}
-                className={`book-ride-type-btn ${form.rideType === value ? 'active' : ''}`}
+                onClick={() => setServiceType(value)}
+                className={`book-ride-type-btn ${serviceType === value ? 'active' : ''}`}
               >
-                {label}
+                <span>{label}</span>
+                <small>{subtitle}</small>
               </button>
             ))}
           </div>
+
+          {isDriverOnly && (
+            <div className="book-ride-types book-ride-reveal delay-2">
+              {RIDE_TYPES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setForm((prev) => ({ ...prev, rideType: value }))}
+                  className={`book-ride-type-btn ${form.rideType === value ? 'active' : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="book-ride-input-group book-ride-reveal delay-2">
             <input
@@ -477,6 +564,16 @@ export default function BookRide() {
               className="book-ride-input"
               autoFocus={firstEmptyField === 'pickup'}
             />
+
+            {(isCarDriver || form.rideType !== 'hourly') && (
+              <input
+                name="drop"
+                placeholder={isCarDriver ? 'Destination (required)' : 'Destination'}
+                value={form.drop}
+                onChange={handleChange}
+                className="book-ride-input"
+              />
+            )}
           </div>
 
           <button
@@ -485,7 +582,7 @@ export default function BookRide() {
             onClick={handleFindDrivers}
             disabled={geoLoading}
           >
-            {geoLoading ? 'Finding Drivers...' : 'Find Drivers'}
+            {geoLoading ? 'Searching...' : dynamicFindLabel}
           </button>
 
           {showPostPickupDetails && (
@@ -501,11 +598,11 @@ export default function BookRide() {
 
               <div className="book-ride-quick-stats">
                 <p className="book-ride-quick-item">
-                  <span>⚡ Drivers nearby</span>
+                  <span>{isCarDriver ? '⚡ Cars available nearby' : '⚡ Drivers nearby'}</span>
                   <b>
                     {quoteLoading
                       ? 'Finding...'
-                      : `${availableDriverCount || 0} available`}
+                      : `${isCarDriver ? carsAvailableCount : availableDriverCount || 0} available`}
                   </b>
                 </p>
                 <p className="book-ride-quick-item">
@@ -516,9 +613,29 @@ export default function BookRide() {
                       : 'Calculating...'}
                   </b>
                 </p>
+                <p className="book-ride-quick-item">
+                  <span>⏱ Pickup in</span>
+                  <b>{quoteLoading ? '...' : `${pickupEtaMinutes} mins`}</b>
+                </p>
               </div>
 
-              {form.rideType === 'hourly' && (
+              {isDriverOnly && (
+                <div className="book-ride-driver-types">
+                  {DRIVER_TYPES.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`book-ride-driver-type-btn ${driverType === option.value ? 'active' : ''}`}
+                      onClick={() => setDriverType(option.value)}
+                    >
+                      <span>{option.label}</span>
+                      <small>{option.extra}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {isDriverOnly && form.rideType === 'hourly' && (
                 <div className="book-ride-hourly-packages">
                   <button
                     type="button"
@@ -544,6 +661,77 @@ export default function BookRide() {
                 </div>
               )}
 
+              {isDriverOnly && form.rideType === 'outstation' && (
+                <div className="book-ride-hourly-packages">
+                  <button
+                    type="button"
+                    className={`book-ride-hourly-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
+                    onClick={() => setOutstationTripType('one_way')}
+                  >
+                    One-way
+                  </button>
+                  <button
+                    type="button"
+                    className={`book-ride-hourly-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
+                    onClick={() => setOutstationTripType('round_trip')}
+                  >
+                    Round trip
+                  </button>
+                </div>
+              )}
+
+              {showTaxiSteps && (
+                <>
+                  <div className="book-ride-hourly-packages">
+                    <button
+                      type="button"
+                      className={`book-ride-hourly-btn ${taxiTripType === 'one_way' ? 'active' : ''}`}
+                      onClick={() => setTaxiTripType('one_way')}
+                    >
+                      One-way
+                    </button>
+                    <button
+                      type="button"
+                      className={`book-ride-hourly-btn ${taxiTripType === 'round_trip' ? 'active' : ''}`}
+                      onClick={() => setTaxiTripType('round_trip')}
+                    >
+                      Round trip
+                    </button>
+                  </div>
+
+                  <div className="book-ride-car-grid">
+                    {CAR_OPTIONS.map((car) => (
+                      <button
+                        key={car.value}
+                        type="button"
+                        className={`book-ride-car-card ${carCategory === car.value ? 'active' : ''}`}
+                        onClick={() => setCarCategory(car.value)}
+                      >
+                        <div className="book-ride-car-badge">⭐ {car.badge}</div>
+                        <h4>{car.title}</h4>
+                        <p>{car.models}</p>
+                        <div className="book-ride-car-meta">💰 ₹{car.rate}/km</div>
+                        <div className="book-ride-car-meta">👤 {car.seats}</div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {showNoDriverSuggestion && (
+                <div className="book-ride-smart-suggestion">
+                  😕 No drivers nearby. Try booking a car instead.
+                  <button
+                    type="button"
+                    className="book-ride-secondary"
+                    style={{ marginTop: 10 }}
+                    onClick={() => setServiceType('car_driver')}
+                  >
+                    Switch to Car + Driver
+                  </button>
+                </div>
+              )}
+
               <div className="book-ride-input-group">
                 <input
                   name="name"
@@ -561,33 +749,7 @@ export default function BookRide() {
                   className="book-ride-input"
                   autoFocus={firstEmptyField === 'phone'}
                 />
-                <input
-                  name="drop"
-                  placeholder={isDestinationRequired ? 'Destination' : 'Destination (optional)'}
-                  value={form.drop}
-                  onChange={handleChange}
-                  className="book-ride-input"
-                />
               </div>
-            </div>
-          )}
-
-          {showPostPickupDetails && form.rideType === 'outstation' && (
-            <div className="book-ride-hourly-packages">
-              <button
-                type="button"
-                className={`book-ride-hourly-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
-                onClick={() => setOutstationTripType('one_way')}
-              >
-                One-way
-              </button>
-              <button
-                type="button"
-                className={`book-ride-hourly-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
-                onClick={() => setOutstationTripType('round_trip')}
-              >
-                Round trip
-              </button>
             </div>
           )}
 
@@ -695,7 +857,7 @@ export default function BookRide() {
 
           {showPostPickupDetails && (
             <button className="book-ride-submit book-ride-reveal delay-3" onClick={handleBooking} disabled={loading}>
-              {loading ? 'Booking...' : '🚗 Confirm Booking'}
+              {loading ? 'Booking...' : (isCarDriver ? '🚕 Find Cars' : '🚗 Find Drivers')}
             </button>
           )}
         </div>

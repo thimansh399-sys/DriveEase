@@ -106,6 +106,10 @@
   z-index: 1;
 }
 
+.book-ride-service-types {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .book-ride-type-btn {
   border: none;
   border-radius: 10px;
@@ -116,6 +120,17 @@
   cursor: pointer;
   text-align: center;
   transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.book-ride-type-btn small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.67rem;
+  color: #9bb0c8;
+}
+
+.book-ride-type-btn.active small {
+  color: #0f2a18;
 }
 
 .book-ride-type-btn:hover {
@@ -135,6 +150,104 @@
   flex-wrap: wrap;
   position: relative;
   z-index: 1;
+}
+
+.book-ride-driver-types {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.book-ride-driver-type-btn {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #dce8f6;
+  padding: 10px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.book-ride-driver-type-btn span {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.book-ride-driver-type-btn small {
+  font-size: 0.74rem;
+  color: #8fb3d6;
+}
+
+.book-ride-driver-type-btn.active {
+  border-color: rgba(34, 197, 94, 0.62);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.book-ride-driver-type-btn.active small {
+  color: #bbf7d0;
+}
+
+.book-ride-car-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.book-ride-car-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 12px;
+  color: #dce8f6;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+}
+
+.book-ride-car-card h4 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.book-ride-car-card p {
+  margin: 0;
+  color: #9fb5cd;
+  font-size: 0.76rem;
+}
+
+.book-ride-car-meta {
+  color: #d1fae5;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.book-ride-car-badge {
+  display: inline-block;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.34);
+  background: rgba(34, 197, 94, 0.14);
+  color: #bbf7d0;
+  padding: 3px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.book-ride-car-card.active {
+  border-color: rgba(34, 197, 94, 0.64);
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.14);
+}
+
+.book-ride-smart-suggestion {
+  border: 1px dashed rgba(250, 204, 21, 0.5);
+  background: rgba(250, 204, 21, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  color: #fde68a;
+  font-size: 0.86rem;
 }
 
 .book-ride-progressive-section {
@@ -652,6 +765,11 @@
 }
 
 @media (max-width: 640px) {
+  .book-ride-driver-types,
+  .book-ride-car-grid {
+    grid-template-columns: 1fr;
+  }
+
   .book-ride-insurance-head {
     flex-wrap: wrap;
     gap: 8px;
