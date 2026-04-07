@@ -2428,7 +2428,7 @@ exports.bookNow = async (req, res) => {
       bookingType: normalizedRideType,
       serviceType: normalizedServiceType,
       driverType: normalizeDriverType(driverType),
-      carCategory: normalizedServiceType === 'car_driver' ? normalizeCarCategory(carCategory) : null,
+      ...(normalizedServiceType === 'car_driver' ? { carCategory: normalizeCarCategory(carCategory) } : {}),
       tripType: normalizedTripType,
       startDate: new Date(),
       estimatedDistance,
