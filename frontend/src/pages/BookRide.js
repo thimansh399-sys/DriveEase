@@ -279,12 +279,11 @@ export default function BookRide() {
       setQuoteLoading(true);
       setQuoteError('');
       try {
-        const response = await api.getRideQuote({
+        const quotePayload = {
           pickup: form.pickup,
           drop: effectiveDrop,
           serviceType,
           driverType,
-          carCategory,
           tripType: isCarDriver ? taxiTripType : outstationTripType,
           rideType: form.rideType,
           totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
@@ -292,7 +291,10 @@ export default function BookRide() {
           pickupLongitude: pickupCoords?.longitude,
           insuranceOpted,
           insuranceAmount: insuranceOpted ? selectedInsurance.amount : 0,
-        });
+          ...(isCarDriver ? { carCategory } : {}),
+        };
+
+        const response = await api.getRideQuote(quotePayload);
 
         if (cancelled) return;
         if (response?.error) {
@@ -346,12 +348,11 @@ export default function BookRide() {
     setError('');
     setLoading(true);
     try {
-      const data = await api.bookNow({
+      const bookingPayload = {
         pickup: form.pickup,
         drop: effectiveDrop,
         serviceType,
         driverType,
-        carCategory,
         rideType: form.rideType,
         totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
         tripType: isCarDriver ? taxiTripType : (form.rideType === 'outstation' ? outstationTripType : 'one_way'),
@@ -360,7 +361,10 @@ export default function BookRide() {
         pickupLongitude: pickupCoords.longitude,
         insuranceOpted,
         insuranceAmount: insuranceOpted ? selectedInsurance.amount : 0,
-      });
+        ...(isCarDriver ? { carCategory } : {}),
+      };
+
+      const data = await api.bookNow(bookingPayload);
 
       if (data?.booking?._id || data?.booking?.bookingId) {
         setSuccess(data);

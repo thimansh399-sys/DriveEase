@@ -155,7 +155,11 @@ const CAR_SERVICE_OPTIONS = {
 };
 
 function normalizeServiceType(value) {
-  return String(value || '').toLowerCase() === 'car_driver' ? 'car_driver' : 'driver_only';
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['car_driver', 'driverwithcar', 'driver_with_car'].includes(normalized)) {
+    return 'car_driver';
+  }
+  return 'driver_only';
 }
 
 function normalizeDriverType(value) {
@@ -2189,6 +2193,11 @@ exports.completeRide = async (req, res) => {
 exports.getRideQuote = async (req, res) => {
   try {
     const customerId = req.user.id;
+    const requestPayload = { ...(req.body || {}) };
+    const incomingServiceType = normalizeServiceType(requestPayload.serviceType);
+    if (incomingServiceType === 'driver_only') {
+      delete requestPayload.carCategory;
+    }
     const {
       pickup,
       drop,
@@ -2207,7 +2216,7 @@ exports.getRideQuote = async (req, res) => {
       totalHours,
       insuranceOpted = false,
       insuranceAmount = 0,
-    } = req.body || {};
+    } = requestPayload;
 
     const normalizedServiceType = normalizeServiceType(serviceType);
     const normalizedTripType = normalizeTripType(tripType);
@@ -2263,7 +2272,7 @@ exports.getRideQuote = async (req, res) => {
     const selectedCar = CAR_SERVICE_OPTIONS[normalizeCarCategory(carCategory)] || CAR_SERVICE_OPTIONS.sedan;
     const carOptions = Object.values(CAR_SERVICE_OPTIONS);
     const carAvailabilityCount = Math.max(0, Math.min(eligibleDrivers.length || driversRaw.length || 0, 12));
-    const pickupEtaMinutes = Math.max(4, Math.min(16, 4 + Math.ceil((availableDrivers.length ? 8 / availableDrivers.length : 10))));
+    const pickupEtaMinutes = Math.max(4, Math.min(16, 4 + Math.ceil((eligibleDrivers.length ? 8 / eligibleDrivers.length : 10))));
 
     return res.json({
       success: true,
@@ -2303,6 +2312,11 @@ exports.getRideQuote = async (req, res) => {
 exports.bookNow = async (req, res) => {
   try {
     const customerId = req.user.id;
+    const requestPayload = { ...(req.body || {}) };
+    const incomingServiceType = normalizeServiceType(requestPayload.serviceType);
+    if (incomingServiceType === 'driver_only') {
+      delete requestPayload.carCategory;
+    }
     const {
       pickup,
       drop,
@@ -2322,7 +2336,7 @@ exports.bookNow = async (req, res) => {
       totalHours,
       insuranceOpted = false,
       insuranceAmount = 0,
-    } = req.body;
+    } = requestPayload;
 
     const normalizedServiceType = normalizeServiceType(serviceType);
     const normalizedTripType = normalizeTripType(tripType);

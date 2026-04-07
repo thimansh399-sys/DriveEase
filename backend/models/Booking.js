@@ -52,7 +52,11 @@ const bookingSchema = new mongoose.Schema({
   carCategory: {
     type: String,
     enum: ['mini', 'sedan', 'suv'],
-    default: undefined
+    default: undefined,
+    required: function requiredCarCategory() {
+      const normalizedServiceType = String(this.serviceType || '').toLowerCase();
+      return normalizedServiceType === 'car_driver' || normalizedServiceType === 'driverwithcar';
+    }
   },
   tripType: {
     type: String,
