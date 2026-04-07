@@ -217,20 +217,6 @@ function Home() {
   ];
 
   const isDestinationRequired = rideMode === 'one_way' || rideMode === 'outstation';
-  const estimatedFareRange = (() => {
-    if (rideMode === 'hourly') {
-      if (hourlyPackage === 2) return '₹299 - ₹449';
-      if (hourlyPackage === 8) return '₹899 - ₹1399';
-      return '₹499 - ₹799';
-    }
-
-    if (rideMode === 'outstation') {
-      return outstationTripType === 'round_trip' ? '₹1899 - ₹2999' : '₹999 - ₹1799';
-    }
-
-    return '₹120 - ₹180';
-  })();
-
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationNote('Location is not supported in this browser.');
