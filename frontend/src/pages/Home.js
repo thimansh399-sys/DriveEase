@@ -168,8 +168,8 @@ function Home() {
   const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
-  const [hourlyPackage, setHourlyPackage] = useState(4);
-  const [outstationTripType, setOutstationTripType] = useState('one_way');
+  const [hourlyPackage] = useState(4);
+  const [outstationTripType] = useState('one_way');
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationNote, setLocationNote] = useState('');
   const [showCarsPromo, setShowCarsPromo] = useState(false);
