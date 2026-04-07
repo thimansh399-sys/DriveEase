@@ -64,6 +64,7 @@ export default function BookRide() {
   const [rideQuote, setRideQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [insuranceOpted, setInsuranceOpted] = useState(false);
   const [autoFetchDriver, setAutoFetchDriver] = useState(true);
   const shouldAutoDetectPickupRef = useRef(true);
@@ -101,6 +102,12 @@ export default function BookRide() {
   const carsAvailableCount = Number(rideQuote?.realtimePreview?.carsAvailableNearby || 0);
   const pickupEtaMinutes = Number(rideQuote?.realtimePreview?.pickupEtaMinutes || 6);
   const showNoDriverSuggestion = isDriverOnly && showPostPickupDetails && availableDriverCount === 0 && !quoteLoading;
+
+  useEffect(() => {
+    if (!showPostPickupDetails) {
+      setShowAdvanced(false);
+    }
+  }, [showPostPickupDetails, serviceType]);
 
   const handleFindDrivers = () => {
     if (!hasPickupValue) {
@@ -619,6 +626,14 @@ export default function BookRide() {
                 </p>
               </div>
 
+              <button
+                type="button"
+                className="book-ride-secondary"
+                onClick={() => setShowAdvanced((prev) => !prev)}
+              >
+                {showAdvanced ? 'Hide advanced options' : 'Show fare breakdown & options'}
+              </button>
+
               {isDriverOnly && (
                 <div className="book-ride-driver-types">
                   {DRIVER_TYPES.map((option) => (
@@ -753,7 +768,7 @@ export default function BookRide() {
             </div>
           )}
 
-          {showPostPickupDetails && (
+          {showPostPickupDetails && showAdvanced && (
             <div className="book-ride-quote-card">
               <div className="book-ride-quote-head">
                 <h4>Plan Based Estimate</h4>
@@ -803,7 +818,7 @@ export default function BookRide() {
             </div>
           )}
 
-          {showPostPickupDetails && (
+          {showPostPickupDetails && showAdvanced && (
             <>
               <div className="book-ride-insurance-card">
                 <div className="book-ride-insurance-head">
@@ -862,6 +877,7 @@ export default function BookRide() {
           )}
         </div>
 
+        {showPostPickupDetails && (
         <aside className="book-ride-map-card book-ride-reveal delay-2">
           <h3>Live Route Preview</h3>
 
@@ -881,6 +897,7 @@ export default function BookRide() {
             <p><span>Ride Type</span><b>{form.rideType}</b></p>
           </div>
         </aside>
+        )}
       </div>
     </div>
   );

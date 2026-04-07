@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
 import '../styles/Home.css';
 
+const CARS_PROMO_VERSION = 'cars-promo-v2';
+
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
@@ -170,6 +172,24 @@ function Home() {
   const [outstationTripType, setOutstationTripType] = useState('one_way');
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationNote, setLocationNote] = useState('');
+  const [showCarsPromo, setShowCarsPromo] = useState(false);
+
+  useEffect(() => {
+    const seenVersion = localStorage.getItem('carsPromoSeenVersion') || '';
+    if (seenVersion !== CARS_PROMO_VERSION) {
+      setShowCarsPromo(true);
+    }
+  }, []);
+
+  const closeCarsPromo = () => {
+    setShowCarsPromo(false);
+    localStorage.setItem('carsPromoSeenVersion', CARS_PROMO_VERSION);
+  };
+
+  const openCarsFlowFromPromo = () => {
+    closeCarsPromo();
+    navigate('/book-ride?serviceType=car_driver');
+  };
 
   const features = [
     { icon: '⚡', title: 'Fast Booking', desc: 'Book a verified driver in under 60 seconds.' },
@@ -327,6 +347,40 @@ function Home() {
 
   return (
     <div className="home-v2-page">
+      <AnimatePresence>
+        {showCarsPromo && (
+          <motion.div
+            className="home-cars-promo-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="home-cars-promo-modal"
+              initial={{ opacity: 0, y: 16, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.97 }}
+              transition={{ duration: 0.25 }}
+            >
+              <button type="button" className="home-cars-promo-close" onClick={closeCarsPromo}>✕</button>
+              <p className="home-cars-promo-tag">NEW SERVICE</p>
+              <h3>We Also Provide Cars + Driver</h3>
+              <p>
+                Mini, Sedan aur SUV options available. One-way ya round-trip me instant booking karo.
+              </p>
+              <div className="home-cars-promo-actions">
+                <button type="button" className="home-v2-btn home-v2-btn-primary" onClick={openCarsFlowFromPromo}>
+                  Explore Car + Driver
+                </button>
+                <button type="button" className="home-v2-btn home-v2-btn-outline" onClick={closeCarsPromo}>
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Background blobs */}
       <div className="home-v2-bg-blob home-v2-bg-blob-top" />
       <div className="home-v2-bg-blob home-v2-bg-blob-bottom" />
@@ -365,6 +419,17 @@ function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.45 }}
           >
+            <div className="home-cars-inline-banner">
+              🚕 New: Car + Driver booking is now live across city routes.
+              <button
+                type="button"
+                className="home-cars-inline-btn"
+                onClick={() => navigate('/book-ride?serviceType=car_driver')}
+              >
+                Try Now
+              </button>
+            </div>
+
             <div className="home-ride-mode-row">
               <button
                 type="button"
