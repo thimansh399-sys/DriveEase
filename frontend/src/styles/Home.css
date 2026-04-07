@@ -801,25 +801,6 @@
   gap: 16px;
 }
 
-.home-media-insights {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 3;
-  display: grid;
-  gap: 8px;
-}
-
-.home-media-insights span {
-  border-radius: 999px;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  background: rgba(7, 14, 28, 0.78);
-  color: #d1fae5;
-  padding: 6px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  width: fit-content;
-}
 
 .home-v2-section {
   max-width: none;
@@ -1640,15 +1621,6 @@
     left: 12px;
     bottom: 12px;
     padding: 8px 10px;
-  }
-
-  .home-media-insights {
-    top: 10px;
-    left: 10px;
-  }
-
-  .home-media-insights span {
-    font-size: 0.69rem;
   }
 
   .home-v2-section {

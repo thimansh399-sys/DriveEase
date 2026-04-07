@@ -511,11 +511,6 @@ function Home() {
             >
               {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
             </button>
-            <div className="home-secondary-info-grid">
-              <span>⚡ 3 drivers nearby</span>
-              <span>💰 {estimatedFareRange}</span>
-              <span>⏱ Pickup in 6 mins</span>
-            </div>
             {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
           </div>
 
@@ -524,12 +519,6 @@ function Home() {
               <span>✔ Verified Drivers</span>
               <span>✔ 24/7 Support</span>
               <span>✔ Instant Booking</span>
-            </div>
-
-            <div className="home-v2-stats">
-              {['⭐ 4.8 Rating', '🚗 5000+ Drivers', '👥 10k+ Users'].map((item) => (
-                <div key={item} className="home-v2-stat-card">{item}</div>
-              ))}
             </div>
           </div>
         </motion.div>
@@ -560,12 +549,6 @@ function Home() {
                 <div style={{ color: '#22c55e', fontSize: '12px' }}>ETA: 30 mins</div>
             </div>
           </motion.div>
-
-          <div className="home-media-insights">
-            <span>🚗 2 mins away</span>
-            <span>👤 Verified Driver</span>
-            <span>⭐ 4.9 rating</span>
-          </div>
         </motion.div>
       </section>
 

@@ -13,7 +13,7 @@
 
 .book-ride-layout {
   width: 100%;
-  max-width: 1120px;
+  max-width: 1320px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
@@ -21,9 +21,10 @@
 }
 
 .book-ride-card {
-  width: min(100%, 460px);
+  width: 100%;
+  max-width: 620px;
   height: 100%;
-  justify-self: center;
+  justify-self: stretch;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -816,7 +817,7 @@
 
 @media (min-width: 768px) {
   .book-ride-layout {
-    grid-template-columns: minmax(440px, 0.95fr) minmax(0, 1.05fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: stretch;
   }
 
@@ -827,7 +828,7 @@
 
 @media (min-width: 1100px) {
   .book-ride-layout {
-    grid-template-columns: 1fr 1.5fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
   }
 
   .book-ride-map-card {
