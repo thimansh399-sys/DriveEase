@@ -5,9 +5,9 @@ import api from '../utils/api';
 import { downloadInvoicePdf } from '../utils/invoiceUtils';
 
 const RIDE_TYPES = [
-  { value: 'hourly', label: '⏱ Hourly' },
-  { value: 'daily', label: '🚗 Daily' },
-  { value: 'outstation', label: '🛣 Outstation' },
+  { value: 'daily', label: '🚗 One-way Ride' },
+  { value: 'hourly', label: '⏱ Hourly Driver' },
+  { value: 'outstation', label: '🛣 Outstation Trip' },
 ];
 
 const INSURANCE_BY_RIDE_TYPE = {
@@ -26,8 +26,9 @@ export default function BookRide() {
     phone: '',
     pickup: '',
     drop: '',
-    rideType: 'hourly',
+    rideType: 'daily',
   });
+  const [hourlyPackage, setHourlyPackage] = useState(4);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,9 +56,7 @@ export default function BookRide() {
       ? 'phone'
       : !form.pickup
         ? 'pickup'
-        : !form.drop
-          ? 'drop'
-          : '';
+        : '';
   const selectedInsurance = INSURANCE_BY_RIDE_TYPE[form.rideType] || INSURANCE_BY_RIDE_TYPE.daily;
 
   useEffect(() => {
@@ -65,6 +64,8 @@ export default function BookRide() {
     const search = new URLSearchParams(location.search || '');
     const draftPickup = search.get('pickup') || '';
     const draftDrop = search.get('drop') || '';
+    const draftRideType = search.get('rideType') || '';
+    const draftTotalHours = Number(search.get('totalHours'));
     const pickupLatFromQuery = Number(search.get('pickupLat'));
     const pickupLngFromQuery = Number(search.get('pickupLng'));
     const pendingDraftRaw = localStorage.getItem('pendingRideDraft');
@@ -81,6 +82,10 @@ export default function BookRide() {
 
     const seedPickup = draftPickup || pendingDraft?.pickup || '';
     const seedDrop = draftDrop || pendingDraft?.drop || '';
+    const seedRideType = draftRideType || pendingDraft?.rideType || '';
+    const seedTotalHours = Number.isFinite(draftTotalHours) && draftTotalHours > 0
+      ? draftTotalHours
+      : Number(pendingDraft?.totalHours || 0);
     const pendingPickupLat = Number(pendingDraft?.pickupPlace?.lat);
     const pendingPickupLng = Number(pendingDraft?.pickupPlace?.lng);
 
@@ -97,7 +102,15 @@ export default function BookRide() {
 
     if (!stored) {
       if (seedPickup || seedDrop) {
-        setForm((prev) => ({ ...prev, pickup: seedPickup, drop: seedDrop }));
+        setForm((prev) => ({
+          ...prev,
+          pickup: seedPickup,
+          drop: seedDrop,
+          rideType: ['hourly', 'daily', 'outstation'].includes(seedRideType) ? seedRideType : prev.rideType,
+        }));
+      }
+      if (seedTotalHours === 2 || seedTotalHours === 4) {
+        setHourlyPackage(seedTotalHours);
       }
       return;
     }
@@ -110,7 +123,12 @@ export default function BookRide() {
       phone: parsed?.phone || '',
       pickup: seedPickup || prev.pickup,
       drop: seedDrop || prev.drop,
+      rideType: ['hourly', 'daily', 'outstation'].includes(seedRideType) ? seedRideType : prev.rideType,
     }));
+
+    if (seedTotalHours === 2 || seedTotalHours === 4) {
+      setHourlyPackage(seedTotalHours);
+    }
   }, [location.search]);
 
   const requestPickupGeolocation = () => {
@@ -149,11 +167,13 @@ export default function BookRide() {
   }, []);
 
   useEffect(() => {
-    if (!form.pickup || !form.drop) {
+    if (!form.pickup) {
       setRideQuote(null);
       setQuoteError('');
       return undefined;
     }
+
+    const effectiveDrop = form.drop || form.pickup;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -162,8 +182,9 @@ export default function BookRide() {
       try {
         const response = await api.getRideQuote({
           pickup: form.pickup,
-          drop: form.drop,
+          drop: effectiveDrop,
           rideType: form.rideType,
+          totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
           pickupLatitude: pickupCoords?.latitude,
           pickupLongitude: pickupCoords?.longitude,
           insuranceOpted,
@@ -190,17 +211,19 @@ export default function BookRide() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.pickup, form.drop, form.rideType, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
+  }, [form.pickup, form.drop, form.rideType, hourlyPackage, pickupCoords?.latitude, pickupCoords?.longitude, insuranceOpted, selectedInsurance.amount]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleBooking = async () => {
-    if (!form.name || !form.phone || !form.pickup || !form.drop) {
-      setError('Please fill all fields');
+    if (!form.name || !form.phone || !form.pickup) {
+      setError('Please fill required fields (name, phone, pickup).');
       return;
     }
+
+    const effectiveDrop = form.drop || form.pickup;
 
     if (!pickupCoords) {
       setError('Please allow location access. Pickup geolocation is mandatory for nearest driver assignment.');
@@ -212,8 +235,9 @@ export default function BookRide() {
     try {
       const data = await api.bookNow({
         pickup: form.pickup,
-        drop: form.drop,
+        drop: effectiveDrop,
         rideType: form.rideType,
+        totalHours: form.rideType === 'hourly' ? hourlyPackage : undefined,
         autoFetchDriver,
         pickupLatitude: pickupCoords.latitude,
         pickupLongitude: pickupCoords.longitude,
@@ -418,11 +442,10 @@ export default function BookRide() {
             />
             <input
               name="drop"
-              placeholder="Drop Location"
+              placeholder="Destination (optional)"
               value={form.drop}
               onChange={handleChange}
               className="book-ride-input"
-              autoFocus={firstEmptyField === 'drop'}
             />
           </div>
 
@@ -437,6 +460,25 @@ export default function BookRide() {
               </button>
             ))}
           </div>
+
+          {form.rideType === 'hourly' && (
+            <div className="book-ride-hourly-packages">
+              <button
+                type="button"
+                className={`book-ride-hourly-btn ${hourlyPackage === 2 ? 'active' : ''}`}
+                onClick={() => setHourlyPackage(2)}
+              >
+                Hire for 2 hours
+              </button>
+              <button
+                type="button"
+                className={`book-ride-hourly-btn ${hourlyPackage === 4 ? 'active' : ''}`}
+                onClick={() => setHourlyPackage(4)}
+              >
+                Hire for 4 hours
+              </button>
+            </div>
+          )}
 
           <div className="book-ride-map-summary" style={{ marginTop: 14 }}>
             <p className="book-ride-geo-row">
@@ -492,7 +534,7 @@ export default function BookRide() {
               </>
             ) : (
               <p className="book-ride-quote-placeholder">
-                Enter pickup and drop to see live quote and plan benefits.
+                Enter pickup to see live quote. Destination is optional.
               </p>
             )}
           </div>

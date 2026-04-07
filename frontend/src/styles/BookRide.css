@@ -128,6 +128,32 @@
   font-weight: 700;
 }
 
+.book-ride-hourly-packages {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.book-ride-hourly-btn {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.75);
+  color: #d5dbe8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.book-ride-hourly-btn.active {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.18);
+  color: #dcfce7;
+}
+
 .book-ride-error {
   margin-top: 14px;
   color: #fca5a5;

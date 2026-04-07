@@ -165,6 +165,8 @@ function Home() {
   const [pickupPlace, setPickupPlace] = useState(null);
   const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
+  const [rideMode, setRideMode] = useState('one_way');
+  const [hourlyPackage, setHourlyPackage] = useState(4);
 
   const features = [
     { icon: '⚡', title: 'Fast Booking', desc: 'Book a verified driver in under 60 seconds.' },
@@ -192,15 +194,21 @@ function Home() {
   ];
 
   const handleBookRide = () => {
-    if (!pickup.trim() || !drop.trim()) {
-      setInputError('Please enter both pickup and drop location.');
+    if (!pickup.trim()) {
+      setInputError('Please enter pickup location.');
       return;
     }
     setInputError('');
-    const search = new URLSearchParams({
-      pickup,
-      drop
-    });
+    const normalizedRideType = rideMode === 'one_way' ? 'daily' : rideMode;
+    const search = new URLSearchParams({ pickup, rideType: normalizedRideType });
+
+    if (drop.trim()) {
+      search.set('drop', drop.trim());
+    }
+
+    if (normalizedRideType === 'hourly') {
+      search.set('totalHours', String(hourlyPackage));
+    }
 
     if (Number.isFinite(Number(pickupPlace?.lat)) && Number.isFinite(Number(pickupPlace?.lng))) {
       search.set('pickupLat', String(pickupPlace.lat));
@@ -220,7 +228,14 @@ function Home() {
       return;
     }
 
-    localStorage.setItem('pendingRideDraft', JSON.stringify({ pickup, drop, pickupPlace, dropPlace }));
+    localStorage.setItem('pendingRideDraft', JSON.stringify({
+      pickup,
+      drop,
+      pickupPlace,
+      dropPlace,
+      rideType: normalizedRideType,
+      totalHours: normalizedRideType === 'hourly' ? hourlyPackage : undefined,
+    }));
     navigate('/login');
   };
 
@@ -264,6 +279,49 @@ function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.45 }}
           >
+            <div className="home-ride-mode-row">
+              <button
+                type="button"
+                className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
+                onClick={() => setRideMode('one_way')}
+              >
+                One-way Ride
+              </button>
+              <button
+                type="button"
+                className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
+                onClick={() => setRideMode('hourly')}
+              >
+                Hire Driver (2h/4h)
+              </button>
+              <button
+                type="button"
+                className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
+                onClick={() => setRideMode('outstation')}
+              >
+                Outstation Trip
+              </button>
+            </div>
+
+            {rideMode === 'hourly' && (
+              <div className="home-hourly-package-row">
+                <button
+                  type="button"
+                  className={`home-hourly-package-btn ${hourlyPackage === 2 ? 'active' : ''}`}
+                  onClick={() => setHourlyPackage(2)}
+                >
+                  2 Hours
+                </button>
+                <button
+                  type="button"
+                  className={`home-hourly-package-btn ${hourlyPackage === 4 ? 'active' : ''}`}
+                  onClick={() => setHourlyPackage(4)}
+                >
+                  4 Hours
+                </button>
+              </div>
+            )}
+
             <LocationInput
               value={pickup}
               onChange={(v) => { setPickup(v); setInputError(''); }}
@@ -276,9 +334,10 @@ function Home() {
               value={drop}
               onChange={(v) => { setDrop(v); setInputError(''); }}
               onSelect={setDropPlace}
-              placeholder="Drop Location"
+              placeholder="Destination (optional)"
               icon="🔴"
             />
+            <p className="home-optional-hint">Where are you going? (optional)</p>
 
             <AnimatePresence>
               {inputError && (

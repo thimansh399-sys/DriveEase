@@ -111,7 +111,20 @@ function Login({ onLogin }) {
         try {
           const draft = JSON.parse(pendingDraftRaw);
           localStorage.removeItem('pendingRideDraft');
-          navigate(`/book-ride?pickup=${encodeURIComponent(draft?.pickup || '')}&drop=${encodeURIComponent(draft?.drop || '')}`);
+          const search = new URLSearchParams({
+            pickup: draft?.pickup || '',
+            drop: draft?.drop || '',
+          });
+
+          if (draft?.rideType) {
+            search.set('rideType', draft.rideType);
+          }
+
+          if (draft?.totalHours) {
+            search.set('totalHours', String(draft.totalHours));
+          }
+
+          navigate(`/book-ride?${search.toString()}`);
           return;
         } catch (_) {
           localStorage.removeItem('pendingRideDraft');
