@@ -9,7 +9,7 @@ exports.getAllDriverRegistrations = async (req, res) => {
     const { status } = req.query;
     let filter = {};
 
-    if (status) {
+    if (status && String(status).toLowerCase() !== 'all') {
       filter.status = status;
     }
 
