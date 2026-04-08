@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
 import '../styles/DriverRegistration.css';
-import { buildApiUrl } from '../utils/network';
+import { buildApiUrl, getApiCandidates } from '../utils/network';
 
 export default function DriverRegistrationFlow() {
   const [loading, setLoading] = useState(false);
@@ -108,20 +108,44 @@ export default function DriverRegistrationFlow() {
       formPayload.append('pincode', formData.pincode);
       formPayload.append('selfie', selfieFile);
 
-      const res = await fetch(buildApiUrl('/driver-registration/register-driver'), {
-        method: 'POST',
-        body: formPayload
-      });
+      const registrationPath = '/driver-registration/register-driver';
+      const candidates = [
+        buildApiUrl(registrationPath),
+        ...getApiCandidates().map((base) => `${base}${registrationPath}`)
+      ];
 
-      const contentType = res.headers.get('content-type') || '';
-      const isJson = contentType.includes('application/json');
-      const data = isJson ? await res.json() : { error: await res.text() };
+      const uniqueCandidates = [...new Set(candidates)];
+      let data = null;
+      let response = null;
+      let lastError = null;
 
-      if (!res.ok) {
-        const fallbackMessage = res.status === 405
-          ? 'Registration API method is blocked (405). Please check backend API routing/proxy.'
-          : `Registration failed (${res.status})`;
-        throw new Error(data.error || fallbackMessage);
+      for (const url of uniqueCandidates) {
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            body: formPayload
+          });
+
+          const contentType = response.headers.get('content-type') || '';
+          const isJson = contentType.includes('application/json');
+          data = isJson ? await response.json() : { error: await response.text() };
+
+          if (!response.ok) {
+            const fallbackMessage = response.status === 405
+              ? 'Registration API method is blocked (405). Please check backend API routing/proxy.'
+              : `Registration failed (${response.status})`;
+            throw new Error(data.error || fallbackMessage);
+          }
+
+          lastError = null;
+          break;
+        } catch (requestError) {
+          lastError = requestError;
+        }
+      }
+
+      if (lastError) {
+        throw new Error(lastError.message || 'Unable to connect to registration API.');
       }
 
       setSuccess(data.message || 'Registration Success ✅');
