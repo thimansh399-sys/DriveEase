@@ -1,0 +1,153 @@
+.app-button {
+  --btn-bg: rgba(15, 23, 42, 0.72);
+  --btn-border: rgba(148, 163, 184, 0.26);
+  --btn-color: #dbe7f4;
+  --btn-shadow: 0 8px 22px rgba(2, 6, 23, 0.28);
+  --btn-active-bg: linear-gradient(135deg, #22c55e, #16a34a);
+  --btn-active-color: #ffffff;
+  --btn-active-border: rgba(74, 222, 128, 0.55);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 12px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  box-shadow: var(--btn-shadow);
+}
+
+.app-button:hover:not(.is-disabled) {
+  transform: scale(1.02);
+}
+
+.app-button:active:not(.is-disabled),
+.app-button.is-active {
+  transform: translateY(1px);
+}
+
+.app-button.is-full-width {
+  width: 100%;
+}
+
+.app-button--sm {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.app-button--md {
+  height: 48px;
+  padding: 0 18px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.app-button--lg {
+  height: 52px;
+  padding: 0 22px;
+  font-size: 15px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.app-button--glass {
+  background: rgba(15, 23, 42, 0.78);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #d6e2ef;
+}
+
+.app-button--secondary {
+  background: rgba(30, 41, 59, 0.72);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #e5edf7;
+}
+
+.app-button--primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-color: rgba(74, 222, 128, 0.55);
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(22, 163, 74, 0.35);
+}
+
+.app-button--ride {
+  background: rgba(18, 30, 50, 0.78);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #b7c6d8;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(2, 6, 23, 0.3);
+}
+
+.app-button--ride.is-active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: rgba(110, 231, 183, 0.78);
+  color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(134, 239, 172, 0.25), 0 10px 24px rgba(34, 197, 94, 0.3);
+}
+
+.app-button.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.app-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.app-button__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.app-button__loader {
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: appButtonSpin 0.75s linear infinite;
+}
+
+@keyframes appButtonSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-button--lg {
+    height: 50px;
+    font-size: 15px;
+  }
+
+  .app-button--md {
+    height: 46px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-button--lg {
+    height: 48px;
+    padding: 0 18px;
+  }
+
+  .app-button--md {
+    height: 44px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+}

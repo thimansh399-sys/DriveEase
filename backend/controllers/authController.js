@@ -6,6 +6,24 @@ const mongoose = require('mongoose');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'driveease-dev-secret';
 
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(-10);
+
+const buildPhoneLookupQuery = (rawValue) => {
+  const normalized = normalizePhone(rawValue);
+  const escaped = String(normalized).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return {
+    normalized,
+    query: {
+      $or: [
+        { phone: normalized },
+        { phone: String(rawValue || '').trim() },
+        { phone: { $regex: `${escaped}$` } }
+      ]
+    }
+  };
+};
+
 const normalizeRole = (role) => {
   const normalized = String(role || '').trim().toLowerCase();
   if (normalized === 'driver') return 'driver';
@@ -13,14 +31,19 @@ const normalizeRole = (role) => {
 };
 
 async function findOrCreateUserByRole({ phone, name, role }) {
+  const { normalized, query } = buildPhoneLookupQuery(phone);
+
   if (role === 'driver') {
-    let driver = await Driver.findOne({ phone });
+    let driver = await Driver.findOne(query);
     if (!driver) {
       driver = new Driver({
-        phone,
+        phone: normalized,
         name: name || 'Driver',
         status: 'pending'
       });
+      await driver.save();
+    } else if (driver.phone !== normalized) {
+      driver.phone = normalized;
       await driver.save();
     }
 
@@ -30,13 +53,15 @@ async function findOrCreateUserByRole({ phone, name, role }) {
     };
   }
 
-  let customer = await User.findOne({ phone });
+  let customer = await User.findOne(query);
   if (!customer) {
     customer = new User({
-      phone,
+      phone: normalized,
       name: name || 'Customer',
       role: 'customer'
     });
+  } else if (customer.phone !== normalized) {
+    customer.phone = normalized;
   } else if (name && String(name).trim()) {
     customer.name = String(name).trim();
   }
@@ -50,15 +75,25 @@ async function findOrCreateUserByRole({ phone, name, role }) {
 }
 
 async function findUserByRole({ phone, role }) {
+  const { normalized, query } = buildPhoneLookupQuery(phone);
+
   if (role === 'driver') {
-    const driver = await Driver.findOne({ phone });
+    const driver = await Driver.findOne(query);
+    if (driver && driver.phone !== normalized) {
+      driver.phone = normalized;
+      await driver.save();
+    }
     return {
       entity: driver,
       role: 'driver'
     };
   }
 
-  const customer = await User.findOne({ phone });
+  const customer = await User.findOne(query);
+  if (customer && customer.phone !== normalized) {
+    customer.phone = normalized;
+    await customer.save();
+  }
   return {
     entity: customer,
     role: 'customer'
@@ -71,7 +106,7 @@ exports.registerCustomer = async (req, res) => {
       return res.status(503).json({ error: 'Database unavailable. Please try again in a moment.' });
     }
 
-    const phone = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
+    const phone = normalizePhone(req.body?.phone);
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim();
 
@@ -83,7 +118,8 @@ exports.registerCustomer = async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const existing = await User.findOne({ phone });
+    const { query } = buildPhoneLookupQuery(phone);
+    const existing = await User.findOne(query);
     if (existing) {
       return res.status(400).json({ error: 'Customer already registered. Please login.' });
     }
@@ -111,7 +147,7 @@ exports.directLogin = async (req, res) => {
       return res.status(503).json({ error: 'Database unavailable. Please try again in a moment.' });
     }
 
-    const phone = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
+    const phone = normalizePhone(req.body?.phone);
     const name = String(req.body?.name || '').trim();
     const role = normalizeRole(req.body?.role);
 
@@ -186,7 +222,8 @@ exports.sendOTP = async (req, res) => {
 
 exports.verifyOTPAndLogin = async (req, res) => {
   try {
-    const { phone, otp, name, role = 'customer' } = req.body;
+    const { otp, name, role = 'customer' } = req.body;
+    const phone = normalizePhone(req.body?.phone);
 
     if (!phone || !otp) {
       return res.status(400).json({ error: 'Phone and OTP required' });

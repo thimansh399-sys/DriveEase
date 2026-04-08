@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/BookRide.css';
 import api from '../utils/api';
 import { downloadInvoicePdf } from '../utils/invoiceUtils';
+import AppButton from '../components/AppButton';
 
 const RIDE_TYPES = [
-  { value: 'daily', label: '🚗 One-way Ride' },
-  { value: 'hourly', label: '⏱ Hourly Driver' },
-  { value: 'outstation', label: '🛣 Outstation Trip' },
+  { value: 'daily', label: 'One-way Ride', icon: 'car' },
+  { value: 'hourly', label: 'Hire Driver (2h/4h)', icon: 'steering' },
+  { value: 'outstation', label: 'Outstation Trip', icon: 'route' },
 ];
 
 const SERVICE_TYPES = [
@@ -32,6 +33,35 @@ const INSURANCE_BY_RIDE_TYPE = {
   daily: { amount: 39, cover: '₹5 lakh accidental + medical' },
   outstation: { amount: 49, cover: '₹5 lakh premium travel cover' },
 };
+
+function RideTypeIcon({ icon }) {
+  if (icon === 'steering') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M4 12h16M12 12v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (icon === 'route') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="6" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="18" cy="18" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8.5 6h4a3 3 0 0 1 3 3v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="9" width="16" height="7" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="8" cy="17" r="1.8" fill="currentColor" />
+      <circle cx="16" cy="17" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
 
 export default function BookRide() {
   const navigate = useNavigate();
@@ -481,15 +511,17 @@ export default function BookRide() {
             </div>
 
             {canShareOtp && (
-              <button
+              <AppButton
                 type="button"
-                className="book-ride-submit"
+                size="lg"
+                variant="primary"
+                fullWidth
                 onClick={handleShareOtp}
-                disabled={shareOtpLoading}
-                style={{ marginTop: 12 }}
+                loading={shareOtpLoading}
+                className="book-ride-btn-gap"
               >
-                {shareOtpLoading ? 'Sharing OTP...' : '🔐 Share OTP With Driver'}
-              </button>
+                {shareOtpLoading ? 'Sharing OTP...' : 'Share OTP With Driver'}
+              </AppButton>
             )}
 
             {live.verification?.otpSharedWithDriver && liveStatus !== 'in_progress' && (
@@ -500,27 +532,31 @@ export default function BookRide() {
           </div>
 
           <div className="book-ride-success-actions">
-            <button className="book-ride-secondary" onClick={() => setSuccess(null)}>
+            <AppButton size="md" variant="secondary" fullWidth onClick={() => setSuccess(null)}>
               Book Another Ride
-            </button>
+            </AppButton>
             {!!(live._id || success.booking?._id) && (
-              <button
-                className="book-ride-secondary"
+              <AppButton
+                size="md"
+                variant="secondary"
+                fullWidth
                 onClick={() => navigate(`/track-booking/${live._id || success.booking?._id}`)}
               >
-                📍 Track Live Ride
-              </button>
+                Track Live Ride
+              </AppButton>
             )}
-            <button className="book-ride-submit" onClick={() => navigate('/customer-dashboard')}>
+            <AppButton size="lg" variant="primary" fullWidth onClick={() => navigate('/customer-dashboard')}>
               Back to Dashboard
-            </button>
+            </AppButton>
             {String(liveStatus || '').toLowerCase() === 'completed' && live.invoice ? (
-              <button
-                className="book-ride-submit"
+              <AppButton
+                size="lg"
+                variant="primary"
+                fullWidth
                 onClick={() => downloadInvoicePdf(live, 'customer')}
               >
                 Download Invoice PDF
-              </button>
+              </AppButton>
             ) : null}
           </div>
         </div>
@@ -541,27 +577,36 @@ export default function BookRide() {
 
           <div className="book-ride-types book-ride-service-types book-ride-reveal delay-2">
             {SERVICE_TYPES.map(({ value, label, subtitle }) => (
-              <button
+              <AppButton
                 key={value}
                 onClick={() => setServiceType(value)}
-                className={`book-ride-type-btn ${serviceType === value ? 'active' : ''}`}
+                size="md"
+                variant="ride"
+                active={serviceType === value}
+                fullWidth
+                className="book-ride-type-btn"
               >
                 <span>{label}</span>
                 <small>{subtitle}</small>
-              </button>
+              </AppButton>
             ))}
           </div>
 
           {isDriverOnly && (
             <div className="book-ride-types book-ride-reveal delay-2">
-              {RIDE_TYPES.map(({ value, label }) => (
-                <button
+              {RIDE_TYPES.map(({ value, label, icon }) => (
+                <AppButton
                   key={value}
                   onClick={() => setForm((prev) => ({ ...prev, rideType: value }))}
-                  className={`book-ride-type-btn ${form.rideType === value ? 'active' : ''}`}
+                  size="md"
+                  variant="ride"
+                  active={form.rideType === value}
+                  fullWidth
+                  leftIcon={<RideTypeIcon icon={icon} />}
+                  className="book-ride-type-btn book-ride-ride-type-btn"
                 >
                   {label}
-                </button>
+                </AppButton>
               ))}
             </div>
           )}
@@ -587,25 +632,30 @@ export default function BookRide() {
             )}
           </div>
 
-          <button
+          <AppButton
             type="button"
+            size="lg"
+            variant="primary"
+            fullWidth
             className="book-ride-submit book-ride-reveal delay-3"
             onClick={handleFindDrivers}
-            disabled={geoLoading}
+            loading={geoLoading}
           >
             {geoLoading ? 'Searching...' : dynamicFindLabel}
-          </button>
+          </AppButton>
 
           {showPostPickupDetails && (
             <div className="book-ride-progressive-section book-ride-reveal delay-3">
-              <button
+              <AppButton
                 type="button"
-                className="book-ride-secondary"
+                size="md"
+                variant="secondary"
+                fullWidth
                 onClick={requestPickupGeolocation}
-                disabled={geoLoading}
+                loading={geoLoading}
               >
                 {geoLoading ? 'Getting Location...' : '📍 Use current location'}
-              </button>
+              </AppButton>
 
               <div className="book-ride-quick-stats">
                 <p className="book-ride-quick-item">
@@ -630,13 +680,15 @@ export default function BookRide() {
                 </p>
               </div>
 
-              <button
+              <AppButton
                 type="button"
-                className="book-ride-secondary"
+                size="md"
+                variant="secondary"
+                fullWidth
                 onClick={() => setShowAdvanced((prev) => !prev)}
               >
                 {showAdvanced ? 'Hide advanced options' : 'Show fare breakdown & options'}
-              </button>
+              </AppButton>
 
               {isDriverOnly && (
                 <div className="book-ride-driver-types">
@@ -656,66 +708,87 @@ export default function BookRide() {
 
               {isDriverOnly && form.rideType === 'hourly' && (
                 <div className="book-ride-hourly-packages">
-                  <button
+                  <AppButton
                     type="button"
-                    className={`book-ride-hourly-btn ${hourlyPackage === 2 ? 'active' : ''}`}
+                    size="sm"
+                    variant="glass"
+                    active={hourlyPackage === 2}
+                    className="book-ride-hourly-btn"
                     onClick={() => setHourlyPackage(2)}
                   >
                     Hire for 2 hours
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className={`book-ride-hourly-btn ${hourlyPackage === 4 ? 'active' : ''}`}
+                    size="sm"
+                    variant="glass"
+                    active={hourlyPackage === 4}
+                    className="book-ride-hourly-btn"
                     onClick={() => setHourlyPackage(4)}
                   >
                     Hire for 4 hours
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className={`book-ride-hourly-btn ${hourlyPackage === 8 ? 'active' : ''}`}
+                    size="sm"
+                    variant="glass"
+                    active={hourlyPackage === 8}
+                    className="book-ride-hourly-btn"
                     onClick={() => setHourlyPackage(8)}
                   >
                     Hire for 8 hours
-                  </button>
+                  </AppButton>
                 </div>
               )}
 
               {isDriverOnly && form.rideType === 'outstation' && (
                 <div className="book-ride-hourly-packages">
-                  <button
+                  <AppButton
                     type="button"
-                    className={`book-ride-hourly-btn ${outstationTripType === 'one_way' ? 'active' : ''}`}
+                    size="sm"
+                    variant="glass"
+                    active={outstationTripType === 'one_way'}
+                    className="book-ride-hourly-btn"
                     onClick={() => setOutstationTripType('one_way')}
                   >
                     One-way
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
-                    className={`book-ride-hourly-btn ${outstationTripType === 'round_trip' ? 'active' : ''}`}
+                    size="sm"
+                    variant="glass"
+                    active={outstationTripType === 'round_trip'}
+                    className="book-ride-hourly-btn"
                     onClick={() => setOutstationTripType('round_trip')}
                   >
                     Round trip
-                  </button>
+                  </AppButton>
                 </div>
               )}
 
               {showTaxiSteps && (
                 <>
                   <div className="book-ride-hourly-packages">
-                    <button
+                    <AppButton
                       type="button"
-                      className={`book-ride-hourly-btn ${taxiTripType === 'one_way' ? 'active' : ''}`}
+                      size="sm"
+                      variant="glass"
+                      active={taxiTripType === 'one_way'}
+                      className="book-ride-hourly-btn"
                       onClick={() => setTaxiTripType('one_way')}
                     >
                       One-way
-                    </button>
-                    <button
+                    </AppButton>
+                    <AppButton
                       type="button"
-                      className={`book-ride-hourly-btn ${taxiTripType === 'round_trip' ? 'active' : ''}`}
+                      size="sm"
+                      variant="glass"
+                      active={taxiTripType === 'round_trip'}
+                      className="book-ride-hourly-btn"
                       onClick={() => setTaxiTripType('round_trip')}
                     >
                       Round trip
-                    </button>
+                    </AppButton>
                   </div>
 
                   <div className="book-ride-car-grid">
@@ -740,14 +813,16 @@ export default function BookRide() {
               {showNoDriverSuggestion && (
                 <div className="book-ride-smart-suggestion">
                   😕 No drivers nearby. Try booking a car instead.
-                  <button
+                  <AppButton
                     type="button"
-                    className="book-ride-secondary"
-                    style={{ marginTop: 10 }}
+                    size="md"
+                    variant="secondary"
+                    fullWidth
+                    className="book-ride-btn-gap"
                     onClick={() => setServiceType('car_driver')}
                   >
                     Switch to Car + Driver
-                  </button>
+                  </AppButton>
                 </div>
               )}
 
@@ -875,9 +950,16 @@ export default function BookRide() {
           {error && <div className="book-ride-error book-ride-reveal delay-3">{error}</div>}
 
           {showPostPickupDetails && (
-            <button className="book-ride-submit book-ride-reveal delay-3" onClick={handleBooking} disabled={loading}>
+            <AppButton
+              size="lg"
+              variant="primary"
+              fullWidth
+              className="book-ride-submit book-ride-reveal delay-3"
+              onClick={handleBooking}
+              loading={loading}
+            >
               {loading ? 'Booking...' : (isCarDriver ? '🚕 Find Cars' : '🚗 Find Drivers')}
-            </button>
+            </AppButton>
           )}
         </div>
 

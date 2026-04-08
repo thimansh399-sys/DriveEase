@@ -102,6 +102,8 @@ const Driver = require('../models/Driver');
 const { generatePaymentVerificationToken, formatPaymentVerificationStatus } = require('../utils/verificationUtils');
 const { getCurrentISTDateTime } = require('../utils/dateTimeUtils');
 
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(-10);
+
 /**
  * Register new driver - Step 1: Basic details and payment
  */
@@ -109,7 +111,7 @@ exports.registerDriver = async (req, res) => {
   try {
     const {
       name,
-      phone,
+      phone: rawPhone,
       email,
       city,
       state,
@@ -126,18 +128,26 @@ exports.registerDriver = async (req, res) => {
     } = req.body;
     console.log('📝 [driverRegistrationController] Driver Registration Step 1:', {
       name,
-      phone,
+      phone: rawPhone,
       email,
       city,
       state,
       pincode
     });
 
+    const phone = normalizePhone(rawPhone);
+
 
     // Validate required fields
-    if (!name || !phone || !city || !state || !pincode) {
+    if (!name || !rawPhone || !city || !state || !pincode) {
       return res.status(400).json({
         error: 'Missing required fields: name, phone, city, state, pincode'
+      });
+    }
+
+    if (phone.length !== 10) {
+      return res.status(400).json({
+        error: 'Valid 10-digit phone number required'
       });
     }
 

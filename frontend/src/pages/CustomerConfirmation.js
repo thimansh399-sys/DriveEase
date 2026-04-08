@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 import '../styles/UnifiedUI.css';
+import AppButton from '../components/AppButton';
 
 const STATUS_LABELS = {
   pending: 'Driver response pending',
@@ -177,8 +178,12 @@ export default function CustomerConfirmation() {
         <div className="ux-panel" style={{ maxWidth: '760px', margin: '0 auto' }}>
           <div className="ux-alert error">{error}</div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-            <Link className="ux-btn" to="/my-bookings">Back to My Bookings</Link>
-            <button type="button" className="ux-btn primary" onClick={() => loadBooking(true)}>Retry</button>
+            <AppButton as={Link} to="/my-bookings" size="md" variant="secondary">
+              Back to My Bookings
+            </AppButton>
+            <AppButton type="button" size="md" variant="primary" onClick={() => loadBooking(true)}>
+              Retry
+            </AppButton>
           </div>
         </div>
       </div>
@@ -239,15 +244,18 @@ export default function CustomerConfirmation() {
 
           {canConfirm(status) && (
             <div style={{ marginTop: '14px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
+              <AppButton
                 type="button"
-                className="ux-btn primary"
+                size="md"
+                variant="primary"
                 onClick={handleConfirmBooking}
-                disabled={confirming}
+                loading={confirming}
               >
                 {confirming ? 'Confirming...' : 'Confirm This Booking'}
-              </button>
-              <button type="button" className="ux-btn" onClick={() => loadBooking(true)}>Refresh Status</button>
+              </AppButton>
+              <AppButton type="button" size="md" variant="secondary" onClick={() => loadBooking(true)}>
+                Refresh Status
+              </AppButton>
             </div>
           )}
 
@@ -263,13 +271,15 @@ export default function CustomerConfirmation() {
           )}
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '16px' }}>
-            <button type="button" className="ux-btn primary" onClick={() => navigate(`/track-booking/${booking?._id || bookingId}`)}>
+            <AppButton type="button" size="md" variant="primary" onClick={() => navigate(`/track-booking/${booking?._id || bookingId}`)}>
               Track Live Ride
-            </button>
-            <button type="button" className="ux-btn" onClick={handleDownloadInvoice}>
+            </AppButton>
+            <AppButton type="button" size="md" variant="secondary" onClick={handleDownloadInvoice}>
               Download Invoice
-            </button>
-            <Link className="ux-btn" to="/my-bookings">Go to My Bookings</Link>
+            </AppButton>
+            <AppButton as={Link} to="/my-bookings" size="md" variant="secondary">
+              Go to My Bookings
+            </AppButton>
           </div>
         </div>
       </div>

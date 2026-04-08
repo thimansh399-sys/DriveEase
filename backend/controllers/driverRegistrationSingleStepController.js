@@ -2,11 +2,13 @@ const path = require('path');
 const fs = require('fs');
 const Driver = require('../models/Driver');
 
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(-10);
+
 exports.registerDriverSingleStep = async (req, res) => {
   try {
     const {
       name,
-      phone,
+      phone: rawPhone,
       email,
       bloodGroup,
       yearsOfExperience,
@@ -20,7 +22,7 @@ exports.registerDriverSingleStep = async (req, res) => {
 
     console.log('📝 Driver Registration Request:', {
       name,
-      phone,
+      phone: rawPhone,
       email,
       aadhaarNumber,
       licenseNumber,
@@ -30,8 +32,13 @@ exports.registerDriverSingleStep = async (req, res) => {
     });
 
     // Validate required fields
-    if (!name || !phone || !aadhaarNumber || !licenseNumber) {
+    if (!name || !rawPhone || !aadhaarNumber || !licenseNumber) {
       return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const phone = normalizePhone(rawPhone);
+    if (phone.length !== 10) {
+      return res.status(400).json({ error: 'Valid 10-digit phone number required' });
     }
 
     if (!req.file) {

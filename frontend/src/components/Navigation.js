@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Navigation.css';
+import AppButton from './AppButton';
 
 function Navigation({ isLoggedIn, userRole, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -116,25 +117,39 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
         <div className="nav-actions">
           {!isLoggedIn ? (
             <>
-              <Link to="/login" className="nav-button btn-outline">Login</Link>
-              <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+              <AppButton as={Link} to="/login" size="sm" variant="glass" className="nav-button">
+                Login
+              </AppButton>
+              <AppButton as={Link} to="/register-driver" size="sm" variant="primary" className="nav-button">
+                Register as Driver
+              </AppButton>
             </>
           ) : (
             <>
               {isDriver && (
                 <>
-                  <Link to="/driver-dashboard" className="nav-button btn-outline">Dashboard</Link>
-                  <Link to="/driver-earnings" className="nav-button btn-outline">Earnings</Link>
+                  <AppButton as={Link} to="/driver-dashboard" size="sm" variant="glass" className="nav-button">
+                    Dashboard
+                  </AppButton>
+                  <AppButton as={Link} to="/driver-earnings" size="sm" variant="glass" className="nav-button">
+                    Earnings
+                  </AppButton>
                   {showLogoutOnMainScreens && (
-                    <button type="button" className="nav-button btn-logout" onClick={handleLogout}>Logout</button>
+                    <AppButton type="button" size="sm" variant="secondary" className="nav-button nav-button-logout" onClick={handleLogout}>
+                      Logout
+                    </AppButton>
                   )}
                 </>
               )}
               {!isDriver && (
                 <>
-                  <Link to="/register-driver" className="nav-button btn-register">Register as Driver</Link>
+                  <AppButton as={Link} to="/register-driver" size="sm" variant="primary" className="nav-button">
+                    Register as Driver
+                  </AppButton>
                   {showLogoutOnMainScreens && (
-                    <button type="button" className="nav-button btn-logout" onClick={handleLogout}>Logout</button>
+                    <AppButton type="button" size="sm" variant="secondary" className="nav-button nav-button-logout" onClick={handleLogout}>
+                      Logout
+                    </AppButton>
                   )}
                 </>
               )}
