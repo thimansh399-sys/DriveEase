@@ -35,7 +35,7 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
-  min-width: 100vw;
+  min-width: 0;
   overflow-x: hidden;
 }
 
@@ -513,4 +513,27 @@ a:hover { color: var(--primary-light); }
 .whatsapp-btn img {
   width: 30px;
   height: 30px;
+}
+
+@media (max-width: 640px) {
+  .install-app-btn {
+    right: 10px;
+    bottom: 74px;
+    max-width: calc(100vw - 80px);
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .whatsapp-btn {
+    right: 10px;
+    bottom: 14px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .whatsapp-btn img {
+    width: 26px;
+    height: 26px;
+  }
 }
