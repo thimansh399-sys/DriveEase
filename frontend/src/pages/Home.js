@@ -223,27 +223,25 @@ function Home() {
   return (
     <>
       <div className="home-v2-page">
-        {/* Minimal Hero Section */}
+        {/* Premium Minimal Hero Section */}
         <section className="home-v2-hero minimal-hero">
           <div className="home-v2-copy">
             <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
-            <h1>Book Your Ride Instantly</h1>
-            <p>Verified drivers for daily commute, family trips, and business travel.</p>
-            {/* Trust badge */}
+            <h1 className="home-v2-copy-title">Book Your Ride Instantly</h1>
+            <p className="home-v2-copy-desc">Verified drivers for daily commute, family trips, and business travel.</p>
             <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
-            {/* Booking Form */}
             <div className="home-booking-card minimal">
-              <div className="home-ride-mode-row">
+              <div className="home-ride-mode-row" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
                 <button
                   type="button"
-                  className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
+                  className={`home-v2-btn ${rideMode === 'one_way' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
                   onClick={() => setRideMode('one_way')}
                 >
                   One-way Ride
                 </button>
                 <button
                   type="button"
-                  className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
+                  className={`home-v2-btn ${rideMode === 'hourly' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
                   onClick={() => {
                     setRideMode('hourly');
                     setDrop('');
@@ -254,7 +252,7 @@ function Home() {
                 </button>
                 <button
                   type="button"
-                  className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
+                  className={`home-v2-btn ${rideMode === 'outstation' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
                   onClick={() => setRideMode('outstation')}
                 >
                   Outstation Trip
@@ -292,30 +290,29 @@ function Home() {
                 )}
               </AnimatePresence>
               <motion.button
-                className="home-book-btn"
+                className="home-v2-btn home-v2-btn-primary home-book-btn"
                 onClick={handleBookRide}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
+                style={{ marginTop: 12 }}
               >
                 Find Drivers
               </motion.button>
               <button
                 type="button"
-                className="home-current-location-btn"
+                className="home-v2-btn home-v2-btn-outline home-current-location-btn"
                 onClick={useCurrentLocation}
                 disabled={detectingLocation}
-                style={{ marginTop: 12 }}
+                style={{ marginTop: 8 }}
               >
                 {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
               </button>
               {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
             </div>
           </div>
-          {/* Subtle background image or color can be handled in CSS */}
           <div className="home-v2-media minimal-bg" />
         </section>
 
-        {/* Below the fold: all secondary content */}
         <div className="home-v2-divider" />
 
         {/* ── PLANS ── */}
@@ -325,7 +322,9 @@ function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4 }}
+            className="section-header"
           >
+            Our Plans
           </motion.h2>
           <div className="home-v2-plan-grid">
             {plans.map((plan, idx) => (
@@ -353,33 +352,35 @@ function Home() {
 
         {/* ── CTA BANNER ── */}
         <motion.section
-          className="home-cta-banner"
+          className="cta-section"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2>Ready to Ride?</h2>
-          <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
-          <div className="home-cta-actions">
-            <Link to="/book-ride" className="home-cta-link">
-              <motion.button
-                className="home-book-btn home-cta-primary"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Get Started →
-              </motion.button>
-            </Link>
-            <Link to="/drivers" className="home-cta-link">
-              <motion.button
-                className="home-v2-btn home-v2-btn-outline home-cta-secondary"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Browse Drivers
-              </motion.button>
-            </Link>
+          <div className="cta-content">
+            <h2>Ready to Ride?</h2>
+            <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
+            <div className="hero-buttons">
+              <Link to="/book-ride" className="home-cta-link">
+                <motion.button
+                  className="btn btn-primary home-book-btn home-cta-primary"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Get Started →
+                </motion.button>
+              </Link>
+              <Link to="/drivers" className="home-cta-link">
+                <motion.button
+                  className="btn btn-outline home-v2-btn home-v2-btn-outline home-cta-secondary"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Browse Drivers
+                </motion.button>
+              </Link>
+            </div>
           </div>
         </motion.section>
 
