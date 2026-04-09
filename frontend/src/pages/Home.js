@@ -172,96 +172,100 @@ function Home() {
 
   return (
     <div className="home-v2-page">
-      {/* Minimal Hero Section */}
-      <section className="home-v2-hero minimal-hero">
-        <div className="home-v2-copy">
-          <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
-          <h1>Book Your Ride Instantly</h1>
-          <p>Verified drivers for daily commute, family trips, and business travel.</p>
-          {/* Trust badge */}
-          <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
-          {/* Booking Form */}
-          <div className="home-booking-card minimal">
-            <div className="home-ride-mode-row">
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
-                onClick={() => setRideMode('one_way')}
-              >
-                One-way Ride
-              </button>
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
-                onClick={() => {
-                  setRideMode('hourly');
-                  setDrop('');
-                }}
-              >
-                Hire Driver (2h/4h)
-              </button>
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
-                onClick={() => setRideMode('outstation')}
-              >
-                Outstation Trip
-              </button>
-            </div>
-            <LocationInput
-              value={pickup}
-              onChange={(v) => { setPickup(v); setInputError(''); }}
-              placeholder="Pickup Location"
-              icon="🟢"
-            />
-            {rideMode !== 'hourly' && (
-              <>
-                <div className="home-input-divider" />
-                <LocationInput
-                  value={drop}
-                  onChange={(v) => { setDrop(v); setInputError(''); }}
-                  placeholder="Destination"
-                  icon="🔴"
-                />
-              </>
-            )}
-            <AnimatePresence>
-              {inputError && (
-                <motion.p
-                  className="home-input-error"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+      {/* Premium Split Hero Section */}
+      <section className="premium-hero-section">
+        <div className="premium-hero-container">
+          {/* Left: Text & Booking */}
+          <div className="premium-hero-left">
+            <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
+            <h1>Book Your Ride Instantly</h1>
+            <p className="premium-hero-sub">Verified drivers for daily commute, family trips, and business travel.</p>
+            <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
+            <div className="home-booking-card minimal">
+              <div className="home-ride-mode-row">
+                <button
+                  type="button"
+                  className="home-ride-mode-btn active"
+                  onClick={() => setRideMode('one_way')}
                 >
-                  ⚠️ {inputError}
-                </motion.p>
+                  One-way Ride
+                </button>
+                <button
+                  type="button"
+                  className="home-ride-mode-btn active"
+                  onClick={() => {
+                    setRideMode('hourly');
+                    setDrop('');
+                  }}
+                >
+                  Hire Driver (2h/4h)
+                </button>
+                <button
+                  type="button"
+                  className="home-ride-mode-btn active"
+                  onClick={() => setRideMode('outstation')}
+                >
+                  Outstation Trip
+                </button>
+              </div>
+              <LocationInput
+                value={pickup}
+                onChange={(v) => { setPickup(v); setInputError(''); }}
+                placeholder="Pickup Location"
+                icon="🟢"
+              />
+              {rideMode !== 'hourly' && (
+                <>
+                  <div className="home-input-divider" />
+                  <LocationInput
+                    value={drop}
+                    onChange={(v) => { setDrop(v); setInputError(''); }}
+                    placeholder="Destination"
+                    icon="🔴"
+                  />
+                </>
               )}
-            </AnimatePresence>
-            <motion.button
-              className="home-book-btn"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              Find Drivers
-            </motion.button>
-            <button
-              type="button"
-              className="home-current-location-btn"
-              disabled={detectingLocation}
-              style={{ marginTop: 12 }}
-            >
-              {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
-            </button>
-            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
+              <AnimatePresence>
+                {inputError && (
+                  <motion.p
+                    className="home-input-error"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    ⚠️ {inputError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <motion.button
+                className="home-book-btn"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Find Drivers
+              </motion.button>
+              <button
+                type="button"
+                className="home-current-location-btn"
+                disabled={detectingLocation}
+                style={{ marginTop: 12 }}
+              >
+                {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
+              </button>
+              {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
+            </div>
+          </div>
+          {/* Right: Premium Image */}
+          <div className="premium-hero-right">
+            <div className="premium-hero-img-container">
+              <img src={process.env.PUBLIC_URL + '/hero-driver.jpg'} alt="Premium Driver" className="premium-hero-img" />
+              <div className="premium-hero-img-overlay" />
+            </div>
           </div>
         </div>
-        {/* Subtle background image or color can be handled in CSS */}
-        <div className="home-v2-media minimal-bg" />
       </section>
-
       {/* Below the fold: all secondary content */}
       <div className="home-v2-divider" />
-      {/* Trust metrics, Why choose us, How it works, Testimonials, Plans, CTA, etc. can be placed here as needed, but are now below the fold. */}
       <Footer />
     </div>
   );
