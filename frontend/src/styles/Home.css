@@ -581,6 +581,15 @@
   gap: 24px;
 }
 
+.home-v2-hero {
+  grid-template-columns: minmax(450px, 1fr) minmax(380px, 0.9fr);
+}
+
+.home-v2-hero-copy {
+  max-width: 680px;
+  gap: 16px;
+}
+
 .home-v2-copy h1 {
   margin: 0;
   font-family: 'Outfit', 'Segoe UI', sans-serif;
@@ -593,6 +602,14 @@
   color: var(--mint);
 }
 
+.home-v2-highlight {
+  margin: -2px 0 2px;
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  color: #a7f3d0;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .home-v2-copy p {
   margin: 0;
   color: var(--text-soft);
@@ -601,12 +618,73 @@
   line-height: 1.65;
 }
 
+.home-v2-availability-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 242, 177, 0.42);
+  background: linear-gradient(95deg, rgba(34, 197, 94, 0.2), rgba(56, 242, 177, 0.12));
+  color: #d1fae5;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.home-v2-metrics-grid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 520px;
+}
+
+.home-v2-metric-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.56);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-v2-metric-card strong {
+  color: #dcfce7;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.home-v2-metric-card span {
+  color: #93c5fd;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+.home-v2-booking-shell {
+  width: 100%;
+  max-width: 620px;
+  justify-self: end;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.home-v2-booking-kicker {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #86efac;
+  font-weight: 700;
+}
+
 .home-cars-strip {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  width: min(560px, 100%);
+  width: 100%;
   border-radius: 999px;
   border: 1px solid rgba(56, 242, 177, 0.35);
   background: rgba(34, 197, 94, 0.12);
@@ -1489,8 +1567,22 @@
 }
 
 @media (max-width: 980px) {
+  .home-v2-hero {
+    grid-template-columns: 1fr;
+  }
+
   .home-v2-copy {
     gap: 16px;
+  }
+
+  .home-v2-hero-copy,
+  .home-v2-booking-shell,
+  .home-v2-metrics-grid {
+    max-width: 100%;
+  }
+
+  .home-v2-booking-shell {
+    justify-self: stretch;
   }
 
   .home-secondary-info-grid {
@@ -1538,6 +1630,17 @@
     margin-top: 0;
     font-size: 0.96rem;
     line-height: 1.5;
+  }
+
+  .home-v2-highlight {
+    font-size: 0.92rem;
+  }
+
+  .home-v2-availability-pill {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.82rem;
   }
 
   .home-cars-strip {
@@ -1591,12 +1694,18 @@
   }
 
   .home-v2-quick-points span,
-  .home-v2-stat-card {
+  .home-v2-stat-card,
+  .home-v2-metric-card {
     min-width: 0;
     flex: 1 1 calc(50% - 8px);
     padding: 9px 10px;
     font-size: 0.8rem;
     border-radius: 10px;
+  }
+
+  .home-v2-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .home-v2-media,
@@ -1652,8 +1761,13 @@
   }
 
   .home-v2-quick-points span,
-  .home-v2-stat-card {
+  .home-v2-stat-card,
+  .home-v2-metric-card {
     flex-basis: 100%;
+  }
+
+  .home-v2-metrics-grid {
+    grid-template-columns: 1fr;
   }
 
   .home-v2-media,

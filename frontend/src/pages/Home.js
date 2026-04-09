@@ -373,9 +373,8 @@ function Home() {
 
       {/* ── HERO SECTION ── */}
       <section className="home-v2-hero">
-        {/* LEFT: Copy + Booking Inputs */}
         <motion.div
-          className="home-v2-copy"
+          className="home-v2-copy home-v2-hero-copy"
           initial={{ opacity: 0, y: 38 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
@@ -386,17 +385,38 @@ function Home() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, duration: 0.4 }}
           >
-            India's #1 Trusted Personal Driver Service — Fast, Safe & Reliable
+            Trusted by 10,000+ Riders Across India
           </motion.div>
 
           <h1>
-            Book Your Ride<br />
-            <span>Instantly</span>
+            Book Verified Personal Drivers <span>Instantly</span>
           </h1>
 
+          <h3 className="home-v2-highlight">Safe • Premium • Reliable Driver Service</h3>
+
           <p>
-            Verified drivers for your daily commute, family trips, and business travel.
+            Professional drivers for daily commute, business travel, family trips, and outstation rides.
           </p>
+
+          <div className="home-v2-availability-pill">
+            🚗 Car + Driver Available in Your City
+          </div>
+
+          <div className="home-v2-metrics-grid" aria-label="trust metrics">
+            <article className="home-v2-metric-card"><strong>10,000+</strong><span>Rides</span></article>
+            <article className="home-v2-metric-card"><strong>4.9★</strong><span>Ratings</span></article>
+            <article className="home-v2-metric-card"><strong>500+</strong><span>Drivers</span></article>
+            <article className="home-v2-metric-card"><strong>24/7</strong><span>Support</span></article>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="home-v2-booking-shell"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.45 }}
+        >
+          <p className="home-v2-booking-kicker">Start Booking in Seconds</p>
 
           <div className="home-cars-strip">
             <span>🚕 Car + Driver now available</span>
@@ -409,10 +429,9 @@ function Home() {
             </button>
           </div>
 
-          {/* Booking Input Card */}
           <motion.div
             className="home-booking-card"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.45 }}
           >
@@ -485,7 +504,6 @@ function Home() {
             >
               Find Drivers
             </motion.button>
-
           </motion.div>
 
           <div className="home-secondary-info">
@@ -499,42 +517,6 @@ function Home() {
             </button>
             {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
           </div>
-
-          <div className="home-trust-strip">
-            <div className="home-v2-quick-points">
-              <span>✔ Verified Drivers</span>
-              <span>✔ 24/7 Support</span>
-              <span>✔ Instant Booking</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* RIGHT: Car Image */}
-        <motion.div
-          className="home-v2-media"
-          initial={{ opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-        >
-          <img
-            src="https://gsiglobe.com/assets/img/personal-driver.jpg"
-            alt="DriveEase Driver"
-          />
-          <div className="home-v2-media-glow" />
-
-          {/* floating ETA card */}
-          <motion.div
-            className="home-eta-card"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6, duration: 0.4 }}
-          >
-            <span className="home-eta-dot" />
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '14px' }}>Driver En Route</div>
-                <div style={{ color: '#22c55e', fontSize: '12px' }}>ETA: 30 mins</div>
-            </div>
-          </motion.div>
         </motion.div>
       </section>
 
