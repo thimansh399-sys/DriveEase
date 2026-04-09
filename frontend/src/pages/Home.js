@@ -372,62 +372,46 @@ function Home() {
       <div className="home-v2-bg-blob home-v2-bg-blob-bottom" />
 
       {/* ── HERO SECTION ── */}
-      <section className="home-v2-hero">
+      <section className="home-v2-hero home-v2-hero-ola">
         <motion.div
-          className="home-v2-copy home-v2-hero-copy"
+          className="home-v2-hero-banner"
           initial={{ opacity: 0, y: 38 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
         >
-          <motion.div
-            className="home-v2-badge"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-          >
-            Trusted by 10,000+ Riders Across India
-          </motion.div>
+          <div className="home-v2-hero-banner-content">
+            <motion.div
+              className="home-v2-badge"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+            >
+              Trusted by 10,000+ Riders Across India
+            </motion.div>
 
-          <h1>
-            Book Verified Personal Drivers <span>Instantly</span>
-          </h1>
+            <h1>
+              Book Verified Personal Drivers <span>Instantly</span>
+            </h1>
 
-          <h3 className="home-v2-highlight">Safe • Premium • Reliable Driver Service</h3>
+            <h3 className="home-v2-highlight">Safe • Premium • Reliable Driver Service</h3>
 
-          <p>
-            Professional drivers for daily commute, business travel, family trips, and outstation rides.
-          </p>
+            <p>
+              Professional drivers for daily commute, business travel, family trips, and outstation rides.
+            </p>
 
-          <div className="home-v2-availability-pill">
-            🚗 Car + Driver Available in Your City
-          </div>
-
-          <div className="home-v2-metrics-grid" aria-label="trust metrics">
-            <article className="home-v2-metric-card"><strong>10,000+</strong><span>Rides</span></article>
-            <article className="home-v2-metric-card"><strong>4.9★</strong><span>Ratings</span></article>
-            <article className="home-v2-metric-card"><strong>500+</strong><span>Drivers</span></article>
-            <article className="home-v2-metric-card"><strong>24/7</strong><span>Support</span></article>
+            <div className="home-v2-availability-pill">
+              🚗 Car + Driver Available in Your City
+            </div>
           </div>
         </motion.div>
 
         <motion.div
-          className="home-v2-booking-shell"
+          className="home-v2-booking-shell home-v2-booking-overlap"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.45 }}
         >
           <p className="home-v2-booking-kicker">Start Booking in Seconds</p>
-
-          <div className="home-cars-strip">
-            <span>🚕 Car + Driver now available</span>
-            <button
-              type="button"
-              className="home-cars-strip-btn"
-              onClick={() => navigate('/book-ride?serviceType=car_driver')}
-            >
-              Try Now
-            </button>
-          </div>
 
           <motion.div
             className="home-booking-card"
@@ -504,9 +488,7 @@ function Home() {
             >
               Find Drivers
             </motion.button>
-          </motion.div>
 
-          <div className="home-secondary-info">
             <button
               type="button"
               className="home-current-location-btn"
@@ -516,8 +498,15 @@ function Home() {
               {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
             </button>
             {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
-          </div>
+          </motion.div>
         </motion.div>
+
+        <div className="home-v2-metrics-grid home-v2-metrics-row" aria-label="trust metrics">
+          <article className="home-v2-metric-card"><strong>10,000+</strong><span>Rides</span></article>
+          <article className="home-v2-metric-card"><strong>4.9★</strong><span>Ratings</span></article>
+          <article className="home-v2-metric-card"><strong>500+</strong><span>Drivers</span></article>
+          <article className="home-v2-metric-card"><strong>24/7</strong><span>Support</span></article>
+        </div>
       </section>
 
       <div className="home-v2-divider" />

@@ -557,18 +557,44 @@
 }
 
 .home-v2-hero {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 46px 0 28px 40px;
+  width: min(1240px, 100%);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 26px 24px 18px;
   display: grid;
-  grid-template-columns: minmax(460px, 0.96fr) minmax(560px, 1.04fr);
-  gap: 28px;
-  align-items: stretch;
-  min-height: calc(100vh - 84px);
+  grid-template-columns: minmax(430px, 1fr) minmax(520px, 1.06fr);
+  gap: 26px;
+  align-items: center;
+  min-height: min(700px, calc(100vh - 86px));
   position: relative;
   z-index: 2;
   box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.home-v2-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(108deg, rgba(6, 13, 24, 0.8) 8%, rgba(6, 13, 24, 0.62) 42%, rgba(6, 13, 24, 0.74) 100%),
+    url('https://gsiglobe.com/assets/img/personal-driver.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-v2-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(56, 242, 177, 0.12);
+  border-radius: 22px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .home-v2-copy {
@@ -579,22 +605,25 @@
   justify-content: flex-start;
   padding-top: 0;
   gap: 24px;
-}
-
-.home-v2-hero {
-  grid-template-columns: minmax(450px, 1fr) minmax(380px, 0.9fr);
+  position: relative;
+  z-index: 1;
 }
 
 .home-v2-hero-copy {
-  max-width: 680px;
-  gap: 16px;
+  max-width: 540px;
+  gap: 10px;
+  background: rgba(8, 17, 30, 0.34);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  backdrop-filter: blur(4px);
 }
 
 .home-v2-copy h1 {
   margin: 0;
   font-family: 'Outfit', 'Segoe UI', sans-serif;
-  font-size: clamp(2.3rem, 4.8vw, 4.1rem);
-  line-height: 1.05;
+  font-size: clamp(1.72rem, 3.25vw, 2.8rem);
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
@@ -603,8 +632,8 @@
 }
 
 .home-v2-highlight {
-  margin: -2px 0 2px;
-  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  margin: 2px 0 2px;
+  font-size: clamp(0.92rem, 1.1vw, 1.02rem);
   color: #a7f3d0;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -613,9 +642,9 @@
 .home-v2-copy p {
   margin: 0;
   color: var(--text-soft);
-  max-width: 760px;
-  font-size: clamp(1rem, 1.4vw, 1.18rem);
-  line-height: 1.65;
+  max-width: 520px;
+  font-size: clamp(0.9rem, 1vw, 0.98rem);
+  line-height: 1.52;
 }
 
 .home-v2-availability-pill {
@@ -626,38 +655,38 @@
   border: 1px solid rgba(56, 242, 177, 0.42);
   background: linear-gradient(95deg, rgba(34, 197, 94, 0.2), rgba(56, 242, 177, 0.12));
   color: #d1fae5;
-  padding: 10px 16px;
-  font-size: 0.9rem;
+  padding: 8px 14px;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
 .home-v2-metrics-grid {
-  margin-top: 6px;
+  margin-top: 4px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 520px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 100%;
 }
 
 .home-v2-metric-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.56);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 9px 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .home-v2-metric-card strong {
   color: #dcfce7;
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1;
 }
 
 .home-v2-metric-card span {
   color: #93c5fd;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   letter-spacing: 0.02em;
 }
 
@@ -666,17 +695,97 @@
   max-width: 620px;
   justify-self: end;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
+  position: relative;
+  z-index: 1;
+  transform: translateY(-10px);
 }
 
 .home-v2-booking-kicker {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #86efac;
   font-weight: 700;
+}
+
+.home-v2-hero-ola {
+  display: block;
+  width: min(1240px, calc(100% - 40px));
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 20px 14px;
+  min-height: auto;
+  border-radius: 18px;
+  overflow: visible;
+  background: transparent;
+}
+
+.home-v2-hero-ola::before,
+.home-v2-hero-ola::after {
+  display: none;
+}
+
+.home-v2-hero-banner {
+  position: relative;
+  min-height: 420px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(56, 242, 177, 0.18);
+  background-image:
+    linear-gradient(100deg, rgba(5, 12, 22, 0.72) 10%, rgba(5, 12, 22, 0.46) 48%, rgba(5, 12, 22, 0.58) 100%),
+    url('https://gsiglobe.com/assets/img/personal-driver.jpg');
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 22px 58px rgba(2, 6, 23, 0.55);
+}
+
+.home-v2-hero-banner-content {
+  width: min(500px, 100%);
+  padding: 42px 34px 30px;
+  display: grid;
+  gap: 12px;
+}
+
+.home-v2-hero-banner-content h1 {
+  margin: 0;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-size: clamp(2rem, 3vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.home-v2-hero-banner-content h1 span {
+  color: var(--mint);
+}
+
+.home-v2-hero-banner-content p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: clamp(0.95rem, 1.05vw, 1.05rem);
+  line-height: 1.58;
+}
+
+.home-v2-booking-overlap {
+  max-width: 980px;
+  margin: -70px auto 0;
+  transform: none;
+  justify-self: stretch;
+}
+
+.home-v2-booking-overlap .home-booking-card {
+  max-width: 100%;
+  border-radius: 12px;
+  border-color: rgba(110, 231, 183, 0.3);
+  box-shadow: 0 26px 56px rgba(2, 6, 23, 0.62);
+}
+
+.home-v2-metrics-row {
+  margin: 18px auto 4px;
+  max-width: 980px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .home-cars-strip {
@@ -689,8 +798,8 @@
   border: 1px solid rgba(56, 242, 177, 0.35);
   background: rgba(34, 197, 94, 0.12);
   color: #d1fae5;
-  padding: 8px 14px;
-  font-size: 0.86rem;
+  padding: 7px 12px;
+  font-size: 0.82rem;
 }
 
 .home-cars-strip-btn {
@@ -1147,13 +1256,14 @@
 /* ── NEW: Booking Card in Hero ── */
 .home-booking-card {
   margin-top: 0;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
-  padding: 22px;
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(110, 231, 183, 0.2);
+  border-radius: 12px;
+  padding: 20px;
   backdrop-filter: blur(10px);
   width: min(560px, 100%);
-  max-width: 560px;
+  max-width: 620px;
+  box-shadow: 0 26px 46px rgba(2, 6, 23, 0.52), 0 0 0 1px rgba(34, 197, 94, 0.12) inset;
 }
 
 .home-cars-inline-banner {
@@ -1191,10 +1301,10 @@
 
 .home-ride-mode-btn {
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(15, 23, 42, 0.55);
   color: #cbd5e1;
-  padding: 9px 8px;
+  padding: 8px 8px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1237,7 +1347,7 @@
 
 .home-current-location-btn {
   width: 100%;
-  margin-top: 0;
+  margin-top: 10px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.68);
@@ -1309,21 +1419,24 @@
 
 .home-book-btn {
   width: 100%;
-  margin-top: 14px;
-  background: linear-gradient(92deg, #18b86e, #22c55e);
-  color: #062111;
+  margin-top: 10px;
+  background: linear-gradient(92deg, #15b765, #22c55e);
+  color: #03190d;
   border: none;
-  border-radius: 12px;
-  padding: 13px 20px;
+  border-radius: 8px;
+  padding: 13px 16px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
-  transition: box-shadow 0.2s;
+  box-shadow: 0 10px 28px rgba(34, 197, 94, 0.35), inset 0 -2px 0 rgba(3, 25, 13, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .home-book-btn:hover {
-  box-shadow: 0 14px 32px rgba(34, 197, 94, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(34, 197, 94, 0.45), inset 0 -2px 0 rgba(3, 25, 13, 0.18);
 }
 
 .home-driver-details-link {
@@ -1567,8 +1680,39 @@
 }
 
 @media (max-width: 980px) {
+  .home-v2-hero-ola {
+    width: calc(100% - 24px);
+    padding: 16px 12px 12px;
+    border-radius: 16px;
+  }
+
+  .home-v2-hero-banner {
+    min-height: 360px;
+    border-radius: 16px;
+    background-position: center right;
+  }
+
+  .home-v2-hero-banner-content {
+    width: min(500px, 100%);
+    padding: 30px 22px 24px;
+  }
+
+  .home-v2-booking-overlap {
+    margin: -48px auto 0;
+    max-width: 100%;
+  }
+
+  .home-v2-metrics-row {
+    margin-top: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .home-v2-hero {
     grid-template-columns: 1fr;
+    min-height: auto;
+    width: min(960px, 100%);
+    padding: 24px 20px 16px;
+    gap: 18px;
   }
 
   .home-v2-copy {
@@ -1583,6 +1727,11 @@
 
   .home-v2-booking-shell {
     justify-self: stretch;
+    transform: none;
+  }
+
+  .home-v2-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .home-secondary-info-grid {
@@ -1609,9 +1758,52 @@
 }
 
 @media (max-width: 768px) {
+  .home-v2-hero-ola {
+    width: calc(100% - 16px);
+    padding: 12px 8px 10px;
+  }
+
+  .home-v2-hero-banner {
+    min-height: 300px;
+    border-radius: 14px;
+    background-position: 62% center;
+  }
+
+  .home-v2-hero-banner-content {
+    width: 100%;
+    padding: 24px 14px 18px;
+    gap: 10px;
+  }
+
+  .home-v2-hero-banner-content h1 {
+    font-size: clamp(1.72rem, 7.2vw, 2.2rem);
+    line-height: 1.1;
+  }
+
+  .home-v2-booking-overlap {
+    margin: -30px auto 0;
+  }
+
+  .home-v2-metrics-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 10px;
+  }
+
   .home-v2-hero {
-    padding: 84px 16px 18px;
-    gap: 16px;
+    width: calc(100% - 20px);
+    margin: 0 10px;
+    padding: 76px 12px 14px;
+    gap: 14px;
+    border-radius: 16px;
+  }
+
+  .home-v2-hero::before {
+    border-radius: 16px;
+    background-position: center right;
+  }
+
+  .home-v2-hero::after {
+    border-radius: 16px;
   }
 
   .home-v2-badge {
@@ -1621,14 +1813,14 @@
   }
 
   .home-v2-copy h1 {
-    font-size: 2.1rem;
+    font-size: 1.86rem;
     line-height: 1.08;
     letter-spacing: -0.01em;
   }
 
   .home-v2-copy p {
     margin-top: 0;
-    font-size: 0.96rem;
+    font-size: 0.9rem;
     line-height: 1.5;
   }
 
@@ -1742,6 +1934,23 @@
 }
 
 @media (max-width: 420px) {
+  .home-v2-hero-banner {
+    min-height: 270px;
+  }
+
+  .home-v2-booking-overlap {
+    margin-top: -22px;
+  }
+
+  .home-v2-metrics-row {
+    grid-template-columns: 1fr;
+    margin-top: 8px;
+  }
+
+  .home-v2-hero-banner-content {
+    padding: 22px 12px 16px;
+  }
+
   .home-v2-hero {
     padding: 78px 12px 14px;
   }
