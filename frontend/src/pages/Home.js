@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
@@ -161,30 +161,14 @@ function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
 }
 
 function Home() {
-  const navigate = useNavigate();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
-  const [pickupPlace, setPickupPlace] = useState(null);
-  const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
-  const [hourlyPackage] = useState(4);
-  const [outstationTripType] = useState('one_way');
-  const [detectingLocation, setDetectingLocation] = useState(false);
-  const [locationNote, setLocationNote] = useState('');
-  const [showCarsPromo, setShowCarsPromo] = useState(false);
+  const [detectingLocation] = useState(false);
+  const [locationNote] = useState('');
 
-  useEffect(() => {
-    const seenVersion = localStorage.getItem('carsPromoSeenVersion') || '';
-    if (seenVersion !== CARS_PROMO_VERSION) {
-      setShowCarsPromo(true);
-    }
-  }, []);
-
-  const closeCarsPromo = () => {
-    setShowCarsPromo(false);
-    localStorage.setItem('carsPromoSeenVersion', CARS_PROMO_VERSION);
-  };
+  // Removed unused useEffect and closeCarsPromo
 
   return (
     <div className="home-v2-page">
