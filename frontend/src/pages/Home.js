@@ -367,10 +367,6 @@ function Home() {
         )}
       </AnimatePresence>
 
-      {/* Background blobs */}
-      <div className="home-v2-bg-blob home-v2-bg-blob-top" />
-      <div className="home-v2-bg-blob home-v2-bg-blob-bottom" />
-
       {/* ── HERO SECTION ── */}
       <section className="home-v2-hero home-v2-hero-ola">
         <motion.div
@@ -386,7 +382,7 @@ function Home() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              Trusted by 10,000+ Riders Across India
+              Personal Driver Service - Fast, Safe & Reliable
             </motion.div>
 
             <h1>
@@ -400,7 +396,8 @@ function Home() {
             </p>
 
             <div className="home-v2-availability-pill">
-              🚗 Car + Driver Available in Your City
+              <span className="home-v2-availability-main">Car + Driver now available</span>
+              <span className="home-v2-availability-sub">Advance Booking Option: Type Car with Driver</span>
             </div>
           </div>
         </motion.div>
@@ -500,8 +497,10 @@ function Home() {
             {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
           </motion.div>
         </motion.div>
+      </section>
 
-        <div className="home-v2-metrics-grid home-v2-metrics-row" aria-label="trust metrics">
+      <section className="home-v2-trust-strip" aria-label="trust metrics">
+        <div className="home-v2-metrics-grid home-v2-metrics-row">
           <article className="home-v2-metric-card"><strong>10,000+</strong><span>Rides</span></article>
           <article className="home-v2-metric-card"><strong>4.9★</strong><span>Ratings</span></article>
           <article className="home-v2-metric-card"><strong>500+</strong><span>Drivers</span></article>
