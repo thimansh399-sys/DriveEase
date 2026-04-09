@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
 import '../styles/Home.css';
 
-// const CARS_PROMO_VERSION = 'cars-promo-v2';
+const CARS_PROMO_VERSION = 'cars-promo-v2';
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
@@ -161,115 +161,276 @@ function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
 }
 
 function Home() {
+  const navigate = useNavigate();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
+  const [pickupPlace, setPickupPlace] = useState(null);
+  const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
-  const [detectingLocation] = useState(false);
-  const [locationNote] = useState('');
+  const [hourlyPackage] = useState(4);
+  const [outstationTripType] = useState('one_way');
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationNote, setLocationNote] = useState('');
+  const [showCarsPromo, setShowCarsPromo] = useState(false);
 
-  // Removed unused useEffect and closeCarsPromo
+  useEffect(() => {
+    const seenVersion = localStorage.getItem('carsPromoSeenVersion') || '';
+    if (seenVersion !== CARS_PROMO_VERSION) {
+      setShowCarsPromo(true);
+    }
+  }, []);
+
+  const closeCarsPromo = () => {
+    setShowCarsPromo(false);
+    localStorage.setItem('carsPromoSeenVersion', CARS_PROMO_VERSION);
+  };
 
   return (
     <div className="home-v2-page">
-      {/* Premium Split Hero Section */}
-      <section className="premium-hero-section">
-        <div className="premium-hero-container">
-          {/* Left: Text & Booking */}
-          <div className="premium-hero-left">
-            <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
-            <h1>Book Your Ride Instantly</h1>
-            <p className="premium-hero-sub">Verified drivers for daily commute, family trips, and business travel.</p>
-            <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
-            <div className="home-booking-card minimal">
-              <div className="home-ride-mode-row">
-                <button
-                  type="button"
-                  className="home-ride-mode-btn active"
-                  onClick={() => setRideMode('one_way')}
-                >
-                  One-way Ride
-                </button>
-                <button
-                  type="button"
-                  className="home-ride-mode-btn active"
-                  onClick={() => {
-                    setRideMode('hourly');
-                    setDrop('');
-                  }}
-                >
-                  Hire Driver (2h/4h)
-                </button>
-                <button
-                  type="button"
-                  className="home-ride-mode-btn active"
-                  onClick={() => setRideMode('outstation')}
-                >
-                  Outstation Trip
-                </button>
-              </div>
-              <LocationInput
-                value={pickup}
-                onChange={(v) => { setPickup(v); setInputError(''); }}
-                placeholder="Pickup Location"
-                icon="🟢"
-              />
-              {rideMode !== 'hourly' && (
-                <>
-                  <div className="home-input-divider" />
-                  <LocationInput
-                    value={drop}
-                    onChange={(v) => { setDrop(v); setInputError(''); }}
-                    placeholder="Destination"
-                    icon="🔴"
-                  />
-                </>
-              )}
-              <AnimatePresence>
-                {inputError && (
-                  <motion.p
-                    className="home-input-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    ⚠️ {inputError}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <motion.button
-                className="home-book-btn"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Find Drivers
-              </motion.button>
+      {/* Minimal Hero Section */}
+      <section className="home-v2-hero minimal-hero">
+        <div className="home-v2-copy">
+          <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
+          <h1>Book Your Ride Instantly</h1>
+          <p>Verified drivers for daily commute, family trips, and business travel.</p>
+          {/* Trust badge */}
+          <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
+          {/* Booking Form */}
+          <div className="home-booking-card minimal">
+            <div className="home-ride-mode-row">
               <button
                 type="button"
-                className="home-current-location-btn"
-                disabled={detectingLocation}
-                style={{ marginTop: 12 }}
+                className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
+                onClick={() => setRideMode('one_way')}
               >
-                {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
+                One-way Ride
               </button>
-              {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
+              <button
+                type="button"
+                className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
+                onClick={() => {
+                  setRideMode('hourly');
+                  setDrop('');
+                  setDropPlace(null);
+                }}
+              >
+                Hire Driver (2h/4h)
+              </button>
+              <button
+                type="button"
+                className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
+                onClick={() => setRideMode('outstation')}
+              >
+                Outstation Trip
+              </button>
             </div>
-          </div>
-          {/* Right: Premium Image */}
-          <div className="premium-hero-right">
-            <div className="premium-hero-img-container">
-              <img src={process.env.PUBLIC_URL + '/premium-driver.jpg'} alt="Premium Driver" className="premium-hero-img" />
-              <div className="premium-hero-img-overlay" />
-            </div>
+            <LocationInput
+              value={pickup}
+              onChange={(v) => { setPickup(v); setInputError(''); }}
+              onSelect={setPickupPlace}
+              placeholder="Pickup Location"
+              icon="🟢"
+            />
+            {rideMode !== 'hourly' && (
+              <>
+                <div className="home-input-divider" />
+                <LocationInput
+                  value={drop}
+                  onChange={(v) => { setDrop(v); setInputError(''); }}
+                  onSelect={setDropPlace}
+                  placeholder="Destination"
+                  icon="🔴"
+                />
+              </>
+            )}
+            <AnimatePresence>
+              {inputError && (
+                <motion.p
+                  className="home-input-error"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                >
+                  ⚠️ {inputError}
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <motion.button
+              className="home-book-btn"
+              onClick={handleBookRide}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              Find Drivers
+            </motion.button>
+            <button
+              type="button"
+              className="home-current-location-btn"
+              onClick={useCurrentLocation}
+              disabled={detectingLocation}
+              style={{ marginTop: 12 }}
+            >
+              {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
+            </button>
+            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
           </div>
         </div>
+        {/* Subtle background image or color can be handled in CSS */}
+        <div className="home-v2-media minimal-bg" />
       </section>
+
       {/* Below the fold: all secondary content */}
       <div className="home-v2-divider" />
+      {/* Trust metrics, Why choose us, How it works, Testimonials, Plans, CTA, etc. can be placed here as needed, but are now below the fold. */}
       <Footer />
     </div>
   );
-// ...existing code...
+              <text x="96" y="204" fill="#fff" fontSize="12" fontWeight="bold">Pickup</text>
+              {/* Dropoff marker */}
+              <circle cx="520" cy="80" r="10" fill="#93c5fd" />
+              <text x="532" y="84" fill="#fff" fontSize="12" fontWeight="bold">Drop</text>
+              {/* Driver marker */}
+              <circle cx="280" cy="90" r="14" fill="#f97316" opacity="0.9"/>
+              <text x="272" y="95" fill="#fff" fontSize="14">🚗</text>
+            </svg>
+
+            <div className="home-map-overlay">
+              <div className="home-map-eta">
+                <span className="home-eta-pulse" />
+                Driver 30 mins away · 2.3 km remaining
+              </div>
+            </div>
+          </div>
+
+          <div className="home-map-info-row">
+            <div className="home-map-info-card" style={{ borderColor: '#22c55e' }}>
+              <div style={{ color: '#22c55e', fontSize: '20px' }}>📍</div>
+              <div>
+                <div style={{ fontWeight: 700 }}>ETA</div>
+                <div style={{ color: '#22c55e' }}>30 mins</div>
+              </div>
+            </div>
+            <div className="home-map-info-card" style={{ borderColor: '#93c5fd' }}>
+              <div style={{ fontSize: '20px' }}>🗺️</div>
+              <div>
+                <div style={{ fontWeight: 700 }}>Distance</div>
+                <div style={{ color: '#93c5fd' }}>12.5 km</div>
+              </div>
+            </div>
+            <div className="home-map-info-card" style={{ borderColor: '#fbbf24' }}>
+              <div style={{ fontSize: '20px' }}>💰</div>
+              <div>
+                <div style={{ fontWeight: 700 }}>Fare</div>
+                <div style={{ color: '#fbbf24' }}>₹285</div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      <div className="home-v2-divider" />
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="home-v2-section">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+        >
+          What Our Users Say
+        </motion.h2>
+        <div className="home-v2-testimonial-grid">
+          {testimonials.map((item, idx) => (
+            <motion.div
+              key={item.name}
+              className="home-v2-testimonial-card"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1, duration: 0.4 }}
+              whileHover={{ y: -4 }}
+            >
+              <div className="home-v2-stars">★★★★★</div>
+              <p>"{item.text}"</p>
+              <div className="home-testimonial-name">— {item.name}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div className="home-v2-divider" />
+
+      {/* ── PLANS ── */}
+      <section className="home-v2-section home-v2-plans">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+        >
+          Plans for Everyone
+        </motion.h2>
+        <div className="home-v2-plan-grid">
+          {plans.map((plan, idx) => (
+            <motion.div
+              key={plan.name}
+              className="home-v2-plan-card"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1, duration: 0.4 }}
+              whileHover={{ y: -6, scale: 1.02 }}
+            >
+              <h3>{plan.name}</h3>
+              <p className="home-plan-price">{plan.price}</p>
+              <p className="home-plan-desc">{plan.desc}</p>
+              <Link to="/subscriptions" className="home-v2-btn home-v2-btn-primary home-v2-plan-action">
+                Choose Plan
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div className="home-v2-divider" />
+
+      {/* ── CTA BANNER ── */}
+      <motion.section
+        className="home-cta-banner"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2>Ready to Ride?</h2>
+        <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
+        <div className="home-cta-actions">
+          <Link to="/book-ride" className="home-cta-link">
+            <motion.button
+              className="home-book-btn home-cta-primary"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Get Started →
+            </motion.button>
+          </Link>
+          <Link to="/drivers" className="home-cta-link">
+            <motion.button
+              className="home-v2-btn home-v2-btn-outline home-cta-secondary"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Browse Drivers
+            </motion.button>
+          </Link>
+        </div>
+      </motion.section>
+
+      <Footer />
+    </div>
+  );
 }
 
 export default Home;
