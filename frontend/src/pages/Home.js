@@ -258,7 +258,7 @@ function Home() {
           {/* Right: Premium Image */}
           <div className="premium-hero-right">
             <div className="premium-hero-img-container">
-              <img src={process.env.PUBLIC_URL + '/hero-driver.jpg'} alt="Premium Driver" className="premium-hero-img" />
+              <img src={process.env.PUBLIC_URL + '/premium-driver.jpg'} alt="Premium Driver" className="premium-hero-img" />
               <div className="premium-hero-img-overlay" />
             </div>
           </div>
