@@ -57,27 +57,9 @@ function checkValidServiceWorker(swUrl, config) {
     });
 }
 
-export function register(config) {
-  if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-    const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
-    if (publicUrl.origin !== window.location.origin) {
-      return;
-    }
-
-    window.addEventListener('load', () => {
-      const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
-
-      if (isLocalhost) {
-        checkValidServiceWorker(swUrl, config);
-
-        navigator.serviceWorker.ready.then(() => {
-          console.log('Service worker is active on localhost.');
-        });
-      } else {
-        registerValidSW(swUrl, config);
-      }
-    });
-  }
+// Service worker registration is disabled to avoid deployment errors.
+export function register() {
+  // No-op: service worker is disabled.
 }
 
 export function unregister() {
