@@ -258,7 +258,6 @@ function Home() {
             </AnimatePresence>
             <motion.button
               className="home-book-btn"
-              onClick={handleBookRide}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -267,7 +266,6 @@ function Home() {
             <button
               type="button"
               className="home-current-location-btn"
-              onClick={useCurrentLocation}
               disabled={detectingLocation}
               style={{ marginTop: 12 }}
             >
