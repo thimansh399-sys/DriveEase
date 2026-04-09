@@ -161,6 +161,51 @@ function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
 }
 
 function Home() {
+    // --- Add missing plans array ---
+    const plans = [
+      { name: 'Basic', price: '₹299/day', desc: 'For short city rides and errands.' },
+      { name: 'Family', price: '₹999/week', desc: 'Perfect for families and regular commutes.' },
+      { name: 'Business', price: '₹3499/month', desc: 'For business professionals and frequent travelers.' }
+    ];
+
+    // --- Add missing handleBookRide function ---
+    function handleBookRide() {
+      if (!pickup || (rideMode !== 'hourly' && !drop)) {
+        setInputError('Please enter all required locations.');
+        return;
+      }
+      // Example navigation logic (customize as needed)
+      navigate('/book-ride', {
+        state: {
+          pickup,
+          drop,
+          rideMode,
+          pickupPlace,
+          dropPlace
+        }
+      });
+    }
+
+    // --- Add missing useCurrentLocation function ---
+    function useCurrentLocation() {
+      setDetectingLocation(true);
+      if (!navigator.geolocation) {
+        setLocationNote('Geolocation is not supported by your browser.');
+        setDetectingLocation(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setPickup(`Lat: ${position.coords.latitude}, Lng: ${position.coords.longitude}`);
+          setLocationNote('Location detected!');
+          setDetectingLocation(false);
+        },
+        (error) => {
+          setLocationNote('Unable to detect location. Please enter manually.');
+          setDetectingLocation(false);
+        }
+      );
+    }
   const navigate = useNavigate();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
@@ -187,250 +232,174 @@ function Home() {
   };
 
   return (
-    <div className="home-v2-page">
-      {/* Minimal Hero Section */}
-      <section className="home-v2-hero minimal-hero">
-        <div className="home-v2-copy">
-          <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
-          <h1>Book Your Ride Instantly</h1>
-          <p>Verified drivers for daily commute, family trips, and business travel.</p>
-          {/* Trust badge */}
-          <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
-          {/* Booking Form */}
-          <div className="home-booking-card minimal">
-            <div className="home-ride-mode-row">
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
-                onClick={() => setRideMode('one_way')}
-              >
-                One-way Ride
-              </button>
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
-                onClick={() => {
-                  setRideMode('hourly');
-                  setDrop('');
-                  setDropPlace(null);
-                }}
-              >
-                Hire Driver (2h/4h)
-              </button>
-              <button
-                type="button"
-                className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
-                onClick={() => setRideMode('outstation')}
-              >
-                Outstation Trip
-              </button>
-            </div>
-            <LocationInput
-              value={pickup}
-              onChange={(v) => { setPickup(v); setInputError(''); }}
-              onSelect={setPickupPlace}
-              placeholder="Pickup Location"
-              icon="🟢"
-            />
-            {rideMode !== 'hourly' && (
-              <>
-                <div className="home-input-divider" />
-                <LocationInput
-                  value={drop}
-                  onChange={(v) => { setDrop(v); setInputError(''); }}
-                  onSelect={setDropPlace}
-                  placeholder="Destination"
-                  icon="🔴"
-                />
-              </>
-            )}
-            <AnimatePresence>
-              {inputError && (
-                <motion.p
-                  className="home-input-error"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+    <>
+      <div className="home-v2-page">
+        {/* Minimal Hero Section */}
+        <section className="home-v2-hero minimal-hero">
+          <div className="home-v2-copy">
+            <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
+            <h1>Book Your Ride Instantly</h1>
+            <p>Verified drivers for daily commute, family trips, and business travel.</p>
+            {/* Trust badge */}
+            <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
+            {/* Booking Form */}
+            <div className="home-booking-card minimal">
+              <div className="home-ride-mode-row">
+                <button
+                  type="button"
+                  className={`home-ride-mode-btn ${rideMode === 'one_way' ? 'active' : ''}`}
+                  onClick={() => setRideMode('one_way')}
                 >
-                  ⚠️ {inputError}
-                </motion.p>
+                  One-way Ride
+                </button>
+                <button
+                  type="button"
+                  className={`home-ride-mode-btn ${rideMode === 'hourly' ? 'active' : ''}`}
+                  onClick={() => {
+                    setRideMode('hourly');
+                    setDrop('');
+                    setDropPlace(null);
+                  }}
+                >
+                  Hire Driver (2h/4h)
+                </button>
+                <button
+                  type="button"
+                  className={`home-ride-mode-btn ${rideMode === 'outstation' ? 'active' : ''}`}
+                  onClick={() => setRideMode('outstation')}
+                >
+                  Outstation Trip
+                </button>
+              </div>
+              <LocationInput
+                value={pickup}
+                onChange={(v) => { setPickup(v); setInputError(''); }}
+                onSelect={setPickupPlace}
+                placeholder="Pickup Location"
+                icon="🟢"
+              />
+              {rideMode !== 'hourly' && (
+                <>
+                  <div className="home-input-divider" />
+                  <LocationInput
+                    value={drop}
+                    onChange={(v) => { setDrop(v); setInputError(''); }}
+                    onSelect={setDropPlace}
+                    placeholder="Destination"
+                    icon="🔴"
+                  />
+                </>
               )}
-            </AnimatePresence>
-            <motion.button
-              className="home-book-btn"
-              onClick={handleBookRide}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              Find Drivers
-            </motion.button>
-            <button
-              type="button"
-              className="home-current-location-btn"
-              onClick={useCurrentLocation}
-              disabled={detectingLocation}
-              style={{ marginTop: 12 }}
-            >
-              {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
-            </button>
-            {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
-          </div>
-        </div>
-        {/* Subtle background image or color can be handled in CSS */}
-        <div className="home-v2-media minimal-bg" />
-      </section>
-
-      {/* Below the fold: all secondary content */}
-      <div className="home-v2-divider" />
-      {/* Trust metrics, Why choose us, How it works, Testimonials, Plans, CTA, etc. can be placed here as needed, but are now below the fold. */}
-      <Footer />
-    </div>
-  );
-              <text x="96" y="204" fill="#fff" fontSize="12" fontWeight="bold">Pickup</text>
-              {/* Dropoff marker */}
-              <circle cx="520" cy="80" r="10" fill="#93c5fd" />
-              <text x="532" y="84" fill="#fff" fontSize="12" fontWeight="bold">Drop</text>
-              {/* Driver marker */}
-              <circle cx="280" cy="90" r="14" fill="#f97316" opacity="0.9"/>
-              <text x="272" y="95" fill="#fff" fontSize="14">🚗</text>
-            </svg>
-
-            <div className="home-map-overlay">
-              <div className="home-map-eta">
-                <span className="home-eta-pulse" />
-                Driver 30 mins away · 2.3 km remaining
-              </div>
+              <AnimatePresence>
+                {inputError && (
+                  <motion.p
+                    className="home-input-error"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    ⚠️ {inputError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <motion.button
+                className="home-book-btn"
+                onClick={handleBookRide}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Find Drivers
+              </motion.button>
+              <button
+                type="button"
+                className="home-current-location-btn"
+                onClick={useCurrentLocation}
+                disabled={detectingLocation}
+                style={{ marginTop: 12 }}
+              >
+                {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
+              </button>
+              {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
             </div>
           </div>
+          {/* Subtle background image or color can be handled in CSS */}
+          <div className="home-v2-media minimal-bg" />
+        </section>
 
-          <div className="home-map-info-row">
-            <div className="home-map-info-card" style={{ borderColor: '#22c55e' }}>
-              <div style={{ color: '#22c55e', fontSize: '20px' }}>📍</div>
-              <div>
-                <div style={{ fontWeight: 700 }}>ETA</div>
-                <div style={{ color: '#22c55e' }}>30 mins</div>
-              </div>
-            </div>
-            <div className="home-map-info-card" style={{ borderColor: '#93c5fd' }}>
-              <div style={{ fontSize: '20px' }}>🗺️</div>
-              <div>
-                <div style={{ fontWeight: 700 }}>Distance</div>
-                <div style={{ color: '#93c5fd' }}>12.5 km</div>
-              </div>
-            </div>
-            <div className="home-map-info-card" style={{ borderColor: '#fbbf24' }}>
-              <div style={{ fontSize: '20px' }}>💰</div>
-              <div>
-                <div style={{ fontWeight: 700 }}>Fare</div>
-                <div style={{ color: '#fbbf24' }}>₹285</div>
-              </div>
-            </div>
+        {/* Below the fold: all secondary content */}
+        <div className="home-v2-divider" />
+
+        {/* ── PLANS ── */}
+        <section className="home-v2-section home-v2-plans">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+          >
+          </motion.h2>
+          <div className="home-v2-plan-grid">
+            {plans.map((plan, idx) => (
+              <motion.div
+                key={plan.name}
+                className="home-v2-plan-card"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1, duration: 0.4 }}
+                whileHover={{ y: -6, scale: 1.02 }}
+              >
+                <h3>{plan.name}</h3>
+                <p className="home-plan-price">{plan.price}</p>
+                <p className="home-plan-desc">{plan.desc}</p>
+                <Link to="/subscriptions" className="home-v2-btn home-v2-btn-primary home-v2-plan-action">
+                  Choose Plan
+                </Link>
+              </motion.div>
+            ))}
           </div>
-        </motion.div>
-      </section>
+        </section>
 
-      <div className="home-v2-divider" />
+        <div className="home-v2-divider" />
 
-      {/* ── TESTIMONIALS ── */}
-      <section className="home-v2-section">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
+        {/* ── CTA BANNER ── */}
+        <motion.section
+          className="home-cta-banner"
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.5 }}
         >
-          What Our Users Say
-        </motion.h2>
-        <div className="home-v2-testimonial-grid">
-          {testimonials.map((item, idx) => (
-            <motion.div
-              key={item.name}
-              className="home-v2-testimonial-card"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1, duration: 0.4 }}
-              whileHover={{ y: -4 }}
-            >
-              <div className="home-v2-stars">★★★★★</div>
-              <p>"{item.text}"</p>
-              <div className="home-testimonial-name">— {item.name}</div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+          <h2>Ready to Ride?</h2>
+          <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
+          <div className="home-cta-actions">
+            <Link to="/book-ride" className="home-cta-link">
+              <motion.button
+                className="home-book-btn home-cta-primary"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Get Started →
+              </motion.button>
+            </Link>
+            <Link to="/drivers" className="home-cta-link">
+              <motion.button
+                className="home-v2-btn home-v2-btn-outline home-cta-secondary"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Browse Drivers
+              </motion.button>
+            </Link>
+          </div>
+        </motion.section>
 
-      <div className="home-v2-divider" />
-
-      {/* ── PLANS ── */}
-      <section className="home-v2-section home-v2-plans">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-        >
-          Plans for Everyone
-        </motion.h2>
-        <div className="home-v2-plan-grid">
-          {plans.map((plan, idx) => (
-            <motion.div
-              key={plan.name}
-              className="home-v2-plan-card"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1, duration: 0.4 }}
-              whileHover={{ y: -6, scale: 1.02 }}
-            >
-              <h3>{plan.name}</h3>
-              <p className="home-plan-price">{plan.price}</p>
-              <p className="home-plan-desc">{plan.desc}</p>
-              <Link to="/subscriptions" className="home-v2-btn home-v2-btn-primary home-v2-plan-action">
-                Choose Plan
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      <div className="home-v2-divider" />
-
-      {/* ── CTA BANNER ── */}
-      <motion.section
-        className="home-cta-banner"
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-      >
-        <h2>Ready to Ride?</h2>
-        <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
-        <div className="home-cta-actions">
-          <Link to="/book-ride" className="home-cta-link">
-            <motion.button
-              className="home-book-btn home-cta-primary"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Get Started →
-            </motion.button>
-          </Link>
-          <Link to="/drivers" className="home-cta-link">
-            <motion.button
-              className="home-v2-btn home-v2-btn-outline home-cta-secondary"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Browse Drivers
-            </motion.button>
-          </Link>
-        </div>
-      </motion.section>
-
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
+
+
 }
 
 export default Home;
