@@ -556,19 +556,127 @@
   animation: homeV2Pulse 2.2s ease-in-out infinite;
 }
 
+
 .home-v2-hero {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 46px 0 28px 40px;
-  display: grid;
-  grid-template-columns: minmax(460px, 0.96fr) minmax(560px, 1.04fr);
-  gap: 28px;
+  padding: 70px 0 70px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
   align-items: stretch;
-  min-height: calc(100vh - 84px);
+  min-height: 70vh;
   position: relative;
   z-index: 2;
   box-sizing: border-box;
+  background: var(--bg-deep, #0b0f19);
+}
+
+/* Minimal hero variant */
+.minimal-hero {
+  padding-top: 90px;
+  padding-bottom: 90px;
+  background: linear-gradient(135deg, #0b0f19 60%, #101c2a 100%);
+}
+
+.home-v2-copy {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.home-v2-badge {
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 8px 22px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  letter-spacing: 0.04em;
+}
+
+.home-v2-copy h1 {
+  margin: 0 0 10px 0;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-size: 2.7rem;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.home-v2-copy p {
+  margin: 0 0 12px 0;
+  color: #b8c7da;
+  font-size: 1.13rem;
+  line-height: 1.6;
+  max-width: 420px;
+}
+
+.home-v2-trust-badge {
+  color: #22c55e;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+  margin-top: 0;
+}
+
+.home-booking-card.minimal {
+  margin-top: 18px;
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(34,197,94,0.08);
+  padding: 32px 28px 28px 28px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.home-v2-media.minimal-bg {
+  display: none;
+}
+
+/* Hide all visual clutter in minimal hero */
+.home-cars-strip,
+.home-trust-strip,
+.home-secondary-info,
+.home-v2-quick-points,
+.home-v2-media:not(.minimal-bg),
+.home-eta-card {
+  display: none !important;
+}
+
+/* Add whitespace between sections */
+.home-v2-divider {
+  height: 48px;
+  background: none;
+}
+
+@media (max-width: 900px) {
+  .home-v2-hero, .minimal-hero {
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0 40px 0;
+    min-height: 60vh;
+  }
+  .home-v2-copy {
+    max-width: 98vw;
+    padding: 0 10px;
+  }
+  .home-booking-card.minimal {
+    max-width: 98vw;
+    padding: 22px 8px 18px 8px;
+  }
 }
 
 .home-v2-copy {
