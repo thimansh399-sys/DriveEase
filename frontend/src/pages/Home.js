@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
 import '../styles/Home.css';
 
-const CARS_PROMO_VERSION = 'cars-promo-v2';
+// const CARS_PROMO_VERSION = 'cars-promo-v2';
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
@@ -196,7 +196,6 @@ function Home() {
                 onClick={() => {
                   setRideMode('hourly');
                   setDrop('');
-                  setDropPlace(null);
                 }}
               >
                 Hire Driver (2h/4h)
@@ -212,7 +211,6 @@ function Home() {
             <LocationInput
               value={pickup}
               onChange={(v) => { setPickup(v); setInputError(''); }}
-              onSelect={setPickupPlace}
               placeholder="Pickup Location"
               icon="🟢"
             />
@@ -222,7 +220,6 @@ function Home() {
                 <LocationInput
                   value={drop}
                   onChange={(v) => { setDrop(v); setInputError(''); }}
-                  onSelect={setDropPlace}
                   placeholder="Destination"
                   icon="🔴"
                 />
