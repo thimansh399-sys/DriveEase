@@ -223,15 +223,24 @@ function Home() {
   return (
     <>
       <div className="home-v2-page">
-        {/* Premium Minimal Hero Section */}
-        <section className="home-v2-hero minimal-hero">
-          <div className="home-v2-copy">
-            <div className="home-v2-badge">India's #1 Trusted Personal Driver Service</div>
-            <h1 className="home-v2-copy-title">Book Your Ride Instantly</h1>
-            <p className="home-v2-copy-desc">Verified drivers for daily commute, family trips, and business travel.</p>
-            <div className="home-v2-trust-badge">✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking</div>
-            <div className="home-booking-card minimal">
-              <div className="home-ride-mode-row" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {/* Premium Split Hero Section */}
+        <section className="home-v2-hero minimal-hero" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 48, minHeight: '70vh', padding: '48px 0'}}>
+          {/* Left: Text and Booking */}
+          <div style={{flex: 1, minWidth: 0, maxWidth: 600, display: 'flex', flexDirection: 'column', gap: 32}}>
+            <div style={{marginBottom: 24}}>
+              <div style={{background: 'rgba(34,197,94,0.13)', color: '#22c55e', fontWeight: 700, fontSize: '1.1rem', padding: '10px 32px', borderRadius: 999, display: 'inline-block', marginBottom: 18, letterSpacing: '0.04em'}}>
+                India's #1 Trusted Personal Driver Service — Fast, Safe & Reliable
+              </div>
+              <h1 style={{fontFamily: 'Outfit, Segoe UI, sans-serif', fontWeight: 800, fontSize: '3.2rem', lineHeight: 1.1, margin: 0}}>
+                Book Your Ride <span style={{color: '#22c55e'}}>Instantly</span>
+              </h1>
+              <p style={{color: '#b8c7da', fontSize: '1.18rem', margin: '18px 0 0 0'}}>Verified drivers for your daily commute, family trips, and business travel.</p>
+            </div>
+            <div className="home-v2-trust-badge" style={{marginBottom: 18, fontSize: '1.08rem', fontWeight: 600}}>
+              ✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking
+            </div>
+            <div className="home-booking-card minimal" style={{marginTop: 0}}>
+              <div className="home-ride-mode-row">
                 <button
                   type="button"
                   className={`home-v2-btn ${rideMode === 'one_way' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
@@ -310,7 +319,14 @@ function Home() {
               {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
             </div>
           </div>
-          <div className="home-v2-media minimal-bg" />
+          {/* Right: Hero Image */}
+          <div style={{flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <img
+              src={process.env.PUBLIC_URL + '/hero-driver.jpg'}
+              alt="Professional driver opening car door"
+              style={{width: '92%', maxWidth: 520, borderRadius: 24, boxShadow: '0 8px 48px rgba(34,197,94,0.13)'}}
+            />
+          </div>
         </section>
 
         <div className="home-v2-divider" />
