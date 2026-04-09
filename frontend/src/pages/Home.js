@@ -3,9 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
 import { filterIndiaLocations } from '../utils/locationData';
-import '../styles/Home.css';
 
-const CARS_PROMO_VERSION = 'cars-promo-v2';
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
@@ -213,23 +211,14 @@ function Home() {
   const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
-  const [hourlyPackage] = useState(4);
-  const [outstationTripType] = useState('one_way');
+  // Removed unused: hourlyPackage, outstationTripType
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationNote, setLocationNote] = useState('');
-  const [showCarsPromo, setShowCarsPromo] = useState(false);
+  // Removed unused: showCarsPromo
 
-  useEffect(() => {
-    const seenVersion = localStorage.getItem('carsPromoSeenVersion') || '';
-    if (seenVersion !== CARS_PROMO_VERSION) {
-      setShowCarsPromo(true);
-    }
-  }, []);
+  // Removed unused useEffect for showCarsPromo
 
-  const closeCarsPromo = () => {
-    setShowCarsPromo(false);
-    localStorage.setItem('carsPromoSeenVersion', CARS_PROMO_VERSION);
-  };
+  // Removed unused: closeCarsPromo
 
   return (
     <>
