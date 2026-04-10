@@ -1,5 +1,4 @@
 // Notification Service - Handles sound and browser notifications
-import React from 'react';
 
 export const playNotificationSound = async () => {
   try {
@@ -68,9 +67,11 @@ export const createToastNotification = (message, type = 'info', duration = 3000)
   };
 };
 
-export default {
+const notificationService = {
   playNotificationSound,
   requestNotificationPermission,
   sendBrowserNotification,
   createToastNotification
 };
+
+export default notificationService;

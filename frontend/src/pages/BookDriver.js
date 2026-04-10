@@ -58,8 +58,7 @@ function MapViewport({ pickupCoords, dropCoords, routeCoords }) {
 // function splitCityState(rawAddress) { ... } // unused
 
 export default function BookDriver() {
-  // --- Fix: Declare distance state at the top ---
-  const [distance] = useState(5); // Default to 5km for demo, update as needed
+  // --- Fix: Removed unused setDistance state ---
   // Modern header and search bar UI
   // Handler for GPS location
   const getLocation = () => {

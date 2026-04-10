@@ -87,7 +87,7 @@ export default function DriverDashboard() {
     fetchBookings();
     const timer = setInterval(fetchBookings, 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [fetchBookings]);
 
   const stats = useMemo(() => {
     const completed = bookings.filter((b) => b.status === 'completed');
