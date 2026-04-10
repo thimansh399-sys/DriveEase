@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import Footer from '../components/Footer';
+import Footer from '../components/Footer.jsx';
 import { filterIndiaLocations } from '../utils/locationData';
+
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
@@ -14,6 +15,148 @@ function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   useEffect(() => {
     setQuery(value || '');
   }, [value]);
+
+  useEffect(() => {
+    const normalized = String(query || '').trim();
+    if (normalized.length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
+          label: location,
+          lat: null,
+          lng: null,
+          source: 'fallback'
+        }));
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&addressdetails=1&limit=8&q=${encodeURIComponent(normalized)}`,
+          {
+            signal: controller.signal,
+            headers: {
+              Accept: 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Unable to fetch live locations');
+        }
+
+        const data = await response.json();
+        const live = (Array.isArray(data) ? data : []).map((item) => ({
+          label: item.display_name,
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+          source: 'live'
+        }));
+
+        const merged = [...live];
+        fallback.forEach((entry) => {
+          if (!merged.some((existing) => existing.label === entry.label)) {
+            merged.push(entry);
+          }
+        });
+
+        if (!mounted) return;
+        setSuggestions(merged.slice(0, 8));
+        setOpen(merged.length > 0);
+      } catch (_) {
+        if (!mounted || controller.signal.aborted) return;
+        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
+          label: location,
+          lat: null,
+          lng: null,
+          source: 'fallback'
+        }));
+        setSuggestions(fallback);
+        setOpen(fallback.length > 0);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }, 240);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = (loc) => {
+    setQuery(loc.label);
+    onChange(loc.label);
+    if (onSelect) {
+      onSelect({ address: loc.label, lat: loc.lat, lng: loc.lng, source: loc.source });
+    }
+    setOpen(false);
+  };
+
+  return (
+    <div className="home-location-wrap" ref={wrapRef}>
+      <div className="home-input-group">
+        <span className="home-input-icon">{icon}</span>
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => {
+            const next = e.target.value;
+            setQuery(next);
+            onChange(next);
+            if (onSelect) onSelect(null);
+          }}
+          className="home-location-input"
+          onFocus={() => query.length >= 2 && setOpen(suggestions.length > 0)}
+          autoComplete="off"
+        />
+        {query && (
+          <button className="home-input-clear" onClick={() => {
+            setQuery('');
+            onChange('');
+            if (onSelect) onSelect(null);
+            setOpen(false);
+          }}>
+            ✕
+          </button>
+        )}
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            className="home-suggestions"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+          >
+            {suggestions.map((loc) => (
+              <li key={`${loc.label}-${loc.lat || 'na'}-${loc.lng || 'na'}`} onMouseDown={() => handleSelect(loc)}>
+                <span className="home-suggestion-icon">📍</span> {loc.label}
+              </li>
+            ))}
+            {loading && <li className="home-suggestion-loading">Searching exact locations...</li>}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function Home() {
   const plans = [
@@ -254,146 +397,4 @@ function Home() {
     </div>
   );
 }
-                  Outstation Trip
-                </button>
-              </div>
-              <LocationInput
-                value={pickup}
-                onChange={(v) => { setPickup(v); setInputError(''); }}
-                onSelect={setPickupPlace}
-                placeholder="Pickup Location"
-                icon="🟢"
-              />
-              {rideMode !== 'hourly' && (
-                <>
-                  <div className="home-input-divider" />
-                  <LocationInput
-                    value={drop}
-                    onChange={(v) => { setDrop(v); setInputError(''); }}
-                    onSelect={setDropPlace}
-                    placeholder="Destination"
-                    icon="🔴"
-                  />
-                </>
-              )}
-              <AnimatePresence>
-                {inputError && (
-                  <motion.p
-                    className="home-input-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    ⚠️ {inputError}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <motion.button
-                className="home-v2-btn home-v2-btn-primary home-book-btn"
-                onClick={handleBookRide}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                style={{ marginTop: 12 }}
-              >
-                Find Drivers
-              </motion.button>
-              <button
-                type="button"
-                className="home-v2-btn home-v2-btn-outline home-current-location-btn"
-                onClick={useCurrentLocation}
-                disabled={detectingLocation}
-                style={{ marginTop: 8 }}
-              >
-                {detectingLocation ? 'Detecting GPS...' : '📍 Use current location'}
-              </button>
-              {locationNote ? <p className="home-optional-hint">{locationNote}</p> : null}
-            </div>
-          </div>
-          {/* Right: Hero Image */}
-          <div style={{flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-            <img
-              src={import.meta.env.BASE_URL + 'hero-driver.jpg'}
-              alt="Professional driver opening car door"
-              style={{width: '92%', maxWidth: 520, borderRadius: 24, boxShadow: '0 8px 48px rgba(34,197,94,0.13)'}}
-            />
-          </div>
-        </section>
-
-        <div className="home-v2-divider" />
-
-        {/* ── PLANS ── */}
-        <section className="home-v2-section home-v2-plans">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="section-header"
-          >
-            Our Plans
-          </motion.h2>
-          <div className="home-v2-plan-grid">
-            {plans.map((plan, idx) => (
-              <motion.div
-                key={plan.name}
-                className="home-v2-plan-card"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1, duration: 0.4 }}
-                whileHover={{ y: -6, scale: 1.02 }}
-              >
-                <h3>{plan.name}</h3>
-                <p className="home-plan-price">{plan.price}</p>
-                <p className="home-plan-desc">{plan.desc}</p>
-                <Link to="/subscriptions" className="home-v2-btn home-v2-btn-primary home-v2-plan-action">
-                  Choose Plan
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        <div className="home-v2-divider" />
-
-        {/* ── CTA BANNER ── */}
-        <motion.section
-          className="cta-section"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="cta-content">
-            <h2>Ready to Ride?</h2>
-            <p>Join 10,000+ happy customers who trust DriveEase every day.</p>
-            <div className="hero-buttons">
-              <Link to="/book-ride" className="home-cta-link">
-                <motion.button
-                  className="btn btn-primary home-book-btn home-cta-primary"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Get Started →
-                </motion.button>
-              </Link>
-              <Link to="/drivers" className="home-cta-link">
-                <motion.button
-                  className="btn btn-outline home-v2-btn home-v2-btn-outline home-cta-secondary"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Browse Drivers
-                </motion.button>
-              </Link>
-            </div>
-          </div>
-        </motion.section>
-
-        <Footer />
-      </div>
-    </>
-  );
-}
-
 export default Home;

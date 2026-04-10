@@ -1,4 +1,4 @@
-const LOCATION_DIRECTORY = [
+export const LOCATION_DIRECTORY = [
   {
     state: 'Uttar Pradesh',
     cities: [
