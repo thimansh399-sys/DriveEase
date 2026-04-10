@@ -2,161 +2,23 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
-import { filterIndiaLocations } from '../utils/locationData';
 
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
-  const [suggestions, setSuggestions] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const wrapRef = useRef(null);
 
-  useEffect(() => {
-    setQuery(value || '');
-  }, [value]);
 
-  useEffect(() => {
-    const normalized = String(query || '').trim();
-    if (normalized.length < 2) {
-      setSuggestions([]);
-      setOpen(false);
-      setLoading(false);
-      return;
-    }
 
-    let mounted = true;
-    const controller = new AbortController();
 
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
-          label: location,
-          lat: null,
-          lng: null,
-          source: 'fallback'
-        }));
 
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&addressdetails=1&limit=8&q=${encodeURIComponent(normalized)}`,
-          {
-            signal: controller.signal,
-            headers: {
-              Accept: 'application/json'
-            }
-          }
-        );
 
-        if (!response.ok) {
-          throw new Error('Unable to fetch live locations');
-        }
 
-        const data = await response.json();
-        const live = (Array.isArray(data) ? data : []).map((item) => ({
-          label: item.display_name,
-          lat: Number(item.lat),
-          lng: Number(item.lon),
-          source: 'live'
-        }));
 
-        const merged = [...live];
-        fallback.forEach((entry) => {
-          if (!merged.some((existing) => existing.label === entry.label)) {
-            merged.push(entry);
-          }
-        });
 
-        if (!mounted) return;
-        setSuggestions(merged.slice(0, 8));
-        setOpen(merged.length > 0);
-      } catch (_) {
-        if (!mounted || controller.signal.aborted) return;
-        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
-          label: location,
-          lat: null,
-          lng: null,
-          source: 'fallback'
-        }));
-        setSuggestions(fallback);
-        setOpen(fallback.length > 0);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }, 240);
 
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
 
-  useEffect(() => {
-    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
-  const handleSelect = (loc) => {
-    setQuery(loc.label);
-    onChange(loc.label);
-    if (onSelect) {
-      onSelect({ address: loc.label, lat: loc.lat, lng: loc.lng, source: loc.source });
-    }
-    setOpen(false);
-  };
 
-  return (
-    <div className="home-location-wrap" ref={wrapRef}>
-      <div className="home-input-group">
-        <span className="home-input-icon">{icon}</span>
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => {
-            const next = e.target.value;
-            setQuery(next);
-            onChange(next);
-            if (onSelect) onSelect(null);
-          }}
-          className="home-location-input"
-          onFocus={() => query.length >= 2 && setOpen(suggestions.length > 0)}
-          autoComplete="off"
-        />
-        {query && (
-          <button className="home-input-clear" onClick={() => {
-            setQuery('');
-            onChange('');
-            if (onSelect) onSelect(null);
-            setOpen(false);
-          }}>
-            ✕
-          </button>
-        )}
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.ul
-            className="home-suggestions"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15 }}
-          >
-            {suggestions.map((loc) => (
-              <li key={`${loc.label}-${loc.lat || 'na'}-${loc.lng || 'na'}`} onMouseDown={() => handleSelect(loc)}>
-                <span className="home-suggestion-icon">📍</span> {loc.label}
-              </li>
-            ))}
-            {loading && <li className="home-suggestion-loading">Searching exact locations...</li>}
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function Home() {
     // --- Add missing plans array ---
@@ -182,11 +44,8 @@ function Home() {
           dropPlace
         }
       });
-    }
 
-    // --- Add missing useCurrentLocation function ---
     function useCurrentLocation() {
-      setDetectingLocation(true);
       if (!navigator.geolocation) {
         setLocationNote('Geolocation is not supported by your browser.');
         setDetectingLocation(false);
@@ -235,25 +94,6 @@ function Home() {
                 Book Your Ride <span style={{color: '#22c55e'}}>Instantly</span>
               </h1>
               <p style={{color: '#b8c7da', fontSize: '1.18rem', margin: '18px 0 0 0'}}>Verified drivers for your daily commute, family trips, and business travel.</p>
-            </div>
-            <div className="home-v2-trust-badge" style={{marginBottom: 18, fontSize: '1.08rem', fontWeight: 600}}>
-              ✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking
-            </div>
-            <div className="home-booking-card minimal" style={{marginTop: 0}}>
-              <div className="home-ride-mode-row">
-                <button
-                  type="button"
-                  className={`home-v2-btn ${rideMode === 'one_way' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
-                  onClick={() => setRideMode('one_way')}
-                >
-                  One-way Ride
-                </button>
-                <button
-                  type="button"
-                  className={`home-v2-btn ${rideMode === 'hourly' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
-                  onClick={() => {
-                    setRideMode('hourly');
-                    setDrop('');
                     setDropPlace(null);
                   }}
                 >
@@ -275,16 +115,6 @@ function Home() {
                 icon="🟢"
               />
               {rideMode !== 'hourly' && (
-                <>
-                  <div className="home-input-divider" />
-                  <LocationInput
-                    value={drop}
-                    onChange={(v) => { setDrop(v); setInputError(''); }}
-                    onSelect={setDropPlace}
-                    placeholder="Destination"
-                    icon="🔴"
-                  />
-                </>
               )}
               <AnimatePresence>
                 {inputError && (

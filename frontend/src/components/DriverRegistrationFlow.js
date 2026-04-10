@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { DEFAULT_LOCATION, STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
+
 import '../styles/DriverRegistration.css';
 import { buildApiUrl, getApiCandidates } from '../utils/network';
 

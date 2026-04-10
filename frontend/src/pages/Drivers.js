@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
-import { STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
+
 import { annotateDriversWithDistance } from '../utils/geo';
 import { buildAssetUrl } from '../utils/network';
 import '../styles/UnifiedUI.css';

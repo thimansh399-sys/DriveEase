@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { STATE_OPTIONS, getAreasByCity, getCitiesByState } from '../utils/locationData';
+
 import { annotateDriversWithDistance } from '../utils/geo';
 import { buildAssetUrl } from '../utils/network';
 import '../styles/Browse.css';
