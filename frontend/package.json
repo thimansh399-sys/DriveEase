@@ -46,6 +46,10 @@
     ]
   },
   "devDependencies": {
-    "react-scripts": "^5.0.1"
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.9",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^4.2.2"
   }
 }

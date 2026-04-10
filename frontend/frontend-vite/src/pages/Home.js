@@ -1,8 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import HeroSection from '../components/HeroSection';
+import StatsStrip from '../components/StatsStrip';
+import WhyChooseUs from '../components/WhyChooseUs';
+import HowItWorks from '../components/HowItWorks';
+import DriverCategories from '../components/DriverCategories';
+import Testimonials from '../components/Testimonials';
+import CTABanner from '../components/CTABanner';
+import BookingCard from '../components/BookingCard';
 import Footer from '../components/Footer';
-import { filterIndiaLocations } from '../utils/locationData';
 
 function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
   const [query, setQuery] = useState(value);
@@ -15,194 +23,13 @@ function LocationInput({ value, onChange, onSelect, placeholder, icon }) {
     setQuery(value || '');
   }, [value]);
 
-  useEffect(() => {
-    const normalized = String(query || '').trim();
-    if (normalized.length < 2) {
-      setSuggestions([]);
-      setOpen(false);
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-    const controller = new AbortController();
-
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
-          label: location,
-          lat: null,
-          lng: null,
-          source: 'fallback'
-        }));
-
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&addressdetails=1&limit=8&q=${encodeURIComponent(normalized)}`,
-          {
-            signal: controller.signal,
-            headers: {
-              Accept: 'application/json'
-            }
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Unable to fetch live locations');
-        }
-
-        const data = await response.json();
-        const live = (Array.isArray(data) ? data : []).map((item) => ({
-          label: item.display_name,
-          lat: Number(item.lat),
-          lng: Number(item.lon),
-          source: 'live'
-        }));
-
-        const merged = [...live];
-        fallback.forEach((entry) => {
-          if (!merged.some((existing) => existing.label === entry.label)) {
-            merged.push(entry);
-          }
-        });
-
-        if (!mounted) return;
-        setSuggestions(merged.slice(0, 8));
-        setOpen(merged.length > 0);
-      } catch (_) {
-        if (!mounted || controller.signal.aborted) return;
-        const fallback = filterIndiaLocations(normalized, 8).map((location) => ({
-          label: location,
-          lat: null,
-          lng: null,
-          source: 'fallback'
-        }));
-        setSuggestions(fallback);
-        setOpen(fallback.length > 0);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }, 240);
-
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
-
-  useEffect(() => {
-    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleSelect = (loc) => {
-    setQuery(loc.label);
-    onChange(loc.label);
-    if (onSelect) {
-      onSelect({ address: loc.label, lat: loc.lat, lng: loc.lng, source: loc.source });
-    }
-    setOpen(false);
-  };
-
-  return (
-    <div className="home-location-wrap" ref={wrapRef}>
-      <div className="home-input-group">
-        <span className="home-input-icon">{icon}</span>
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => {
-            const next = e.target.value;
-            setQuery(next);
-            onChange(next);
-            if (onSelect) onSelect(null);
-          }}
-          className="home-location-input"
-          onFocus={() => query.length >= 2 && setOpen(suggestions.length > 0)}
-          autoComplete="off"
-        />
-        {query && (
-          <button className="home-input-clear" onClick={() => {
-            setQuery('');
-            onChange('');
-            if (onSelect) onSelect(null);
-            setOpen(false);
-          }}>
-            ✕
-          </button>
-        )}
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.ul
-            className="home-suggestions"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15 }}
-          >
-            {suggestions.map((loc) => (
-              <li key={`${loc.label}-${loc.lat || 'na'}-${loc.lng || 'na'}`} onMouseDown={() => handleSelect(loc)}>
-                <span className="home-suggestion-icon">📍</span> {loc.label}
-              </li>
-            ))}
-            {loading && <li className="home-suggestion-loading">Searching exact locations...</li>}
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 function Home() {
-    // --- Add missing plans array ---
-    const plans = [
-      { name: 'Basic', price: '₹299/day', desc: 'For short city rides and errands.' },
-      { name: 'Family', price: '₹999/week', desc: 'Perfect for families and regular commutes.' },
-      { name: 'Business', price: '₹3499/month', desc: 'For business professionals and frequent travelers.' }
-    ];
+  const plans = [
+    { name: 'Basic', price: '₹299/day', desc: 'For short city rides and errands.' },
+    { name: 'Family', price: '₹999/week', desc: 'Perfect for families and regular commutes.' },
+    { name: 'Business', price: '₹3499/month', desc: 'For business professionals and frequent travelers.' }
+  ];
 
-    // --- Add missing handleBookRide function ---
-    function handleBookRide() {
-      if (!pickup || (rideMode !== 'hourly' && !drop)) {
-        setInputError('Please enter all required locations.');
-        return;
-      }
-      // Example navigation logic (customize as needed)
-      navigate('/book-ride', {
-        state: {
-          pickup,
-          drop,
-          rideMode,
-          pickupPlace,
-          dropPlace
-        }
-      });
-    }
-
-    // --- Add missing useCurrentLocation function ---
-    function useCurrentLocation() {
-      setDetectingLocation(true);
-      if (!navigator.geolocation) {
-        setLocationNote('Geolocation is not supported by your browser.');
-        setDetectingLocation(false);
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setPickup(`Lat: ${position.coords.latitude}, Lng: ${position.coords.longitude}`);
-          setLocationNote('Location detected!');
-          setDetectingLocation(false);
-        },
-        (error) => {
-          setLocationNote('Unable to detect location. Please enter manually.');
-          setDetectingLocation(false);
-        }
-      );
-    }
   const navigate = useNavigate();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
@@ -210,105 +37,110 @@ function Home() {
   const [dropPlace, setDropPlace] = useState(null);
   const [inputError, setInputError] = useState('');
   const [rideMode, setRideMode] = useState('one_way');
-  // Removed unused: hourlyPackage, outstationTripType
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationNote, setLocationNote] = useState('');
-  // Removed unused: showCarsPromo
 
-  // Removed unused useEffect for showCarsPromo
+  function handleBookRide() {
+    if (!pickup || (rideMode !== 'hourly' && !drop)) {
+      setInputError('Please enter all required locations.');
+      return;
+    }
+    navigate('/book-ride', {
+      state: {
+        pickup,
+        drop,
+        rideMode,
+        pickupPlace,
+        dropPlace
+      }
+    });
+  }
 
-  // Removed unused: closeCarsPromo
+  function useCurrentLocation() {
+    setDetectingLocation(true);
+    if (!navigator.geolocation) {
 
-  return (
-    <>
-      <div className="home-v2-page">
-        {/* Premium Split Hero Section */}
-        <section className="home-v2-hero minimal-hero" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 48, minHeight: '70vh', padding: '48px 0'}}>
-          {/* Left: Text and Booking */}
-          <div style={{flex: 1, minWidth: 0, maxWidth: 600, display: 'flex', flexDirection: 'column', gap: 32}}>
-            <div style={{marginBottom: 24}}>
-              <div style={{background: 'rgba(34,197,94,0.13)', color: '#22c55e', fontWeight: 700, fontSize: '1.1rem', padding: '10px 32px', borderRadius: 999, display: 'inline-block', marginBottom: 18, letterSpacing: '0.04em'}}>
-                India's #1 Trusted Personal Driver Service — Fast, Safe & Reliable
-              </div>
-              <h1 style={{fontFamily: 'Outfit, Segoe UI, sans-serif', fontWeight: 800, fontSize: '3.2rem', lineHeight: 1.1, margin: 0}}>
-                Book Your Ride <span style={{color: '#22c55e'}}>Instantly</span>
-              </h1>
-              <p style={{color: '#b8c7da', fontSize: '1.18rem', margin: '18px 0 0 0'}}>Verified drivers for your daily commute, family trips, and business travel.</p>
-            </div>
-            <div className="home-v2-trust-badge" style={{marginBottom: 18, fontSize: '1.08rem', fontWeight: 600}}>
-              ✔ 24/7 Support · ✔ Verified Drivers · ✔ Instant Booking
-            </div>
-            <div className="home-booking-card minimal" style={{marginTop: 0}}>
-              <div className="home-ride-mode-row">
-                <button
-                  type="button"
-                  className={`home-v2-btn ${rideMode === 'one_way' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
-                  onClick={() => setRideMode('one_way')}
-                >
-                  One-way Ride
-                </button>
-                <button
-                  type="button"
-                  className={`home-v2-btn ${rideMode === 'hourly' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
-                  onClick={() => {
-                    setRideMode('hourly');
-                    setDrop('');
-                    setDropPlace(null);
-                  }}
-                >
-                  Hire Driver (2h/4h)
-                </button>
-                <button
-                  type="button"
-                  className={`home-v2-btn ${rideMode === 'outstation' ? 'home-v2-btn-primary' : 'home-v2-btn-outline'}`}
-                  onClick={() => setRideMode('outstation')}
-                >
-                  Outstation Trip
-                </button>
-              </div>
-              <LocationInput
-                value={pickup}
-                onChange={(v) => { setPickup(v); setInputError(''); }}
-                onSelect={setPickupPlace}
-                placeholder="Pickup Location"
-                icon="🟢"
-              />
-              {rideMode !== 'hourly' && (
-                <>
-                  <div className="home-input-divider" />
-                  <LocationInput
-                    value={drop}
-                    onChange={(v) => { setDrop(v); setInputError(''); }}
-                    onSelect={setDropPlace}
-                    placeholder="Destination"
-                    icon="🔴"
-                  />
-                </>
-              )}
-              <AnimatePresence>
-                {inputError && (
-                  <motion.p
-                    className="home-input-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    ⚠️ {inputError}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <motion.button
-                className="home-v2-btn home-v2-btn-primary home-book-btn"
-                onClick={handleBookRide}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                style={{ marginTop: 12 }}
-              >
-                Find Drivers
-              </motion.button>
-              <button
-                type="button"
-                className="home-v2-btn home-v2-btn-outline home-current-location-btn"
+      function Home() {
+        const navigate = useNavigate();
+        const [pickup, setPickup] = useState('');
+        const [drop, setDrop] = useState('');
+        const [pickupPlace, setPickupPlace] = useState(null);
+        const [dropPlace, setDropPlace] = useState(null);
+        const [inputError, setInputError] = useState('');
+        const [rideMode, setRideMode] = useState('one_way');
+        const [detectingLocation, setDetectingLocation] = useState(false);
+        const [locationNote, setLocationNote] = useState('');
+
+        function handleBookRide() {
+          if (!pickup || (rideMode !== 'hourly' && !drop)) {
+            setInputError('Please enter all required locations.');
+            return;
+          }
+          navigate('/book-ride', {
+            state: {
+              pickup,
+              drop,
+              rideMode,
+              pickupPlace,
+              dropPlace
+            }
+          });
+        }
+
+        function useCurrentLocation() {
+          setDetectingLocation(true);
+          if (!navigator.geolocation) {
+            setLocationNote('Geolocation is not supported by your browser.');
+            setDetectingLocation(false);
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setPickup(`Lat: ${position.coords.latitude}, Lng: ${position.coords.longitude}`);
+              setLocationNote('Location detected!');
+              setDetectingLocation(false);
+            },
+            (error) => {
+              setLocationNote('Unable to detect location. Please enter manually.');
+              setDetectingLocation(false);
+            }
+          );
+        }
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#111827] to-[#0f172a] text-white flex flex-col">
+            <Navbar />
+            <HeroSection />
+            <BookingCard
+              pickup={pickup}
+              setPickup={setPickup}
+              drop={drop}
+              setDrop={setDrop}
+              pickupPlace={pickupPlace}
+              setPickupPlace={setPickupPlace}
+              dropPlace={dropPlace}
+              setDropPlace={setDropPlace}
+              inputError={inputError}
+              setInputError={setInputError}
+              rideMode={rideMode}
+              setRideMode={setRideMode}
+              detectingLocation={detectingLocation}
+              setDetectingLocation={setDetectingLocation}
+              locationNote={locationNote}
+              setLocationNote={setLocationNote}
+              handleBookRide={handleBookRide}
+              useCurrentLocation={useCurrentLocation}
+            />
+            <StatsStrip />
+            <WhyChooseUs />
+            <HowItWorks />
+            <DriverCategories />
+            <Testimonials />
+            <CTABanner />
+            <Footer />
+          </div>
+        );
+      }
                 onClick={useCurrentLocation}
                 disabled={detectingLocation}
                 style={{ marginTop: 8 }}
