@@ -3,7 +3,12 @@ import React, { useState } from 'react';
 
 import '../styles/DriverRegistration.css';
 import { buildApiUrl, getApiCandidates } from '../utils/network';
-
+import {
+  DEFAULT_LOCATION,
+  getCitiesByState,
+  getAreasByCity,
+  STATE_OPTIONS
+} from "../utils/findIndiaLocation";
 export default function DriverRegistrationFlow() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

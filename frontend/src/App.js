@@ -5,8 +5,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AnimatePresence, motion } from 'framer-motion';
 import { NotificationProvider, NotificationBell } from './context/NotificationContext';
 import './styles/App.css';
+import Home from './pages/Home.jsx';
 import Navigation from './components/Navigation';
-import Home from './pages/Home';
 import Browse from './pages/Browse';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';

@@ -142,10 +142,10 @@ export default function CustomerDashboard() {
         <div className="content">
           <div className="full">
             <Stats bookings={bookings} />
+            <ProfileCard user={user} />
+            <ActiveRide bookings={bookings} />
+            <RideHistory bookings={bookings} />
           </div>
-          <ProfileCard user={user} />
-          <ActiveRide bookings={bookings} />
-          <RideHistory bookings={bookings} />
         </div>
       </div>
     </div>

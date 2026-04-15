@@ -121,7 +121,7 @@ function Navigation({ isLoggedIn, userRole, onLogout }) {
                 Login
               </AppButton>
               <AppButton as={Link} to="/register-driver" size="sm" variant="primary" className="nav-button">
-                Register as Driver
+                Register
               </AppButton>
             </>
           ) : (
